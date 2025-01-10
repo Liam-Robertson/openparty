@@ -1,0 +1,377 @@
+package com.openparty.app.features.startup.feature_splash.presentation
+
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavHostController
+import com.openparty.app.core.shared.presentation.ErrorText
+import com.openparty.app.core.shared.presentation.UiEvent
+import kotlinx.coroutines.flow.collectLatest
+
+@Composable
+fun SplashScreen(
+    navController: NavHostController,
+    viewModel: SplashViewModel = hiltViewModel()
+) {
+    val uiState by viewModel.uiState.collectAsState()
+
+    LaunchedEffect(viewModel.uiEvent) {
+        viewModel.uiEvent.collectLatest { event ->
+            when (event) {
+                is UiEvent.Navigate -> {
+                    navController.navigate(event.destination.route) {
+                        popUpTo(event.destination.route) { inclusive = true }
+                    }
+                }
+            }
+        }
+    }
+    ErrorText(errorMessage = uiState.errorMessage)
+}
+package com.openparty.app.features.startup.feature_splash.presentation
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.openparty.app.core.shared.domain.DomainResult
+import com.openparty.app.core.shared.domain.error.AppErrorMapper
+import com.openparty.app.core.shared.presentation.UiEvent
+import com.openparty.app.core.shared.presentation.UiState
+import com.openparty.app.features.startup.feature_authentication.domain.usecase.DetermineAuthStatesUseCase
+import com.openparty.app.features.startup.feature_authentication.presentation.AuthFlowNavigationMapper
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
+import javax.inject.Inject
+
+@HiltViewModel
+class SplashViewModel @Inject constructor(
+    private val determineAuthStatesUseCase: DetermineAuthStatesUseCase,
+    private val authFlowNavigationMapper: AuthFlowNavigationMapper
+) : ViewModel() {
+
+    private val _uiState = MutableStateFlow(UiState())
+    val uiState: StateFlow<UiState> = _uiState
+
+    private val _uiEvent = MutableSharedFlow<UiEvent>()
+    val uiEvent: SharedFlow<UiEvent> = _uiEvent
+
+    init {
+        viewModelScope.launch {
+            navigateToNextAuthScreen()
+        }
+    }
+
+    private suspend fun navigateToNextAuthScreen() {
+        _uiState.value = _uiState.value.copy(isLoading = true)
+        when (val authStatesResult = determineAuthStatesUseCase()) {
+            is DomainResult.Success -> {
+                val destination = authFlowNavigationMapper.determineDestination(authStatesResult.data)
+                _uiState.value = _uiState.value.copy(isLoading = false, errorMessage = null)
+                _uiEvent.emit(UiEvent.Navigate(destination))
+            }
+            is DomainResult.Failure -> {
+                val errorMessage = AppErrorMapper.getUserFriendlyMessage(authStatesResult.error)
+                _uiState.value = _uiState.value.copy(isLoading = false, errorMessage = errorMessage)
+            }
+        }
+    }
+}
+package com.openparty.app
+
+import android.app.Application
+import com.google.firebase.FirebaseApp
+import com.google.firebase.ktx.Firebase
+import com.google.firebase.firestore.ktx.firestore
+import dagger.hilt.android.HiltAndroidApp
+import timber.log.Timber
+
+@HiltAndroidApp
+class OpenPartyApp : Application() {
+    override fun onCreate() {
+        super.onCreate()
+
+        if (BuildConfig.DEBUG) {
+            Timber.plant(Timber.DebugTree())
+        }
+
+        FirebaseApp.initializeApp(this)
+        val db = Firebase.firestore
+    }
+}
+package com.openparty.app.navigation
+
+import androidx.compose.runtime.Composable
+import androidx.navigation.NavHostController
+import androidx.navigation.NavType
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.navArgument
+import com.openparty.app.features.engagement.comments.feature_add_comment.presentation.AddCommentScreen
+import com.openparty.app.features.newsfeed.council_meetings.feature_council_meetings_article.presentation.CouncilMeetingArticleScreen
+import com.openparty.app.features.newsfeed.council_meetings.feature_council_meetings_preview.presentation.CouncilMeetingsPreviewScreen
+import com.openparty.app.features.newsfeed.discussions.feature_add_discussion.presentation.AddDiscussionScreen
+import com.openparty.app.features.newsfeed.discussions.feature_discussions_article.presentation.DiscussionArticleScreen
+import com.openparty.app.features.newsfeed.discussions.feature_discussions_preview.presentation.DiscussionsPreviewScreen
+import com.openparty.app.features.startup.account.feature_login.presentation.LoginScreen
+import com.openparty.app.features.startup.account.feature_register.presentation.RegisterScreen
+import com.openparty.app.features.startup.feature_screen_name_generation.presentation.ScreenNameGenerationScreen
+import com.openparty.app.features.startup.feature_splash.presentation.SplashScreen
+import com.openparty.app.features.startup.verification.feature_email_verification.presentation.EmailVerificationScreen
+import com.openparty.app.features.startup.verification.feature_location_verification.presentation.LocationVerificationScreen
+import com.openparty.app.features.startup.verification.feature_manual_verification.presentation.ManualVerificationScreen
+
+@Composable
+fun AppNavigation(navController: NavHostController) {
+    NavHost(navController = navController, startDestination = NavDestinations.Splash.route) {
+        composable(NavDestinations.Splash.route) { SplashScreen(navController = navController) }
+        composable(NavDestinations.Login.route) { LoginScreen(navController = navController) }
+        composable(NavDestinations.Register.route) { RegisterScreen(navController = navController) }
+        composable(NavDestinations.EmailVerification.route) { EmailVerificationScreen(navController = navController) }
+        composable(NavDestinations.LocationVerification.route) { LocationVerificationScreen(navController = navController) }
+        composable(NavDestinations.ScreenNameGeneration.route) { ScreenNameGenerationScreen(navController = navController) }
+        composable(NavDestinations.ManualVerification.route) { ManualVerificationScreen() }
+        composable(NavDestinations.DiscussionsPreview.route) { DiscussionsPreviewScreen(navController = navController) }
+        composable(
+            route = "discussion_article/{discussionId}",
+            arguments = listOf(navArgument("discussionId") { type = NavType.StringType })
+        ) { DiscussionArticleScreen(navController = navController) }
+        composable(NavDestinations.CouncilMeetingsPreview.route) { CouncilMeetingsPreviewScreen(navController = navController) }
+        composable(
+            route = "council_meetings_article/{councilMeetingId}",
+            arguments = listOf(navArgument("councilMeetingId") { type = NavType.StringType })
+        ) { CouncilMeetingArticleScreen(navController = navController) }
+        composable(
+            route = "add_comment_screen?discussionId={discussionId}&titleText={titleText}",
+            arguments = listOf(
+                navArgument("discussionId") { type = NavType.StringType; defaultValue = "" },
+                navArgument("titleText") { type = NavType.StringType; defaultValue = "" }
+            )
+        ) { AddCommentScreen(navController = navController) }
+        composable(NavDestinations.AddDiscussion.route) { AddDiscussionScreen(navController = navController) }
+    }
+}
+package com.openparty.app.main
+
+import android.os.Bundle
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.navigation.compose.rememberNavController
+import com.openparty.app.navigation.AppNavigation
+import com.openparty.app.ui.theme.OpenPartyTheme
+import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
+
+@AndroidEntryPoint
+class MainActivity : ComponentActivity() {
+
+    @Inject
+    lateinit var mainViewModel: MainViewModel
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContent {
+            OpenPartyTheme {
+                Surface(color = MaterialTheme.colorScheme.background) {
+                    val navController = rememberNavController()
+                    AppNavigation(navController = navController)
+                }
+            }
+        }
+        mainViewModel.trackAppOpenedAndIdentifyUser()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        mainViewModel.trackAppOpenedAndIdentifyUser()
+    }
+}
+package com.openparty.app.main
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.openparty.app.core.analytics.domain.usecase.TrackAppOpenedUseCase
+import com.openparty.app.core.analytics.domain.usecase.IdentifyUserUseCase
+import com.openparty.app.core.shared.domain.DomainResult
+import com.openparty.app.features.startup.feature_authentication.domain.usecase.GetCurrentUserIdUseCase
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.launch
+import timber.log.Timber
+import javax.inject.Inject
+
+@HiltViewModel
+class MainViewModel @Inject constructor(
+    private val trackAppOpenedUseCase: TrackAppOpenedUseCase,
+    private val identifyUserUseCase: IdentifyUserUseCase,
+    private val getCurrentUserIdUseCase: GetCurrentUserIdUseCase
+) : ViewModel() {
+
+    fun trackAppOpenedAndIdentifyUser() {
+        viewModelScope.launch {
+            when (val userIdResult = getCurrentUserIdUseCase()) {
+                is DomainResult.Success -> {
+                    val userId = userIdResult.data
+                    handleIdentifyUser(userId)
+                    handleTrackAppOpened(userId)
+                }
+                is DomainResult.Failure -> {
+                    handleTrackAppOpened(null)
+                }
+            }
+        }
+    }
+
+    private suspend fun handleIdentifyUser(userId: String) {
+        when (val identifyResult = identifyUserUseCase(userId)) {
+            is DomainResult.Success -> Timber.i("User successfully identified: $userId")
+            is DomainResult.Failure -> Timber.w("Failed to identify user: $userId")
+        }
+    }
+
+    private suspend fun handleTrackAppOpened(userId: String?) {
+        when (val trackResult = trackAppOpenedUseCase(userId)) {
+            is DomainResult.Success -> Timber.i("App Opened event tracked for userId: $userId")
+            is DomainResult.Failure -> Timber.w("Failed to track App Opened event for userId: $userId")
+        }
+    }
+}
+
+package com.openparty.app.main.di
+
+import com.openparty.app.core.analytics.domain.usecase.TrackAppOpenedUseCase
+import com.openparty.app.core.analytics.domain.usecase.IdentifyUserUseCase
+import com.openparty.app.features.startup.feature_authentication.domain.usecase.GetCurrentUserIdUseCase
+import com.openparty.app.main.MainViewModel
+import dagger.Module
+import dagger.Provides
+import dagger.hilt.InstallIn
+import dagger.hilt.components.SingletonComponent
+import javax.inject.Singleton
+
+@Module
+@InstallIn(SingletonComponent::class)
+object MainModule {
+
+    @Provides
+    @Singleton
+    fun provideMainViewModel(
+        trackAppOpenedUseCase: TrackAppOpenedUseCase,
+        identifyUserUseCase: IdentifyUserUseCase,
+        getCurrentUserIdUseCase: GetCurrentUserIdUseCase
+    ): MainViewModel {
+        return MainViewModel(
+            trackAppOpenedUseCase = trackAppOpenedUseCase,
+            identifyUserUseCase = identifyUserUseCase,
+            getCurrentUserIdUseCase = getCurrentUserIdUseCase
+        )
+    }
+}
+package com.openparty.app.navigation
+
+sealed class NavDestinations(val route: String) {
+    object Loading : NavDestinations("loading")
+    object Splash : NavDestinations("splash")
+    object Login : NavDestinations("login")
+    object Register : NavDestinations("register")
+    object EmailVerification : NavDestinations("email_verification")
+    object LocationVerification : NavDestinations("location_verification")
+    object ScreenNameGeneration : NavDestinations("screen_name_generation")
+    object ManualVerification : NavDestinations("manual_verification")
+    object DiscussionsPreview : NavDestinations("discussions_preview")
+    data class DiscussionsArticle(val discussionId: String) : NavDestinations("discussion_article/$discussionId")
+    object CouncilMeetingsPreview : NavDestinations("council_meetings_preview")
+    data class CouncilMeetingsArticle(val councilMeetingId: String) : NavDestinations("council_meetings_article/$councilMeetingId")
+    object AddDiscussion : NavDestinations("add_discussion")
+    data class AddComment(
+        val discussionId: String,
+        val titleText: String
+    ) : NavDestinations("add_comment_screen?discussionId=$discussionId&titleText=$titleText")
+    object Back : NavDestinations("back")
+}
+
+------------
+
+I have the above kotlin code. it was written for a native kotlin app, 
+
+however i want to change this native kotlin app so that it can be used on ios - i will do this using kotlin multiplatform 
+
+i have created an empty kotlin multiplatform project, the structure of which is as follows: 
+
+OpenParty/
+├── build.gradle.kts
+├── gradle/
+│   ├── libs.versions.toml
+│   └── wrapper/
+│       ├── gradle-wrapper.jar
+│       └── gradle-wrapper.properties
+├── gradle.properties
+├── gradlew
+├── gradlew.bat
+├── composeApp/
+│   ├── build.gradle.kts
+│   └── src/
+│       ├── androidMain/
+│       │   ├── AndroidManifest.xml
+│       │   └── kotlin/
+│       │       └── com/
+│       │           └── openparty/
+│       │               └── app/
+│       │                   └── [Placeholder]
+│       ├── commonMain/
+│       │   └── kotlin/
+│       │       └── com/
+│       │           └── openparty/
+│       │               └── app/
+│       │                   └── [Placeholder]
+│       └── iosMain/
+│           └── kotlin/
+│               └── com/
+│                   └── openparty/
+│                       └── app/
+│                           └── [Placeholder]
+└── iosApp/
+    ├── configuration/
+    ├── iosApp/
+    │   ├── Assets.xcassets/
+    │   ├── ContentView.swift
+    │   ├── Info.plist
+    │   ├── iOSApp.swift
+    │   ├── iosApp.xcodeproj/
+    │   └── Preview Content/
+    └── iosApp.xcodeproj/
+
+------
+
+show me how to take my native kotlin code and move it to the empty kotlin multiplatform project 
+
+To do this, you might have to change some libraries, which is fine. 
+
+For any libraries you had to change, explain why and what they were changed to 
+
+Keep the viewmodel, in newer versions of kotlin multiplatform you are able to keep the viewmodel classes which you weren't able to do before
+
+Don't use compose multiplatform, instead implement the UI natively on both 
+
+Don't use firebase multiplatform, instead implement firebase natively on both 
+
+Use Compose Multiplatform Navigation and use it in the common folder
+
+Right now i'm using dagger hilt for dependency injection. Change this so that I use koin dependency injection instead
+
+
+
+
+
+tell me how to take my native kotlin code and make it work for multiplatform, will i have to change some libraries? If so, which? 
+
+to do this, you will have to figure out which files are common files between android and ios, and which are android specific 
+
+do this, and give me an output package structure which shows where all the files should go 
+
+also tell me what changes i will have to make to allow my code to be 
