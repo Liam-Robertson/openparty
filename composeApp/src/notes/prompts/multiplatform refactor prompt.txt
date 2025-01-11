@@ -1,86 +1,101 @@
-package com.openparty.app.features.startup.feature_splash.presentation
+root level build.gradle.kts: 
 
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.navigation.NavHostController
-import com.openparty.app.core.shared.presentation.ErrorText
-import com.openparty.app.core.shared.presentation.UiEvent
-import kotlinx.coroutines.flow.collectLatest
-
-@Composable
-fun SplashScreen(
-    navController: NavHostController,
-    viewModel: SplashViewModel = hiltViewModel()
-) {
-    val uiState by viewModel.uiState.collectAsState()
-
-    LaunchedEffect(viewModel.uiEvent) {
-        viewModel.uiEvent.collectLatest { event ->
-            when (event) {
-                is UiEvent.Navigate -> {
-                    navController.navigate(event.destination.route) {
-                        popUpTo(event.destination.route) { inclusive = true }
-                    }
-                }
-            }
-        }
-    }
-    ErrorText(errorMessage = uiState.errorMessage)
+plugins {
+    // this is necessary to avoid the plugins to be loaded multiple times
+    // in each subproject's classloader
+    alias(libs.plugins.androidApplication) apply false
+    alias(libs.plugins.androidLibrary) apply false
+    alias(libs.plugins.composeMultiplatform) apply false
+    alias(libs.plugins.composeCompiler) apply false
+    alias(libs.plugins.kotlinMultiplatform) apply false
 }
-package com.openparty.app.features.startup.feature_splash.presentation
 
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
-import com.openparty.app.core.shared.domain.DomainResult
-import com.openparty.app.core.shared.domain.error.AppErrorMapper
-import com.openparty.app.core.shared.presentation.UiEvent
-import com.openparty.app.core.shared.presentation.UiState
-import com.openparty.app.features.startup.feature_authentication.domain.usecase.DetermineAuthStatesUseCase
-import com.openparty.app.features.startup.feature_authentication.presentation.AuthFlowNavigationMapper
-import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharedFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.launch
-import javax.inject.Inject
+------------
 
-@HiltViewModel
-class SplashViewModel @Inject constructor(
-    private val determineAuthStatesUseCase: DetermineAuthStatesUseCase,
-    private val authFlowNavigationMapper: AuthFlowNavigationMapper
-) : ViewModel() {
+app level build.gradle.kts: 
 
-    private val _uiState = MutableStateFlow(UiState())
-    val uiState: StateFlow<UiState> = _uiState
+import org.jetbrains.compose.desktop.application.dsl.TargetFormat
+import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
-    private val _uiEvent = MutableSharedFlow<UiEvent>()
-    val uiEvent: SharedFlow<UiEvent> = _uiEvent
+plugins {
+    alias(libs.plugins.kotlinMultiplatform)
+    alias(libs.plugins.androidApplication)
+    alias(libs.plugins.composeMultiplatform)
+    alias(libs.plugins.composeCompiler)
+}
 
-    init {
-        viewModelScope.launch {
-            navigateToNextAuthScreen()
+kotlin {
+    androidTarget {
+        @OptIn(ExperimentalKotlinGradlePluginApi::class)
+        compilerOptions {
+            jvmTarget.set(JvmTarget.JVM_11)
         }
     }
-
-    private suspend fun navigateToNextAuthScreen() {
-        _uiState.value = _uiState.value.copy(isLoading = true)
-        when (val authStatesResult = determineAuthStatesUseCase()) {
-            is DomainResult.Success -> {
-                val destination = authFlowNavigationMapper.determineDestination(authStatesResult.data)
-                _uiState.value = _uiState.value.copy(isLoading = false, errorMessage = null)
-                _uiEvent.emit(UiEvent.Navigate(destination))
-            }
-            is DomainResult.Failure -> {
-                val errorMessage = AppErrorMapper.getUserFriendlyMessage(authStatesResult.error)
-                _uiState.value = _uiState.value.copy(isLoading = false, errorMessage = errorMessage)
-            }
+    
+    listOf(
+        iosX64(),
+        iosArm64(),
+        iosSimulatorArm64()
+    ).forEach { iosTarget ->
+        iosTarget.binaries.framework {
+            baseName = "ComposeApp"
+            isStatic = true
+        }
+    }
+    
+    sourceSets {
+        androidMain.dependencies {
+            implementation(compose.preview)
+            implementation(libs.androidx.activity.compose)
+        }
+        commonMain.dependencies {
+            implementation(compose.runtime)
+            implementation(compose.foundation)
+            implementation(compose.material)
+            implementation(compose.ui)
+            implementation(compose.components.resources)
+            implementation(compose.components.uiToolingPreview)
+            implementation(libs.androidx.lifecycle.viewmodel)
+            implementation(libs.androidx.lifecycle.runtime.compose)
         }
     }
 }
+
+android {
+    namespace = "com.openparty.app"
+    compileSdk = libs.versions.android.compileSdk.get().toInt()
+
+    defaultConfig {
+        applicationId = "com.openparty.app"
+        minSdk = libs.versions.android.minSdk.get().toInt()
+        targetSdk = libs.versions.android.targetSdk.get().toInt()
+        versionCode = 1
+        versionName = "1.0"
+    }
+    packaging {
+        resources {
+            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+        }
+    }
+    buildTypes {
+        getByName("release") {
+            isMinifyEnabled = false
+        }
+    }
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_11
+        targetCompatibility = JavaVersion.VERSION_11
+    }
+}
+
+dependencies {
+    debugImplementation(compose.uiTooling)
+}
+
+
+------------
+
 package com.openparty.app
 
 import android.app.Application
@@ -103,6 +118,7 @@ class OpenPartyApp : Application() {
         val db = Firebase.firestore
     }
 }
+
 package com.openparty.app.navigation
 
 import androidx.compose.runtime.Composable
@@ -153,6 +169,58 @@ fun AppNavigation(navController: NavHostController) {
             )
         ) { AddCommentScreen(navController = navController) }
         composable(NavDestinations.AddDiscussion.route) { AddDiscussionScreen(navController = navController) }
+    }
+}
+package com.openparty.app.navigation
+
+sealed class NavDestinations(val route: String) {
+    object Loading : NavDestinations("loading")
+    object Splash : NavDestinations("splash")
+    object Login : NavDestinations("login")
+    object Register : NavDestinations("register")
+    object EmailVerification : NavDestinations("email_verification")
+    object LocationVerification : NavDestinations("location_verification")
+    object ScreenNameGeneration : NavDestinations("screen_name_generation")
+    object ManualVerification : NavDestinations("manual_verification")
+    object DiscussionsPreview : NavDestinations("discussions_preview")
+    data class DiscussionsArticle(val discussionId: String) : NavDestinations("discussion_article/$discussionId")
+    object CouncilMeetingsPreview : NavDestinations("council_meetings_preview")
+    data class CouncilMeetingsArticle(val councilMeetingId: String) : NavDestinations("council_meetings_article/$councilMeetingId")
+    object AddDiscussion : NavDestinations("add_discussion")
+    data class AddComment(
+        val discussionId: String,
+        val titleText: String
+    ) : NavDestinations("add_comment_screen?discussionId=$discussionId&titleText=$titleText")
+    object Back : NavDestinations("back")
+}
+package com.openparty.app.main.di
+
+import com.openparty.app.core.analytics.domain.usecase.TrackAppOpenedUseCase
+import com.openparty.app.core.analytics.domain.usecase.IdentifyUserUseCase
+import com.openparty.app.features.startup.feature_authentication.domain.usecase.GetCurrentUserIdUseCase
+import com.openparty.app.main.MainViewModel
+import dagger.Module
+import dagger.Provides
+import dagger.hilt.InstallIn
+import dagger.hilt.components.SingletonComponent
+import javax.inject.Singleton
+
+@Module
+@InstallIn(SingletonComponent::class)
+object MainModule {
+
+    @Provides
+    @Singleton
+    fun provideMainViewModel(
+        trackAppOpenedUseCase: TrackAppOpenedUseCase,
+        identifyUserUseCase: IdentifyUserUseCase,
+        getCurrentUserIdUseCase: GetCurrentUserIdUseCase
+    ): MainViewModel {
+        return MainViewModel(
+            trackAppOpenedUseCase = trackAppOpenedUseCase,
+            identifyUserUseCase = identifyUserUseCase,
+            getCurrentUserIdUseCase = getCurrentUserIdUseCase
+        )
     }
 }
 package com.openparty.app.main
@@ -241,13 +309,96 @@ class MainViewModel @Inject constructor(
         }
     }
 }
+package com.openparty.app.di
 
-package com.openparty.app.main.di
+import android.content.Context
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
+import com.openparty.app.core.storage.EncryptedSharedPreferencesSecureStorage
+import com.openparty.app.core.storage.SecureStorage
+import dagger.Module
+import dagger.Provides
+import dagger.hilt.InstallIn
+import dagger.hilt.android.qualifiers.ApplicationContext
+import dagger.hilt.components.SingletonComponent
+import javax.inject.Singleton
 
-import com.openparty.app.core.analytics.domain.usecase.TrackAppOpenedUseCase
-import com.openparty.app.core.analytics.domain.usecase.IdentifyUserUseCase
-import com.openparty.app.features.startup.feature_authentication.domain.usecase.GetCurrentUserIdUseCase
-import com.openparty.app.main.MainViewModel
+@Module
+@InstallIn(SingletonComponent::class)
+object AppModule {
+    @Provides
+    @Singleton
+    fun provideFirebaseAuth(): FirebaseAuth {
+        return FirebaseAuth.getInstance()
+    }
+
+    @Provides
+    @Singleton
+    fun provideFirebaseFirestore(): FirebaseFirestore {
+        return FirebaseFirestore.getInstance()
+    }
+
+    @Provides
+    @Singleton
+    fun provideSecureStorage(
+        @ApplicationContext context: Context
+    ): SecureStorage {
+        return EncryptedSharedPreferencesSecureStorage(context)
+    }
+}
+package com.openparty.app.di
+
+import com.openparty.app.core.storage.SecureStorage
+import com.openparty.app.core.network.TokenInterceptor
+import com.openparty.app.features.startup.feature_authentication.domain.usecase.RefreshAccessTokenUseCase
+import dagger.Module
+import dagger.Provides
+import dagger.hilt.InstallIn
+import dagger.hilt.components.SingletonComponent
+import okhttp3.OkHttpClient
+import retrofit2.Retrofit
+import retrofit2.converter.gson.GsonConverterFactory
+import javax.inject.Singleton
+
+@Module
+@InstallIn(SingletonComponent::class)
+object NetworkModule {
+    @Provides
+    @Singleton
+    fun provideTokenInterceptor(
+        secureStorage: SecureStorage,
+        refreshAccessTokenUseCase: RefreshAccessTokenUseCase
+    ): TokenInterceptor {
+        return TokenInterceptor(secureStorage, refreshAccessTokenUseCase)
+    }
+
+    @Provides
+    @Singleton
+    fun provideOkHttpClient(
+        tokenInterceptor: TokenInterceptor
+    ): OkHttpClient {
+        return OkHttpClient.Builder()
+            .addInterceptor(tokenInterceptor)
+            .build()
+    }
+
+    @Provides
+    @Singleton
+    fun provideRetrofit(
+        client: OkHttpClient
+    ): Retrofit {
+        return Retrofit.Builder()
+            .baseUrl("https://example.com/")
+            .addConverterFactory(GsonConverterFactory.create())
+            .client(client)
+            .build()
+    }
+}
+package com.openparty.app.features.startup.account.feature_login.di
+
+import com.openparty.app.features.startup.account.feature_login.domain.usecase.PerformLoginUseCase
+import com.openparty.app.features.startup.account.shared.domain.usecase.ValidateCredentialsUseCase
+import com.openparty.app.features.startup.feature_authentication.domain.usecase.SignInUseCase
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -256,52 +407,154 @@ import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
-object MainModule {
+object LoginModule {
 
     @Provides
     @Singleton
-    fun provideMainViewModel(
-        trackAppOpenedUseCase: TrackAppOpenedUseCase,
-        identifyUserUseCase: IdentifyUserUseCase,
-        getCurrentUserIdUseCase: GetCurrentUserIdUseCase
-    ): MainViewModel {
-        return MainViewModel(
-            trackAppOpenedUseCase = trackAppOpenedUseCase,
-            identifyUserUseCase = identifyUserUseCase,
-            getCurrentUserIdUseCase = getCurrentUserIdUseCase
-        )
+    fun providePerformLoginUseCase(
+        validateCredentialsUseCase: ValidateCredentialsUseCase,
+        signInUseCase: SignInUseCase
+    ): PerformLoginUseCase {
+        return PerformLoginUseCase(validateCredentialsUseCase, signInUseCase)
     }
 }
-package com.openparty.app.navigation
 
-sealed class NavDestinations(val route: String) {
-    object Loading : NavDestinations("loading")
-    object Splash : NavDestinations("splash")
-    object Login : NavDestinations("login")
-    object Register : NavDestinations("register")
-    object EmailVerification : NavDestinations("email_verification")
-    object LocationVerification : NavDestinations("location_verification")
-    object ScreenNameGeneration : NavDestinations("screen_name_generation")
-    object ManualVerification : NavDestinations("manual_verification")
-    object DiscussionsPreview : NavDestinations("discussions_preview")
-    data class DiscussionsArticle(val discussionId: String) : NavDestinations("discussion_article/$discussionId")
-    object CouncilMeetingsPreview : NavDestinations("council_meetings_preview")
-    data class CouncilMeetingsArticle(val councilMeetingId: String) : NavDestinations("council_meetings_article/$councilMeetingId")
-    object AddDiscussion : NavDestinations("add_discussion")
-    data class AddComment(
-        val discussionId: String,
-        val titleText: String
-    ) : NavDestinations("add_comment_screen?discussionId=$discussionId&titleText=$titleText")
-    object Back : NavDestinations("back")
+package com.openparty.app.features.startup.account.feature_login.domain.usecase
+
+import com.openparty.app.core.shared.domain.DomainResult
+import com.openparty.app.features.startup.account.shared.domain.usecase.ValidateCredentialsUseCase
+import com.openparty.app.features.startup.feature_authentication.domain.usecase.SignInUseCase
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import timber.log.Timber
+import javax.inject.Inject
+
+class PerformLoginUseCase @Inject constructor(
+    private val validateCredentialsUseCase: ValidateCredentialsUseCase,
+    private val signInUseCase: SignInUseCase
+) {
+    suspend operator fun invoke(email: String, password: String): DomainResult<Unit> {
+        Timber.i("PerformLoginUseCase invoked with email: $email")
+
+        return withContext(Dispatchers.IO) {
+            Timber.d("Validating credentials")
+            when (val validationResult = validateCredentialsUseCase(email, password)) {
+                is DomainResult.Failure -> {
+                    Timber.e("Validation failed: ${validationResult.error}")
+                    return@withContext validationResult
+                }
+                is DomainResult.Success -> {
+                    Timber.i("Validation successful for email: $email")
+                }
+            }
+
+            Timber.d("Attempting to sign in")
+            when (val signInResult = signInUseCase(email, password)) {
+                is DomainResult.Success -> {
+                    Timber.i("Sign in successful for email: $email")
+                    DomainResult.Success(Unit)
+                }
+                is DomainResult.Failure -> {
+                    Timber.e("Sign in failed: ${signInResult.error}")
+                    signInResult
+                }
+            }
+        }
+    }
+}
+package com.openparty.app.features.startup.account.feature_login.presentation
+
+import androidx.compose.runtime.Composable
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavHostController
+import com.openparty.app.features.startup.account.shared.presentation.AccountScreen
+
+@Composable
+fun LoginScreen(
+    navController: NavHostController,
+    viewModel: LoginViewModel = hiltViewModel()
+) {
+    AccountScreen(
+        viewModel = viewModel,
+        title = "Login",
+        actionText = "Login",
+        footerText = "Don't have an account? Register",
+        onActionClick = { viewModel.onLoginButtonClick() },
+        onFooterClick = { viewModel.onTextFooterClick() },
+        uiEvent = viewModel.uiEvent,
+        navController = navController
+    )
+}
+package com.openparty.app.features.startup.account.feature_login.presentation
+
+import androidx.lifecycle.viewModelScope
+import com.openparty.app.core.shared.domain.DomainResult
+import com.openparty.app.core.shared.domain.error.AppErrorMapper
+import com.openparty.app.core.shared.presentation.UiEvent
+import com.openparty.app.features.startup.account.feature_login.domain.usecase.PerformLoginUseCase
+import com.openparty.app.features.startup.account.shared.presentation.AccountViewModel
+import com.openparty.app.features.startup.account.shared.presentation.model.AccountUiStateUpdate
+import com.openparty.app.features.startup.feature_authentication.domain.usecase.DetermineAuthStatesUseCase
+import com.openparty.app.features.startup.feature_authentication.presentation.AuthFlowNavigationMapper
+import com.openparty.app.navigation.NavDestinations
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.launch
+import javax.inject.Inject
+
+@HiltViewModel
+class LoginViewModel @Inject constructor(
+    private val performLoginUseCase: PerformLoginUseCase,
+    private val determineAuthStatesUseCase: DetermineAuthStatesUseCase,
+    private val authFlowNavigationMapper: AuthFlowNavigationMapper
+) : AccountViewModel() {
+
+    private val _uiEvent = MutableSharedFlow<UiEvent>()
+    val uiEvent: SharedFlow<UiEvent> = _uiEvent
+
+    fun onLoginButtonClick() {
+        viewModelScope.launch {
+            updateState(AccountUiStateUpdate.UpdateLoading(true))
+            val currentState = accountUiState.value
+
+            when (val loginResult = performLoginUseCase(currentState.email, currentState.password)) {
+                is DomainResult.Success -> {
+                    when (val authStatesResult = determineAuthStatesUseCase()) {
+                        is DomainResult.Success -> {
+                            val destination = authFlowNavigationMapper.determineDestination(authStatesResult.data)
+                            _uiEvent.emit(UiEvent.Navigate(destination))
+                        }
+                        is DomainResult.Failure -> {
+                            val errorMessage = AppErrorMapper.getUserFriendlyMessage(authStatesResult.error)
+                            updateState(AccountUiStateUpdate.UpdateError(errorMessage))
+                        }
+                    }
+                }
+                is DomainResult.Failure -> {
+                    val errorMessage = AppErrorMapper.getUserFriendlyMessage(loginResult.error)
+                    updateState(AccountUiStateUpdate.UpdateError(errorMessage))
+                }
+            }
+            updateState(AccountUiStateUpdate.UpdateLoading(false))
+        }
+    }
+
+    fun onTextFooterClick() {
+        viewModelScope.launch {
+            _uiEvent.emit(UiEvent.Navigate(NavDestinations.Register))
+        }
+    }
+
+    fun clearError() {
+        updateState(AccountUiStateUpdate.UpdateError(null))
+    }
 }
 
-------------
 
-I have the above kotlin code. it was written for a native kotlin app, 
+-----------------
 
-however i want to change this native kotlin app so that it can be used on ios - i will do this using kotlin multiplatform 
-
-i have created an empty kotlin multiplatform project, the structure of which is as follows: 
+Here is the rough package structure: 
 
 OpenParty/
 ├── build.gradle.kts
@@ -346,32 +599,30 @@ OpenParty/
     │   └── Preview Content/
     └── iosApp.xcodeproj/
 
-------
+---------
 
-show me how to take my native kotlin code and move it to the empty kotlin multiplatform project 
+Notes: 
+- When you give code, give the entire file, don't abbreviate anything
+- Don't leave comments in the code, except a comment at a top of the file stating the file path
+    - e.g. //File: composeApp/src/androidMain/kotlin/com/openparty/app/main/MainViewModel.kt
+- Use the cleanest, most robust, scalable architecture you can 
+- For every gradle dependency, give it in this format: implementation("org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-compose:2.8.2")
+    - don't give it in the libs.version.toml format. i.e. don't do this - implementation(compose.components.uiToolingPreview)
+    - The exception to this is the dependencies that are already in my gradle files, leave them in the original format
+- For view models, use the compose multiplatform view model i.e. this dependency - implementation("org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-compose:2.8.2")
+    - Don't create view models, that don't inherit from anything, instead use the above dependency and this import - import androidx.lifecycle.viewmodel.compose.viewModel
 
-To do this, you might have to change some libraries, which is fine. 
+---------
 
-For any libraries you had to change, explain why and what they were changed to 
+- The above code is native kotlin android code 
+- I want to change this, so that it instead uses kotlin multiplatform with compose multiplatform
+    - i.e. i want you to change this from a native kotlin app to a kotlin multiplatform with compose multiplatform app 
+- I've given you the package structure for the kotlin multiplatform app above 
 
-Keep the viewmodel, in newer versions of kotlin multiplatform you are able to keep the viewmodel classes which you weren't able to do before
+In order to do this you will need to make some changes: 
+- Right now, dependency injection is done using dagger hilt, I'll need you to change this to koin dependency injection 
+- I'm also using firebase. Put the firebase dependencies in the commonMain gradle so that I can use firebase shared code across platforms 
+- I want to use compose multiplatform navigation, so all navigation should be in commonMain and should be shared across platforms 
+    - implementation("org.jetbrains.compose.navigation:navigation:1.0.0")
 
-Don't use compose multiplatform, instead implement the UI natively on both 
-
-Don't use firebase multiplatform, instead implement firebase natively on both 
-
-Use Compose Multiplatform Navigation and use it in the common folder
-
-Right now i'm using dagger hilt for dependency injection. Change this so that I use koin dependency injection instead
-
-
-
-
-
-tell me how to take my native kotlin code and make it work for multiplatform, will i have to change some libraries? If so, which? 
-
-to do this, you will have to figure out which files are common files between android and ios, and which are android specific 
-
-do this, and give me an output package structure which shows where all the files should go 
-
-also tell me what changes i will have to make to allow my code to be 
+Rewrite the files to be mulitplatform and give me  all the files back 
