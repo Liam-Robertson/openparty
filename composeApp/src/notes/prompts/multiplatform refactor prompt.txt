@@ -624,5 +624,7 @@ In order to do this you will need to make some changes:
 - I'm also using firebase. Put the firebase dependencies in the commonMain gradle so that I can use firebase shared code across platforms 
 - I want to use compose multiplatform navigation, so all navigation should be in commonMain and should be shared across platforms 
     - implementation("org.jetbrains.compose.navigation:navigation:1.0.0")
+- Use this for navigation - import androidx.navigation.NavController
+    - Don't use this - import androidx.navigation.NavController
 
 Rewrite the files to be mulitplatform and give me  all the files back 

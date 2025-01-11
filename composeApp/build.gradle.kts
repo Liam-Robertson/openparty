@@ -30,13 +30,10 @@ kotlin {
     
     sourceSets {
         androidMain.dependencies {
-            implementation(platform("com.google.firebase:firebase-bom:31.4.0"))
             implementation(compose.preview)
             implementation(libs.androidx.activity.compose)
-            implementation("io.insert-koin:koin-android:3.3.3")
-            implementation("com.google.firebase:firebase-analytics-ktx")
-            implementation("com.google.firebase:firebase-auth-ktx")
-            implementation("com.google.firebase:firebase-firestore-ktx")
+            implementation("io.insert-koin:koin-android:3.2.0")
+            implementation("io.insert-koin:koin-android:3.2.0")
         }
         commonMain.dependencies {
             implementation(compose.runtime)
@@ -47,12 +44,14 @@ kotlin {
             implementation(compose.components.uiToolingPreview)
             implementation(libs.androidx.lifecycle.viewmodel)
             implementation(libs.androidx.lifecycle.runtime.compose)
-            implementation("io.insert-koin:koin-core:3.3.3")
-            implementation("com.arkivanov.decompose:decompose:3.2.2")
-            implementation("com.arkivanov.essenty:lifecycle:1.0.0")
-            implementation("androidx.lifecycle:lifecycle-viewmodel:2.8.0-alpha03")
-            implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
-            implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.1")
+//            implementation("androidx.compose.material3:material3:1.3.1")
+            implementation("io.insert-koin:koin-core:3.4.0")
+            implementation("org.jetbrains.androidx.navigation:navigation-compose:2.8.0-alpha10")
+            implementation("org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-compose:2.8.2")
+            implementation("dev.gitlive:firebase-auth:1.6.2")
+            implementation("dev.gitlive:firebase-firestore:1.6.2")
+            implementation(compose.material3)
+            implementation("com.mixpanel.android:mixpanel-android:5.9.1")
         }
     }
 }
