@@ -11,7 +11,6 @@ import com.openparty.app.features.shared.feature_permissions.domain.PermissionMa
 class PermissionManagerImpl(
     private val context: Context
 ) : PermissionManager {
-
     override fun hasPermission(permission: String): DomainResult<Boolean> {
         return try {
             val isGranted = ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED

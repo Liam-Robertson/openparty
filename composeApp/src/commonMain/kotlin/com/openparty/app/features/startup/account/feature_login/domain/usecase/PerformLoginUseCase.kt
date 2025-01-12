@@ -4,6 +4,7 @@ import com.openparty.app.core.shared.domain.DomainResult
 import com.openparty.app.features.startup.account.shared.domain.usecase.ValidateCredentialsUseCase
 import com.openparty.app.features.startup.feature_authentication.domain.usecase.SignInUseCase
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.withContext
 
 class PerformLoginUseCase(
