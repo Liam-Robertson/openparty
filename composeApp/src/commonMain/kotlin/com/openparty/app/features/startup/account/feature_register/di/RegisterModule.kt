@@ -1,26 +1,25 @@
 package com.openparty.app.features.startup.account.feature_register.di
 
 import com.openparty.app.features.startup.account.feature_register.domain.usecase.PerformRegisterUseCase
+import com.openparty.app.features.startup.account.feature_register.presentation.RegisterViewModel
 import com.openparty.app.features.startup.account.shared.domain.usecase.ValidateCredentialsUseCase
-import com.openparty.app.features.startup.feature_authentication.domain.usecase.DetermineAuthStatesUseCase
-import com.openparty.app.features.startup.feature_authentication.domain.usecase.RegisterUseCase
-import dagger.Module
-import dagger.Provides
-import dagger.hilt.InstallIn
-import dagger.hilt.components.SingletonComponent
-import javax.inject.Singleton
+import org.koin.core.module.Module
+import org.koin.dsl.module
 
-@Module
-@InstallIn(SingletonComponent::class)
-object RegisterModule {
-
-    @Provides
-    @Singleton
-    fun providePerformRegisterUseCase(
-        validateCredentialsUseCase: ValidateCredentialsUseCase,
-        registerUseCase: RegisterUseCase,
-        determineAuthStatesUseCase: DetermineAuthStatesUseCase
-    ): PerformRegisterUseCase {
-        return PerformRegisterUseCase(validateCredentialsUseCase, registerUseCase, determineAuthStatesUseCase)
+val registerModule: Module = module {
+    single { ValidateCredentialsUseCase() }
+    single {
+        PerformRegisterUseCase(
+            validateCredentialsUseCase = get(),
+            registerUseCase = get(),
+            determineAuthStatesUseCase = get()
+        )
+    }
+    single {
+        RegisterViewModel(
+            performRegisterUseCase = get(),
+            determineAuthStatesUseCase = get(),
+            authFlowNavigationMapper = get()
+        )
     }
 }
