@@ -1,5 +1,4 @@
 //File: composeApp/src/commonMain/kotlin/com/openparty/app/features/startup/feature_authentication/di/AuthenticationKoinModule.kt
-
 package com.openparty.app.features.startup.feature_authentication.di
 
 import com.openparty.app.core.storage.SecureStorage
@@ -21,14 +20,14 @@ val authenticationKoinModule = module {
     }
 
     single<AuthenticationRepository> {
-        AuthenticationRepositoryImpl(get(), get())
+        AuthenticationRepositoryImpl(get(), get<SecureStorage>())
     }
 
     single { ValidateCredentialsUseCase() }
 
     single { SignInUseCase(get()) }
 
-    single { RegisterUseCase(get(), get()) }
+    single { RegisterUseCase(get(), get<UserRepository>()) }
 
     single { SendEmailVerificationUseCase(get()) }
 

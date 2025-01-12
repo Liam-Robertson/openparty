@@ -55,6 +55,7 @@ kotlin {
             implementation("org.jetbrains.compose.material:material-icons-extended:1.7.3")
             implementation("dev.gitlive:firebase-auth:2.1.0")
             implementation("dev.gitlive:firebase-firestore:2.1.0")
+            implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.5.0")
 
 
 //            implementation(libs.androidx.material.icons.core)

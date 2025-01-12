@@ -1,5 +1,4 @@
 //File: composeApp/src/commonMain/kotlin/com/openparty/app/features/startup/feature_authentication/data/AuthenticationRepositoryImpl.kt
-
 package com.openparty.app.features.startup.feature_authentication.data
 
 import com.openparty.app.core.shared.domain.DomainResult
@@ -94,11 +93,10 @@ class AuthenticationRepositoryImpl(
             .map { result ->
                 result.getOrElse {
                     println("Error observing auth state: ${it.message}")
-                    null // Return null in case of an error
+                    null
                 }
             }
     }
-
 
     override suspend fun logout(): DomainResult<Unit> {
         println("Logout invoked")

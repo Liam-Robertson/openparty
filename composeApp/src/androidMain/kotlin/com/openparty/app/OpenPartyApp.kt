@@ -4,7 +4,7 @@ package com.openparty.app
 
 import android.app.Application
 import android.util.Log
-import com.openparty.app.di.appModule
+import com.openparty.app.di.androidModule
 import org.koin.core.context.startKoin
 import org.koin.android.ext.koin.androidContext
 import com.google.firebase.FirebaseApp
@@ -18,7 +18,7 @@ class OpenPartyApp : Application() {
         // Koin
         startKoin {
             androidContext(this@OpenPartyApp)
-            modules(appModule)
+            modules(listOf(androidModule))
         }
 
         // Logs using Android Log (instead of Timber)

@@ -1,4 +1,3 @@
-//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/shared/feature_user/data/mapper/UserMapper.kt
 package com.openparty.app.features.shared.feature_user.data.mapper
 
 import com.openparty.app.features.shared.feature_user.data.model.UserDto

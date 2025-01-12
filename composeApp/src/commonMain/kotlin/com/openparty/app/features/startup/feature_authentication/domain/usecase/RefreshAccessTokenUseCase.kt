@@ -1,32 +1,34 @@
+//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/startup/feature_authentication/domain/usecase/RefreshAccessTokenUseCase.kt
 package com.openparty.app.features.startup.feature_authentication.domain.usecase
 
 import com.openparty.app.core.shared.domain.DomainResult
 import com.openparty.app.core.shared.domain.error.AppError
 import com.openparty.app.features.startup.feature_authentication.domain.repository.AuthenticationRepository
-import timber.log.Timber
-import javax.inject.Inject
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
-class RefreshAccessTokenUseCase @Inject constructor(
+class RefreshAccessTokenUseCase(
     private val authenticationRepository: AuthenticationRepository
 ) {
     suspend operator fun invoke(): DomainResult<String> {
-        Timber.i("RefreshAccessTokenUseCase invoked")
-
-        return try {
-            Timber.d("Attempting to refresh access token")
-            when (val result = authenticationRepository.refreshAccessToken()) {
-                is DomainResult.Success -> {
-                    Timber.i("Access token refreshed successfully: ${result.data}")
-                    result
+        return withContext(Dispatchers.Default) {
+            println("RefreshAccessTokenUseCase invoked")
+            try {
+                println("Attempting to refresh access token")
+                when (val result = authenticationRepository.refreshAccessToken()) {
+                    is DomainResult.Success -> {
+                        println("Access token refreshed successfully: ${result.data}")
+                        result
+                    }
+                    is DomainResult.Failure -> {
+                        println("Failed to refresh access token: ${result.error}")
+                        DomainResult.Failure(result.error)
+                    }
                 }
-                is DomainResult.Failure -> {
-                    Timber.e("Failed to refresh access token: ${result.error}")
-                    DomainResult.Failure(result.error)
-                }
+            } catch (e: Throwable) {
+                println("Unexpected error during access token refresh: ${e.message}")
+                DomainResult.Failure(AppError.Authentication.RefreshToken)
             }
-        } catch (e: Throwable) {
-            Timber.e(e, "Unexpected error during access token refresh")
-            DomainResult.Failure(AppError.Authentication.RefreshToken)
         }
     }
 }

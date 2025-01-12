@@ -1,5 +1,4 @@
 //File: composeApp/src/commonMain/kotlin/com/openparty/app/features/startup/feature_authentication/domain/repository/AuthenticationRepository.kt
-
 package com.openparty.app.features.startup.feature_authentication.domain.repository
 
 import com.openparty.app.core.shared.domain.DomainResult

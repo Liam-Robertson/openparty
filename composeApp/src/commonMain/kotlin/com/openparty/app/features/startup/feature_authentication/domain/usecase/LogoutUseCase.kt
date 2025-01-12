@@ -1,34 +1,35 @@
+//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/startup/feature_authentication/domain/usecase/LogoutUseCase.kt
 package com.openparty.app.features.startup.feature_authentication.domain.usecase
 
 import com.openparty.app.core.shared.domain.DomainResult
 import com.openparty.app.core.shared.domain.error.AppError
 import com.openparty.app.features.startup.feature_authentication.domain.repository.AuthenticationRepository
-import timber.log.Timber
-import javax.inject.Inject
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
-class LogoutUseCase @Inject constructor(
+class LogoutUseCase(
     private val authenticationRepository: AuthenticationRepository
 ) {
     suspend operator fun invoke(): DomainResult<Unit> {
-        Timber.i("LogoutUseCase invoked")
-
-        return try {
-            Timber.d("Attempting to log out user")
-            val result = authenticationRepository.logout()
-
-            when (result) {
-                is DomainResult.Success -> {
-                    Timber.i("User logged out successfully")
-                    DomainResult.Success(Unit)
+        return withContext(Dispatchers.Default) {
+            println("LogoutUseCase invoked")
+            try {
+                println("Attempting to log out user")
+                val result = authenticationRepository.logout()
+                when (result) {
+                    is DomainResult.Success -> {
+                        println("User logged out successfully")
+                        DomainResult.Success(Unit)
+                    }
+                    is DomainResult.Failure -> {
+                        println("Failed to log out user: ${result.error}")
+                        DomainResult.Failure(result.error)
+                    }
                 }
-                is DomainResult.Failure -> {
-                    Timber.e("Failed to log out user: ${result.error}")
-                    DomainResult.Failure(result.error)
-                }
+            } catch (e: Throwable) {
+                println("Unexpected error during logout: ${e.message}")
+                DomainResult.Failure(AppError.Authentication.Logout)
             }
-        } catch (e: Throwable) {
-            Timber.e(e, "Unexpected error during logout")
-            DomainResult.Failure(AppError.Authentication.Logout)
         }
     }
 }
