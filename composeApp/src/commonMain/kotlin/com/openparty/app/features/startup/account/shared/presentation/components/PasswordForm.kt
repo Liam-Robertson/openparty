@@ -1,3 +1,4 @@
+//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/startup/account/shared/presentation/components/PasswordForm.kt
 package com.openparty.app.features.startup.account.shared.presentation.components
 
 import androidx.compose.foundation.layout.fillMaxWidth

@@ -1,14 +1,14 @@
 package com.openparty.app.features.startup.account.feature_login.presentation
 
 import androidx.compose.runtime.Composable
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import com.openparty.app.features.startup.account.shared.presentation.AccountScreen
 
 @Composable
 fun LoginScreen(
     navController: NavHostController,
-    viewModel: LoginViewModel = hiltViewModel()
+    viewModel: LoginViewModel = viewModel()
 ) {
     AccountScreen(
         viewModel = viewModel,

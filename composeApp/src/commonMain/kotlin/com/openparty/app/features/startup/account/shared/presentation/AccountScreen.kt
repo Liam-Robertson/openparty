@@ -1,3 +1,4 @@
+//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/startup/account/shared/presentation/AccountScreen.kt
 package com.openparty.app.features.startup.account.shared.presentation
 
 import androidx.compose.foundation.clickable
@@ -42,7 +43,6 @@ fun AccountScreen(
     navController: NavHostController
 ) {
     val state = viewModel.accountUiState.collectAsState().value
-
     LaunchedEffect(uiEvent) {
         uiEvent?.collectLatest { event ->
             when (event) {
@@ -54,7 +54,6 @@ fun AccountScreen(
             }
         }
     }
-
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.background

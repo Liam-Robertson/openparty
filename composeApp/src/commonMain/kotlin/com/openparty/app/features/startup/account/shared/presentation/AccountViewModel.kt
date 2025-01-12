@@ -1,3 +1,4 @@
+//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/startup/account/shared/presentation/AccountViewModel.kt
 package com.openparty.app.features.startup.account.shared.presentation
 
 import androidx.lifecycle.ViewModel
@@ -6,13 +7,10 @@ import com.openparty.app.features.startup.account.shared.presentation.model.Acco
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import javax.inject.Inject
 
-open class AccountViewModel @Inject constructor() : ViewModel() {
-
+open class AccountViewModel : ViewModel() {
     private val _accountUiState = MutableStateFlow(AccountUiState())
     val accountUiState: StateFlow<AccountUiState> = _accountUiState.asStateFlow()
-
     fun updateState(update: AccountUiStateUpdate) {
         _accountUiState.value = when (update) {
             is AccountUiStateUpdate.UpdateEmail -> _accountUiState.value.copy(email = update.email)

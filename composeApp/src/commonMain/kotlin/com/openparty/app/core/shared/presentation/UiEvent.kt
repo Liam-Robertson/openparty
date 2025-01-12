@@ -2,6 +2,8 @@
 
 package com.openparty.app.core.shared.presentation
 
-sealed class UiEvent {
-    data class Navigate(val route: String) : UiEvent()
+import com.openparty.app.navigation.NavDestinations
+
+abstract class UiEvent {
+    data class Navigate(val destination: NavDestinations) : UiEvent()
 }

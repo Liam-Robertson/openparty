@@ -1,14 +1,14 @@
 package com.openparty.app.features.startup.account.feature_register.presentation
 
 import androidx.compose.runtime.Composable
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import com.openparty.app.features.startup.account.shared.presentation.AccountScreen
 
 @Composable
 fun RegisterScreen(
     navController: NavHostController,
-    viewModel: RegisterViewModel = hiltViewModel()
+    viewModel: RegisterViewModel = viewModel()
 ) {
     AccountScreen(
         viewModel = viewModel,

@@ -1,3 +1,4 @@
+//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/shared/feature_user/domain/model/User.kt
 package com.openparty.app.features.shared.feature_user.domain.model
 
 data class User(
@@ -6,7 +7,7 @@ data class User(
     val accountType: AccountType,
     val title: String?,
     val manuallyVerified: Boolean,
-    val isLocationVerified: Boolean,
+    val isLocationVerified: Boolean
 )
 
 enum class AccountType {

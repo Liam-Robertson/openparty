@@ -1,3 +1,4 @@
+//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/shared/feature_user/domain/model/UpdateUserRequest.kt
 package com.openparty.app.features.shared.feature_user.domain.model
 
 data class UpdateUserRequest(

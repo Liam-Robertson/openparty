@@ -1,121 +1,162 @@
+//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/startup/feature_authentication/data/AuthenticationRepositoryImpl.kt
+
 package com.openparty.app.features.startup.feature_authentication.data
 
-import com.google.firebase.auth.FirebaseUser
-import com.openparty.app.core.storage.SecureStorage
 import com.openparty.app.core.shared.domain.DomainResult
 import com.openparty.app.core.shared.domain.error.AppError
+import com.openparty.app.core.storage.SecureStorage
 import com.openparty.app.features.startup.feature_authentication.data.datasource.AuthDataSource
 import com.openparty.app.features.startup.feature_authentication.domain.repository.AuthenticationRepository
+import dev.gitlive.firebase.auth.FirebaseUser
 import kotlinx.coroutines.flow.Flow
-import timber.log.Timber
-import javax.inject.Inject
-import javax.inject.Singleton
+import kotlinx.coroutines.flow.map
 
-@Singleton
-class AuthenticationRepositoryImpl @Inject constructor(
+class AuthenticationRepositoryImpl(
     private val authDataSource: AuthDataSource,
     private val secureStorage: SecureStorage
 ) : AuthenticationRepository {
 
     override suspend fun login(email: String, password: String): DomainResult<Unit> {
-        Timber.d("Login invoked with email: $email")
+        println("Login invoked with email: $email")
         return try {
             val user = authDataSource.signIn(email, password)
-            Timber.d("Login successful for email: $email, userId: ${user.uid}")
-            val token = authDataSource.getToken(user)
-            secureStorage.saveToken(token)
-            Timber.d("Token saved successfully for userId: ${user.uid}")
+            println("Login successful for email: $email, userId: ${user.uid}")
+            val tokenResult = authDataSource.getToken(forceRefresh = true)
+            tokenResult.onSuccess { token ->
+                if (token != null) {
+                    secureStorage.saveToken(token)
+                    println("Token saved successfully for userId: ${user.uid}")
+                } else {
+                    println("Token is null for userId: ${user.uid}")
+                    throw AppError.Authentication.General
+                }
+            }.onFailure { error ->
+                println("Failed to fetch token for userId: ${user.uid}, exception: ${error.message}")
+                throw AppError.Authentication.General
+            }
             DomainResult.Success(Unit)
-        } catch (e: Exception) {
-            Timber.e(e, "Login failed for email: $email")
+        } catch (e: AppError.Authentication) {
+            println("Login failed for email: $email, exception: ${e.message}")
+            DomainResult.Failure(e)
+        } catch (e: Throwable) {
+            println("Login failed for email: $email, exception: ${e.message}")
             DomainResult.Failure(AppError.Authentication.General)
         }
     }
 
     override suspend fun register(email: String, password: String): DomainResult<String> {
-        Timber.d("Register invoked with email: $email")
+        println("Register invoked with email: $email")
         return try {
             val user = authDataSource.register(email, password)
-            Timber.d("Registration successful for email: $email, userId: ${user.uid}")
-            val token = authDataSource.getToken(user)
-            secureStorage.saveToken(token)
-            Timber.d("Token saved successfully for userId: ${user.uid}")
+            println("Registration successful for email: $email, userId: ${user.uid}")
+            val tokenResult = authDataSource.getToken(forceRefresh = true)
+            tokenResult.onSuccess { token ->
+                if (token != null) {
+                    secureStorage.saveToken(token)
+                    println("Token saved successfully for userId: ${user.uid}")
+                } else {
+                    println("Token is null for userId: ${user.uid}")
+                    throw AppError.Authentication.General
+                }
+            }.onFailure { error ->
+                println("Failed to fetch token for userId: ${user.uid}, exception: ${error.message}")
+                throw AppError.Authentication.General
+            }
             DomainResult.Success(user.uid)
         } catch (e: AppError.Authentication.UserAlreadyExists) {
-            Timber.e("Registration failed: User already exists for email: $email")
+            println("Registration failed: User already exists for email: $email")
             DomainResult.Failure(AppError.Authentication.UserAlreadyExists)
-        } catch (e: Exception) {
-            Timber.e(e, "Registration failed for email: $email")
+        } catch (e: Throwable) {
+            println("Registration failed for email: $email, exception: ${e.message}")
             DomainResult.Failure(AppError.Authentication.General)
         }
     }
 
     override suspend fun sendEmailVerification(): DomainResult<Unit> {
-        Timber.d("SendEmailVerification invoked")
+        println("SendEmailVerification invoked")
         val currentUser = authDataSource.currentUser()
         if (currentUser == null) {
-            Timber.w("SendEmailVerification failed: No current user found")
+            println("SendEmailVerification failed: No current user found")
             return DomainResult.Failure(AppError.Authentication.General)
         }
         return try {
             authDataSource.sendVerificationEmail(currentUser)
-            Timber.d("Verification email sent successfully to userId: ${currentUser.uid}")
+            println("Verification email sent successfully to userId: ${currentUser.uid}")
             DomainResult.Success(Unit)
-        } catch (e: Exception) {
-            Timber.e(e, "Failed to send verification email to userId: ${currentUser.uid}")
+        } catch (e: Throwable) {
+            println("Failed to send verification email to userId: ${currentUser.uid}, exception: ${e.message}")
             DomainResult.Failure(AppError.Authentication.General)
         }
     }
 
     override fun observeAuthState(): Flow<FirebaseUser?> {
-        Timber.d("ObserveAuthState invoked")
-        return try {
-            authDataSource.authStateFlow()
-        } catch (e: Exception) {
-            Timber.e(e, "Error in observeAuthState")
-            throw Exception("Failed to observe auth state.", e)
-        }
+        return authDataSource.authStateFlow()
+            .map { result ->
+                result.getOrElse {
+                    println("Error observing auth state: ${it.message}")
+                    null // Return null in case of an error
+                }
+            }
     }
 
+
     override suspend fun logout(): DomainResult<Unit> {
-        Timber.d("Logout invoked")
+        println("Logout invoked")
         return try {
-            authDataSource.signOut()
-            secureStorage.clearToken()
-            Timber.d("User logged out and token cleared successfully")
+            val signOutResult = authDataSource.signOut()
+            signOutResult.onSuccess {
+                secureStorage.clearToken()
+                println("User logged out and token cleared successfully")
+            }.onFailure { error ->
+                println("Error during sign-out process: ${error.message}")
+                throw AppError.Authentication.General
+            }
             DomainResult.Success(Unit)
-        } catch (e: Exception) {
-            Timber.e(e, "Logout failed")
+        } catch (e: Throwable) {
+            println("Logout failed, exception: ${e.message}")
             DomainResult.Failure(AppError.Authentication.General)
         }
     }
 
     override suspend fun getCurrentUser(): FirebaseUser? {
-        Timber.d("GetCurrentUser invoked")
+        println("GetCurrentUser invoked")
         return try {
             val user = authDataSource.currentUser()
-            Timber.d("Current user fetched: $user")
+            println("Current user fetched: $user")
             user
-        } catch (e: Exception) {
-            Timber.e(e, "Error fetching current user")
+        } catch (e: Throwable) {
+            println("Error fetching current user, exception: ${e.message}")
             null
         }
     }
 
     override suspend fun refreshAccessToken(): DomainResult<String> {
-        Timber.d("RefreshAccessToken invoked")
+        println("RefreshAccessToken invoked")
         val user = authDataSource.currentUser()
         if (user == null) {
-            Timber.w("RefreshAccessToken failed: No current user found")
+            println("RefreshAccessToken failed: No current user found")
             return DomainResult.Failure(AppError.Authentication.General)
         }
         return try {
-            val token = authDataSource.getToken(user)
-            secureStorage.saveToken(token)
-            Timber.d("Access token refreshed and saved successfully for userId: ${user.uid}")
-            DomainResult.Success(token)
-        } catch (e: Exception) {
-            Timber.e(e, "Failed to refresh access token for userId: ${user.uid}")
+            val tokenResult = authDataSource.getToken(forceRefresh = true)
+            tokenResult.fold(
+                onSuccess = { token ->
+                    if (token != null) {
+                        secureStorage.saveToken(token)
+                        println("Access token refreshed and saved successfully for userId: ${user.uid}")
+                        DomainResult.Success(token)
+                    } else {
+                        println("Token is null for userId: ${user.uid}")
+                        DomainResult.Failure(AppError.Authentication.General)
+                    }
+                },
+                onFailure = { error ->
+                    println("Failed to refresh access token for userId: ${user.uid}, exception: ${error.message}")
+                    DomainResult.Failure(AppError.Authentication.General)
+                }
+            )
+        } catch (e: Throwable) {
+            println("Failed to refresh access token for userId: ${user.uid}, exception: ${e.message}")
             DomainResult.Failure(AppError.Authentication.General)
         }
     }

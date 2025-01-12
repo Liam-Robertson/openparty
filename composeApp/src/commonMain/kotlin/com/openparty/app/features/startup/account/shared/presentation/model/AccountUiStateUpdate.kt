@@ -1,3 +1,4 @@
+//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/startup/account/shared/presentation/model/AccountUiStateUpdate.kt
 package com.openparty.app.features.startup.account.shared.presentation.model
 
 sealed class AccountUiStateUpdate {

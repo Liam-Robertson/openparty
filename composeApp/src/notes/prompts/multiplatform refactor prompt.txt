@@ -611,7 +611,9 @@ Notes:
     - The exception to this is the dependencies that are already in my gradle files, leave them in the original format
 - For view models, use the compose multiplatform view model i.e. this dependency - implementation("org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-compose:2.8.2")
     - Don't create view models, that don't inherit from anything, instead use the above dependency and this import - import androidx.lifecycle.viewmodel.compose.viewModel
-
+- Don't give me files I haven't given you, only give me the files back that i gave you 
+    - The exception to this is koin dependency injection files, you can create those and given them back 
+    
 ---------
 
 - The above code is native kotlin android code 
@@ -621,10 +623,11 @@ Notes:
 
 In order to do this you will need to make some changes: 
 - Right now, dependency injection is done using dagger hilt, I'll need you to change this to koin dependency injection 
-- I'm also using firebase. Put the firebase dependencies in the commonMain gradle so that I can use firebase shared code across platforms 
+    - Put the koin dependency injection files in commonMain (i.e. use them for both platforms, don't make them platform specific)- I'm also using firebase. Put the firebase dependencies in the commonMain gradle so that I can use firebase shared code across platforms 
 - I want to use compose multiplatform navigation, so all navigation should be in commonMain and should be shared across platforms 
     - implementation("org.jetbrains.compose.navigation:navigation:1.0.0")
 - Use this for navigation - import androidx.navigation.NavController
     - Don't use this - import androidx.navigation.NavController
+- Don't use Timber logs, use normal logs 
 
 Rewrite the files to be mulitplatform and give me  all the files back 

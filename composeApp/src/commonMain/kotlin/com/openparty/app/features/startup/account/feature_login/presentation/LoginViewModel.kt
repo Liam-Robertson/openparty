@@ -10,27 +10,21 @@ import com.openparty.app.features.startup.account.shared.presentation.model.Acco
 import com.openparty.app.features.startup.feature_authentication.domain.usecase.DetermineAuthStatesUseCase
 import com.openparty.app.features.startup.feature_authentication.presentation.AuthFlowNavigationMapper
 import com.openparty.app.navigation.NavDestinations
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
-@HiltViewModel
-class LoginViewModel @Inject constructor(
+class LoginViewModel(
     private val performLoginUseCase: PerformLoginUseCase,
     private val determineAuthStatesUseCase: DetermineAuthStatesUseCase,
     private val authFlowNavigationMapper: AuthFlowNavigationMapper
 ) : AccountViewModel() {
-
     private val _uiEvent = MutableSharedFlow<UiEvent>()
     val uiEvent: SharedFlow<UiEvent> = _uiEvent
-
     fun onLoginButtonClick() {
         viewModelScope.launch {
             updateState(AccountUiStateUpdate.UpdateLoading(true))
             val currentState = accountUiState.value
-
             when (val loginResult = performLoginUseCase(currentState.email, currentState.password)) {
                 is DomainResult.Success -> {
                     when (val authStatesResult = determineAuthStatesUseCase()) {
@@ -52,13 +46,11 @@ class LoginViewModel @Inject constructor(
             updateState(AccountUiStateUpdate.UpdateLoading(false))
         }
     }
-
     fun onTextFooterClick() {
         viewModelScope.launch {
             _uiEvent.emit(UiEvent.Navigate(NavDestinations.Register))
         }
     }
-
     fun clearError() {
         updateState(AccountUiStateUpdate.UpdateError(null))
     }

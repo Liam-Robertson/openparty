@@ -1,3 +1,4 @@
+//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/startup/account/shared/presentation/model/AccountUiState.kt
 package com.openparty.app.features.startup.account.shared.presentation.model
 
 data class AccountUiState(

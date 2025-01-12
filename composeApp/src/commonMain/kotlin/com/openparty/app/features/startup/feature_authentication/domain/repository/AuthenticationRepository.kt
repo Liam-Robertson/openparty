@@ -1,7 +1,9 @@
+//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/startup/feature_authentication/domain/repository/AuthenticationRepository.kt
+
 package com.openparty.app.features.startup.feature_authentication.domain.repository
 
-import com.google.firebase.auth.FirebaseUser
 import com.openparty.app.core.shared.domain.DomainResult
+import dev.gitlive.firebase.auth.FirebaseUser
 import kotlinx.coroutines.flow.Flow
 
 interface AuthenticationRepository {
