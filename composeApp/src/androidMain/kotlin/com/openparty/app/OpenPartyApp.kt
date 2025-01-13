@@ -4,32 +4,24 @@ package com.openparty.app
 
 import android.app.Application
 import android.util.Log
-import com.openparty.app.di.androidModule
-import org.koin.core.context.startKoin
-import org.koin.android.ext.koin.androidContext
-import com.google.firebase.FirebaseApp
-import org.koin.core.module.Module
-import com.openparty.app.BuildConfig
+import com.openparty.app.di.AndroidKoinInitializer
+import dev.gitlive.firebase.Firebase
+import dev.gitlive.firebase.initialize
 
 class OpenPartyApp : Application() {
     override fun onCreate() {
         super.onCreate()
-
-        // Koin
-        startKoin {
-            androidContext(this@OpenPartyApp)
-            modules(listOf(androidModule))
-        }
-
-        // Logs using Android Log (instead of Timber)
-        if (BuildConfig.DEBUG) {
-            Log.d("OpenPartyApp", "Application is running in DEBUG mode")
-        } else {
-            Log.d("OpenPartyApp", "Application is running in RELEASE mode")
-        }
-
-        // Initialize Firebase (Android-specific if needed)
-        FirebaseApp.initializeApp(this)
+        AndroidKoinInitializer.initializeKoin(this)
+//        FirebaseApp.initializeApp(this)
+        Firebase.initialize(context = this)
         Log.d("OpenPartyApp", "Firebase initialized")
+
+
+//        if (BuildConfig.DEBUG) {
+//            Log.d("OpenPartyApp", "Application is running in DEBUG mode")
+//        } else {
+//            Log.d("OpenPartyApp", "Application is running in RELEASE mode")
+//        }
+
     }
 }

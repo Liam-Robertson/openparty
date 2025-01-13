@@ -32,8 +32,7 @@ kotlin {
         androidMain.dependencies {
             implementation(compose.preview)
             implementation(libs.androidx.activity.compose)
-            implementation("io.insert-koin:koin-android:3.2.0")
-            implementation("io.insert-koin:koin-android:3.2.0")
+            implementation("io.insert-koin:koin-android:3.4.0")
             implementation("androidx.security:security-crypto:1.0.0")
         }
         commonMain.dependencies {
@@ -50,12 +49,12 @@ kotlin {
             implementation("org.jetbrains.androidx.navigation:navigation-compose:2.8.0-alpha10")
             implementation("org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-compose:2.8.2")
 //            implementation(compose.material3)
-            implementation("com.mixpanel.android:mixpanel-android:5.9.1")
+            implementation("com.mixpanel.android:mixpanel-android:8.0.1")
             implementation("org.jetbrains.compose.material3:material3:1.7.3")
             implementation("org.jetbrains.compose.material:material-icons-extended:1.7.3")
             implementation("dev.gitlive:firebase-auth:2.1.0")
             implementation("dev.gitlive:firebase-firestore:2.1.0")
-            implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.5.0")
+            implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.1")
 
 
 //            implementation(libs.androidx.material.icons.core)

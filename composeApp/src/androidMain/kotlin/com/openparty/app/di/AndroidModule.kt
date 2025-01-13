@@ -9,6 +9,6 @@ import org.koin.dsl.module
 import org.koin.android.ext.koin.androidContext
 
 val androidModule = module {
-    single { PlatformSecureStorage(context = androidContext()) }
+    single { PlatformSecureStorage(androidContext()) }
     single<SecureStorage> { SecureStorageImpl(platformSecureStorage = get()) }
 }
