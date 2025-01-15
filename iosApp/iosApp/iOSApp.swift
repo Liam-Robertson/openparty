@@ -1,16 +1,12 @@
 //File: iosApp/iosApp/iOSApp.swift
 
 import SwiftUI
-import Shared // or your framework name
+import Firebase
 
 @main
 struct iOSApp: App {
     init() {
-        // Optionally start Koin from iOS if you want a fresh start,
-        // or rely on the existing injection if that suits your needs.
-
-        // For example:
-        // KoinKt.doInitKoin()
+        FirebaseApp.configure()
     }
 
     var body: some Scene {

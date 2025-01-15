@@ -1,14 +1,14 @@
 package com.openparty.app.features.startup.account.feature_login.presentation
 
 import androidx.compose.runtime.Composable
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import com.openparty.app.features.startup.account.shared.presentation.AccountScreen
+import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
 fun LoginScreen(
     navController: NavHostController,
-    viewModel: LoginViewModel = viewModel()
+    viewModel: LoginViewModel = koinViewModel()
 ) {
     AccountScreen(
         viewModel = viewModel,

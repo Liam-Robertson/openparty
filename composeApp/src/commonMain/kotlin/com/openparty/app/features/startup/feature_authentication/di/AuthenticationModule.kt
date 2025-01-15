@@ -52,6 +52,14 @@ val authenticationModule: Module = module {
     }
 
     single {
+        GetFirebaseUserUseCase(authenticationRepository = get())
+    }
+
+    single {
+        GetCurrentUserIdUseCase(getFirebaseUserUseCase = get())
+    }
+
+    single {
         AuthFlowNavigationMapper()
     }
 }

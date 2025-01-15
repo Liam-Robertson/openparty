@@ -7,6 +7,7 @@ plugins {
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
+    id("com.google.gms.google-services")
 }
 
 kotlin {
@@ -32,7 +33,8 @@ kotlin {
         androidMain.dependencies {
             implementation(compose.preview)
             implementation(libs.androidx.activity.compose)
-            implementation("io.insert-koin:koin-android:3.4.0")
+            implementation("androidx.security:security-crypto:1.0.0")
+            implementation("io.insert-koin:koin-android:3.5.6")
             implementation("androidx.security:security-crypto:1.0.0")
         }
         commonMain.dependencies {
@@ -45,7 +47,6 @@ kotlin {
             implementation(libs.androidx.lifecycle.viewmodel)
             implementation(libs.androidx.lifecycle.runtime.compose)
 //            implementation("androidx.compose.material3:material3:1.3.1")
-            implementation("io.insert-koin:koin-core:3.4.0")
             implementation("org.jetbrains.androidx.navigation:navigation-compose:2.8.0-alpha10")
             implementation("org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-compose:2.8.2")
 //            implementation(compose.material3)
@@ -55,6 +56,9 @@ kotlin {
             implementation("dev.gitlive:firebase-auth:2.1.0")
             implementation("dev.gitlive:firebase-firestore:2.1.0")
             implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.1")
+            implementation("io.insert-koin:koin-core:3.5.6")
+            implementation("io.insert-koin:koin-compose:1.1.5")
+            implementation("io.insert-koin:koin-compose-viewmodel:1.2.0-Beta4")
 
 
 //            implementation(libs.androidx.material.icons.core)

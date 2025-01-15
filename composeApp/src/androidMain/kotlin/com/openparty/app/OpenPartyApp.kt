@@ -5,15 +5,13 @@ package com.openparty.app
 import android.app.Application
 import android.util.Log
 import com.openparty.app.di.AndroidKoinInitializer
-import dev.gitlive.firebase.Firebase
-import dev.gitlive.firebase.initialize
+import com.google.firebase.FirebaseApp
 
 class OpenPartyApp : Application() {
     override fun onCreate() {
         super.onCreate()
+        FirebaseApp.initializeApp(this)
         AndroidKoinInitializer.initializeKoin(this)
-//        FirebaseApp.initializeApp(this)
-        Firebase.initialize(context = this)
         Log.d("OpenPartyApp", "Firebase initialized")
 
 
