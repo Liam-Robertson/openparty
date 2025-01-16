@@ -9,7 +9,7 @@ import com.openparty.app.features.startup.account.shared.presentation.AccountVie
 import com.openparty.app.features.startup.account.shared.presentation.model.AccountUiStateUpdate
 import com.openparty.app.features.startup.feature_authentication.domain.usecase.DetermineAuthStatesUseCase
 import com.openparty.app.features.startup.feature_authentication.presentation.AuthFlowNavigationMapper
-import com.openparty.app.navigation.NavDestinations
+import com.openparty.app.navigation.Screen
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.launch
@@ -48,7 +48,7 @@ class LoginViewModel(
     }
     fun onTextFooterClick() {
         viewModelScope.launch {
-            _uiEvent.emit(UiEvent.Navigate(NavDestinations.Register))
+            _uiEvent.emit(UiEvent.Navigate(Screen.Register))
         }
     }
     fun clearError() {

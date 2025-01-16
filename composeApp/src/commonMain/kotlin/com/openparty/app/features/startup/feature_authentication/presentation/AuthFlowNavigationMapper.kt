@@ -2,37 +2,37 @@
 package com.openparty.app.features.startup.feature_authentication.presentation
 
 import com.openparty.app.features.startup.feature_authentication.domain.model.AuthState
-import com.openparty.app.navigation.NavDestinations
+import com.openparty.app.navigation.Screen
 
 class AuthFlowNavigationMapper {
 
-    fun determineDestination(states: List<AuthState>): NavDestinations {
+    fun determineDestination(states: List<AuthState>): Screen {
         println("Determining navigation destination based on auth states: $states")
 
         return when {
             !states.contains(AuthState.isLoggedIn) -> {
                 println("User is not logged in; navigating to Login")
-                NavDestinations.Login
+                Screen.Login
             }
             !states.contains(AuthState.isEmailVerified) -> {
                 println("User email is not verified; navigating to EmailVerification")
-                NavDestinations.EmailVerification
+                Screen.EmailVerification
             }
             !states.contains(AuthState.isLocationVerified) -> {
                 println("User location is not verified; navigating to LocationVerification")
-                NavDestinations.LocationVerification
+                Screen.LocationVerification
             }
             !states.contains(AuthState.isScreenNameGenerated) -> {
                 println("User screen name is not generated; navigating to ScreenNameGeneration")
-                NavDestinations.ScreenNameGeneration
+                Screen.ScreenNameGeneration
             }
             !states.contains(AuthState.isManuallyVerified) -> {
                 println("User is not manually verified; navigating to ManualVerification")
-                NavDestinations.ManualVerification
+                Screen.ManualVerification
             }
             else -> {
                 println("All auth states satisfied; navigating to DiscussionsPreview")
-                NavDestinations.DiscussionsPreview
+                Screen.DiscussionsPreview
             }
         }
     }

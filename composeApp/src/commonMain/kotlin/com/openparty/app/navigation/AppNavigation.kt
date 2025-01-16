@@ -13,55 +13,48 @@ fun AppNavigation() {
 
     NavHost(
         navController = navController,
-        startDestination = NavDestinations.Splash.route
+        startDestination = Screen.Splash
     ) {
-        composable(NavDestinations.Splash.route) {
+        composable<Screen.Splash> {
             SplashScreen(navController)
         }
-        composable(NavDestinations.Login.route) {
+        composable<Screen.Login> {
             LoginScreen(navController)
         }
-//        composable(NavDestinations.Register.route) {
+//        composable<Screen.Register> {
 //            RegisterScreen(navController)
 //        }
-//        composable(NavDestinations.EmailVerification.route) {
+//        composable<Screen.EmailVerification> {
 //            EmailVerificationScreen(navController)
 //        }
-//        composable(NavDestinations.LocationVerification.route) {
+//        composable<Screen.LocationVerification> {
 //            LocationVerificationScreen(navController)
 //        }
-//        composable(NavDestinations.ScreenNameGeneration.route) {
+//        composable<Screen.ScreenNameGeneration> {
 //            ScreenNameGenerationScreen(navController)
 //        }
-//        composable(NavDestinations.ManualVerification.route) {
+//        composable<Screen.ManualVerification> {
 //            ManualVerificationScreen(navController)
 //        }
-//        composable(NavDestinations.DiscussionsPreview.route) {
+//        composable<Screen.DiscussionsPreview> {
 //            DiscussionsPreviewScreen(navController)
 //        }
-//        composable(
-//            "discussion_article/{discussionId}"
-//        ) { backStackEntry ->
-//            val discussionId = backStackEntry.arguments?.getString("discussionId") ?: ""
-//            DiscussionArticleScreen(navController, discussionId)
+//        composable<Screen.DiscussionsArticle> { backStackEntry ->
+//            val route = backStackEntry.toRoute<Screen.DiscussionsArticle>()
+//            DiscussionArticleScreen(navController, route.discussionId)
 //        }
-//        composable(NavDestinations.CouncilMeetingsPreview.route) {
+//        composable<Screen.CouncilMeetingsPreview> {
 //            CouncilMeetingsPreviewScreen(navController)
 //        }
-//        composable(
-//            "council_meetings_article/{councilMeetingId}"
-//        ) { backStackEntry ->
-//            val councilMeetingId = backStackEntry.arguments?.getString("councilMeetingId") ?: ""
-//            CouncilMeetingArticleScreen(navController, councilMeetingId)
+//        composable<Screen.CouncilMeetingsArticle> { backStackEntry ->
+//            val route = backStackEntry.toRoute<Screen.CouncilMeetingsArticle>()
+//            CouncilMeetingArticleScreen(navController, route.councilMeetingId)
 //        }
-//        composable(
-//            "add_comment_screen?discussionId={discussionId}&titleText={titleText}"
-//        ) { backStackEntry ->
-//            val discussionId = backStackEntry.arguments?.getString("discussionId") ?: ""
-//            val titleText = backStackEntry.arguments?.getString("titleText") ?: ""
-//            AddCommentScreen(navController, discussionId, titleText)
+//        composable<Screen.AddComment> { backStackEntry ->
+//            val route = backStackEntry.toRoute<Screen.AddComment>()
+//            AddCommentScreen(navController, route.discussionId, route.titleText)
 //        }
-//        composable(NavDestinations.AddDiscussion.route) {
+//        composable<Screen.AddDiscussion> {
 //            AddDiscussionScreen(navController)
 //        }
     }
