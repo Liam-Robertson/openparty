@@ -8,6 +8,7 @@ import com.openparty.app.features.shared.feature_user.di.userModule
 import com.openparty.app.features.startup.account.feature_login.di.loginModule
 import com.openparty.app.features.startup.account.feature_register.di.registerModule
 import com.openparty.app.features.startup.feature_authentication.di.authenticationModule
+import com.openparty.app.features.startup.feature_screen_name_generation.di.screenNameGenerationModule
 import com.openparty.app.features.startup.feature_splash.di.splashModule
 import org.koin.core.module.Module
 
@@ -18,5 +19,6 @@ fun sharedModules(): List<Module> = listOf(
     registerModule,
     authenticationModule,
     splashModule,
-    analyticsModule
+    analyticsModule,
+    screenNameGenerationModule,
 )

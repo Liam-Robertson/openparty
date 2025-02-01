@@ -21,7 +21,7 @@ fun SplashScreen(
         viewModel.uiEvent.collectLatest { event ->
             when (event) {
                 is UiEvent.Navigate -> {
-                    navController.navigate(event.destination.route) {
+                    navController.navigate(event.destination) {
                         popUpTo(0) { inclusive = true }
                     }
                 }

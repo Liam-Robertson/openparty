@@ -47,8 +47,8 @@ fun AccountScreen(
         uiEvent?.collectLatest { event ->
             when (event) {
                 is UiEvent.Navigate -> {
-                    navController.navigate(event.destination.route) {
-                        popUpTo(event.destination.route) { inclusive = true }
+                    navController.navigate(event.destination) {
+                        popUpTo(event.destination) { inclusive = true }
                     }
                 }
             }

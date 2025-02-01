@@ -59,6 +59,7 @@ kotlin {
             implementation("io.insert-koin:koin-core:3.5.6")
             implementation("io.insert-koin:koin-compose:1.1.5")
             implementation("io.insert-koin:koin-compose-viewmodel:1.2.0-Beta4")
+            implementation("co.touchlab:kermit:1.1.3")
 
 
 //            implementation(libs.androidx.material.icons.core)

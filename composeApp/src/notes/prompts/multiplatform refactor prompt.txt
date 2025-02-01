@@ -1,557 +1,350 @@
-root level build.gradle.kts: 
 
-plugins {
-    // this is necessary to avoid the plugins to be loaded multiple times
-    // in each subproject's classloader
-    alias(libs.plugins.androidApplication) apply false
-    alias(libs.plugins.androidLibrary) apply false
-    alias(libs.plugins.composeMultiplatform) apply false
-    alias(libs.plugins.composeCompiler) apply false
-    alias(libs.plugins.kotlinMultiplatform) apply false
-}
+package com.openparty.app.features.startup.verification.feature_email_verification.di
 
-------------
-
-app level build.gradle.kts: 
-
-import org.jetbrains.compose.desktop.application.dsl.TargetFormat
-import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
-import org.jetbrains.kotlin.gradle.dsl.JvmTarget
-
-plugins {
-    alias(libs.plugins.kotlinMultiplatform)
-    alias(libs.plugins.androidApplication)
-    alias(libs.plugins.composeMultiplatform)
-    alias(libs.plugins.composeCompiler)
-}
-
-kotlin {
-    androidTarget {
-        @OptIn(ExperimentalKotlinGradlePluginApi::class)
-        compilerOptions {
-            jvmTarget.set(JvmTarget.JVM_11)
-        }
-    }
-    
-    listOf(
-        iosX64(),
-        iosArm64(),
-        iosSimulatorArm64()
-    ).forEach { iosTarget ->
-        iosTarget.binaries.framework {
-            baseName = "ComposeApp"
-            isStatic = true
-        }
-    }
-    
-    sourceSets {
-        androidMain.dependencies {
-            implementation(compose.preview)
-            implementation(libs.androidx.activity.compose)
-        }
-        commonMain.dependencies {
-            implementation(compose.runtime)
-            implementation(compose.foundation)
-            implementation(compose.material)
-            implementation(compose.ui)
-            implementation(compose.components.resources)
-            implementation(compose.components.uiToolingPreview)
-            implementation(libs.androidx.lifecycle.viewmodel)
-            implementation(libs.androidx.lifecycle.runtime.compose)
-        }
-    }
-}
-
-android {
-    namespace = "com.openparty.app"
-    compileSdk = libs.versions.android.compileSdk.get().toInt()
-
-    defaultConfig {
-        applicationId = "com.openparty.app"
-        minSdk = libs.versions.android.minSdk.get().toInt()
-        targetSdk = libs.versions.android.targetSdk.get().toInt()
-        versionCode = 1
-        versionName = "1.0"
-    }
-    packaging {
-        resources {
-            excludes += "/META-INF/{AL2.0,LGPL2.1}"
-        }
-    }
-    buildTypes {
-        getByName("release") {
-            isMinifyEnabled = false
-        }
-    }
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
-    }
-}
-
-dependencies {
-    debugImplementation(compose.uiTooling)
-}
-
-
-------------
-
-package com.openparty.app
-
-import android.app.Application
-import com.google.firebase.FirebaseApp
-import com.google.firebase.ktx.Firebase
-import com.google.firebase.firestore.ktx.firestore
-import dagger.hilt.android.HiltAndroidApp
-import timber.log.Timber
-
-@HiltAndroidApp
-class OpenPartyApp : Application() {
-    override fun onCreate() {
-        super.onCreate()
-
-        if (BuildConfig.DEBUG) {
-            Timber.plant(Timber.DebugTree())
-        }
-
-        FirebaseApp.initializeApp(this)
-        val db = Firebase.firestore
-    }
-}
-
-package com.openparty.app.navigation
-
-import androidx.compose.runtime.Composable
-import androidx.navigation.NavHostController
-import androidx.navigation.NavType
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.navArgument
-import com.openparty.app.features.engagement.comments.feature_add_comment.presentation.AddCommentScreen
-import com.openparty.app.features.newsfeed.council_meetings.feature_council_meetings_article.presentation.CouncilMeetingArticleScreen
-import com.openparty.app.features.newsfeed.council_meetings.feature_council_meetings_preview.presentation.CouncilMeetingsPreviewScreen
-import com.openparty.app.features.newsfeed.discussions.feature_add_discussion.presentation.AddDiscussionScreen
-import com.openparty.app.features.newsfeed.discussions.feature_discussions_article.presentation.DiscussionArticleScreen
-import com.openparty.app.features.newsfeed.discussions.feature_discussions_preview.presentation.DiscussionsPreviewScreen
-import com.openparty.app.features.startup.account.feature_login.presentation.LoginScreen
-import com.openparty.app.features.startup.account.feature_register.presentation.RegisterScreen
-import com.openparty.app.features.startup.feature_screen_name_generation.presentation.ScreenNameGenerationScreen
-import com.openparty.app.features.startup.feature_splash.presentation.SplashScreen
-import com.openparty.app.features.startup.verification.feature_email_verification.presentation.EmailVerificationScreen
-import com.openparty.app.features.startup.verification.feature_location_verification.presentation.LocationVerificationScreen
-import com.openparty.app.features.startup.verification.feature_manual_verification.presentation.ManualVerificationScreen
-
-@Composable
-fun AppNavigation(navController: NavHostController) {
-    NavHost(navController = navController, startDestination = NavDestinations.Splash.route) {
-        composable(NavDestinations.Splash.route) { SplashScreen(navController = navController) }
-        composable(NavDestinations.Login.route) { LoginScreen(navController = navController) }
-        composable(NavDestinations.Register.route) { RegisterScreen(navController = navController) }
-        composable(NavDestinations.EmailVerification.route) { EmailVerificationScreen(navController = navController) }
-        composable(NavDestinations.LocationVerification.route) { LocationVerificationScreen(navController = navController) }
-        composable(NavDestinations.ScreenNameGeneration.route) { ScreenNameGenerationScreen(navController = navController) }
-        composable(NavDestinations.ManualVerification.route) { ManualVerificationScreen() }
-        composable(NavDestinations.DiscussionsPreview.route) { DiscussionsPreviewScreen(navController = navController) }
-        composable(
-            route = "discussion_article/{discussionId}",
-            arguments = listOf(navArgument("discussionId") { type = NavType.StringType })
-        ) { DiscussionArticleScreen(navController = navController) }
-        composable(NavDestinations.CouncilMeetingsPreview.route) { CouncilMeetingsPreviewScreen(navController = navController) }
-        composable(
-            route = "council_meetings_article/{councilMeetingId}",
-            arguments = listOf(navArgument("councilMeetingId") { type = NavType.StringType })
-        ) { CouncilMeetingArticleScreen(navController = navController) }
-        composable(
-            route = "add_comment_screen?discussionId={discussionId}&titleText={titleText}",
-            arguments = listOf(
-                navArgument("discussionId") { type = NavType.StringType; defaultValue = "" },
-                navArgument("titleText") { type = NavType.StringType; defaultValue = "" }
-            )
-        ) { AddCommentScreen(navController = navController) }
-        composable(NavDestinations.AddDiscussion.route) { AddDiscussionScreen(navController = navController) }
-    }
-}
-package com.openparty.app.navigation
-
-sealed class NavDestinations(val route: String) {
-    object Loading : NavDestinations("loading")
-    object Splash : NavDestinations("splash")
-    object Login : NavDestinations("login")
-    object Register : NavDestinations("register")
-    object EmailVerification : NavDestinations("email_verification")
-    object LocationVerification : NavDestinations("location_verification")
-    object ScreenNameGeneration : NavDestinations("screen_name_generation")
-    object ManualVerification : NavDestinations("manual_verification")
-    object DiscussionsPreview : NavDestinations("discussions_preview")
-    data class DiscussionsArticle(val discussionId: String) : NavDestinations("discussion_article/$discussionId")
-    object CouncilMeetingsPreview : NavDestinations("council_meetings_preview")
-    data class CouncilMeetingsArticle(val councilMeetingId: String) : NavDestinations("council_meetings_article/$councilMeetingId")
-    object AddDiscussion : NavDestinations("add_discussion")
-    data class AddComment(
-        val discussionId: String,
-        val titleText: String
-    ) : NavDestinations("add_comment_screen?discussionId=$discussionId&titleText=$titleText")
-    object Back : NavDestinations("back")
-}
-package com.openparty.app.main.di
-
-import com.openparty.app.core.analytics.domain.usecase.TrackAppOpenedUseCase
-import com.openparty.app.core.analytics.domain.usecase.IdentifyUserUseCase
-import com.openparty.app.features.startup.feature_authentication.domain.usecase.GetCurrentUserIdUseCase
-import com.openparty.app.main.MainViewModel
 import dagger.Module
-import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
-import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
-object MainModule {
+object EmailVerificationModule
 
-    @Provides
-    @Singleton
-    fun provideMainViewModel(
-        trackAppOpenedUseCase: TrackAppOpenedUseCase,
-        identifyUserUseCase: IdentifyUserUseCase,
-        getCurrentUserIdUseCase: GetCurrentUserIdUseCase
-    ): MainViewModel {
-        return MainViewModel(
-            trackAppOpenedUseCase = trackAppOpenedUseCase,
-            identifyUserUseCase = identifyUserUseCase,
-            getCurrentUserIdUseCase = getCurrentUserIdUseCase
-        )
-    }
-}
-package com.openparty.app.main
+--
 
-import android.os.Bundle
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.navigation.compose.rememberNavController
-import com.openparty.app.navigation.AppNavigation
-import com.openparty.app.ui.theme.OpenPartyTheme
-import dagger.hilt.android.AndroidEntryPoint
-import javax.inject.Inject
+package com.openparty.app.features.startup.verification.feature_email_verification.presentation
 
-@AndroidEntryPoint
-class MainActivity : ComponentActivity() {
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavHostController
+import com.openparty.app.core.shared.presentation.ErrorText
+import com.openparty.app.core.shared.presentation.RoundedButton
+import com.openparty.app.core.shared.presentation.TitleText
+import com.openparty.app.core.shared.presentation.UiEvent
+import com.openparty.app.navigation.NavDestinations
+import kotlinx.coroutines.flow.collectLatest
 
-    @Inject
-    lateinit var mainViewModel: MainViewModel
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContent {
-            OpenPartyTheme {
-                Surface(color = MaterialTheme.colorScheme.background) {
-                    val navController = rememberNavController()
-                    AppNavigation(navController = navController)
+@Composable
+fun EmailVerificationScreen(
+    navController: NavHostController,
+    viewModel: EmailVerificationViewModel = hiltViewModel()
+) {
+    LaunchedEffect(Unit) {
+        viewModel.uiEvent.collectLatest { event ->
+            when (event) {
+                is UiEvent.Navigate -> {
+                    navController.navigate(event.destination.route) {
+                        popUpTo(NavDestinations.EmailVerification.route) { inclusive = true }
+                    }
                 }
             }
         }
-        mainViewModel.trackAppOpenedAndIdentifyUser()
     }
 
-    override fun onResume() {
-        super.onResume()
-        mainViewModel.trackAppOpenedAndIdentifyUser()
+    val uiState by viewModel.uiState.collectAsState()
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        TitleText("Verify Your Email")
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        RoundedButton(onClick = { viewModel.onSendVerificationClick() }, text = "Send Verification Email")
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        RoundedButton(onClick = { viewModel.onCheckEmailVerificationStatus() }, text = "Check Verification Status")
+
+        if (uiState.isLoading) {
+            Spacer(modifier = Modifier.height(16.dp))
+            CircularProgressIndicator()
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        ErrorText(errorMessage = uiState.errorMessage)
     }
 }
-package com.openparty.app.main
+
+package com.openparty.app.features.startup.verification.feature_email_verification.presentation
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.openparty.app.core.analytics.domain.usecase.TrackAppOpenedUseCase
-import com.openparty.app.core.analytics.domain.usecase.IdentifyUserUseCase
-import com.openparty.app.core.shared.domain.DomainResult
-import com.openparty.app.features.startup.feature_authentication.domain.usecase.GetCurrentUserIdUseCase
-import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.launch
-import timber.log.Timber
-import javax.inject.Inject
-
-@HiltViewModel
-class MainViewModel @Inject constructor(
-    private val trackAppOpenedUseCase: TrackAppOpenedUseCase,
-    private val identifyUserUseCase: IdentifyUserUseCase,
-    private val getCurrentUserIdUseCase: GetCurrentUserIdUseCase
-) : ViewModel() {
-
-    fun trackAppOpenedAndIdentifyUser() {
-        viewModelScope.launch {
-            when (val userIdResult = getCurrentUserIdUseCase()) {
-                is DomainResult.Success -> {
-                    val userId = userIdResult.data
-                    handleIdentifyUser(userId)
-                    handleTrackAppOpened(userId)
-                }
-                is DomainResult.Failure -> {
-                    handleTrackAppOpened(null)
-                }
-            }
-        }
-    }
-
-    private suspend fun handleIdentifyUser(userId: String) {
-        when (val identifyResult = identifyUserUseCase(userId)) {
-            is DomainResult.Success -> Timber.i("User successfully identified: $userId")
-            is DomainResult.Failure -> Timber.w("Failed to identify user: $userId")
-        }
-    }
-
-    private suspend fun handleTrackAppOpened(userId: String?) {
-        when (val trackResult = trackAppOpenedUseCase(userId)) {
-            is DomainResult.Success -> Timber.i("App Opened event tracked for userId: $userId")
-            is DomainResult.Failure -> Timber.w("Failed to track App Opened event for userId: $userId")
-        }
-    }
-}
-package com.openparty.app.di
-
-import android.content.Context
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FirebaseFirestore
-import com.openparty.app.core.storage.EncryptedSharedPreferencesSecureStorage
-import com.openparty.app.core.storage.SecureStorage
-import dagger.Module
-import dagger.Provides
-import dagger.hilt.InstallIn
-import dagger.hilt.android.qualifiers.ApplicationContext
-import dagger.hilt.components.SingletonComponent
-import javax.inject.Singleton
-
-@Module
-@InstallIn(SingletonComponent::class)
-object AppModule {
-    @Provides
-    @Singleton
-    fun provideFirebaseAuth(): FirebaseAuth {
-        return FirebaseAuth.getInstance()
-    }
-
-    @Provides
-    @Singleton
-    fun provideFirebaseFirestore(): FirebaseFirestore {
-        return FirebaseFirestore.getInstance()
-    }
-
-    @Provides
-    @Singleton
-    fun provideSecureStorage(
-        @ApplicationContext context: Context
-    ): SecureStorage {
-        return EncryptedSharedPreferencesSecureStorage(context)
-    }
-}
-package com.openparty.app.di
-
-import com.openparty.app.core.storage.SecureStorage
-import com.openparty.app.core.network.TokenInterceptor
-import com.openparty.app.features.startup.feature_authentication.domain.usecase.RefreshAccessTokenUseCase
-import dagger.Module
-import dagger.Provides
-import dagger.hilt.InstallIn
-import dagger.hilt.components.SingletonComponent
-import okhttp3.OkHttpClient
-import retrofit2.Retrofit
-import retrofit2.converter.gson.GsonConverterFactory
-import javax.inject.Singleton
-
-@Module
-@InstallIn(SingletonComponent::class)
-object NetworkModule {
-    @Provides
-    @Singleton
-    fun provideTokenInterceptor(
-        secureStorage: SecureStorage,
-        refreshAccessTokenUseCase: RefreshAccessTokenUseCase
-    ): TokenInterceptor {
-        return TokenInterceptor(secureStorage, refreshAccessTokenUseCase)
-    }
-
-    @Provides
-    @Singleton
-    fun provideOkHttpClient(
-        tokenInterceptor: TokenInterceptor
-    ): OkHttpClient {
-        return OkHttpClient.Builder()
-            .addInterceptor(tokenInterceptor)
-            .build()
-    }
-
-    @Provides
-    @Singleton
-    fun provideRetrofit(
-        client: OkHttpClient
-    ): Retrofit {
-        return Retrofit.Builder()
-            .baseUrl("https://example.com/")
-            .addConverterFactory(GsonConverterFactory.create())
-            .client(client)
-            .build()
-    }
-}
-package com.openparty.app.features.startup.account.feature_login.di
-
-import com.openparty.app.features.startup.account.feature_login.domain.usecase.PerformLoginUseCase
-import com.openparty.app.features.startup.account.shared.domain.usecase.ValidateCredentialsUseCase
-import com.openparty.app.features.startup.feature_authentication.domain.usecase.SignInUseCase
-import dagger.Module
-import dagger.Provides
-import dagger.hilt.InstallIn
-import dagger.hilt.components.SingletonComponent
-import javax.inject.Singleton
-
-@Module
-@InstallIn(SingletonComponent::class)
-object LoginModule {
-
-    @Provides
-    @Singleton
-    fun providePerformLoginUseCase(
-        validateCredentialsUseCase: ValidateCredentialsUseCase,
-        signInUseCase: SignInUseCase
-    ): PerformLoginUseCase {
-        return PerformLoginUseCase(validateCredentialsUseCase, signInUseCase)
-    }
-}
-
-package com.openparty.app.features.startup.account.feature_login.domain.usecase
-
-import com.openparty.app.core.shared.domain.DomainResult
-import com.openparty.app.features.startup.account.shared.domain.usecase.ValidateCredentialsUseCase
-import com.openparty.app.features.startup.feature_authentication.domain.usecase.SignInUseCase
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import timber.log.Timber
-import javax.inject.Inject
-
-class PerformLoginUseCase @Inject constructor(
-    private val validateCredentialsUseCase: ValidateCredentialsUseCase,
-    private val signInUseCase: SignInUseCase
-) {
-    suspend operator fun invoke(email: String, password: String): DomainResult<Unit> {
-        Timber.i("PerformLoginUseCase invoked with email: $email")
-
-        return withContext(Dispatchers.IO) {
-            Timber.d("Validating credentials")
-            when (val validationResult = validateCredentialsUseCase(email, password)) {
-                is DomainResult.Failure -> {
-                    Timber.e("Validation failed: ${validationResult.error}")
-                    return@withContext validationResult
-                }
-                is DomainResult.Success -> {
-                    Timber.i("Validation successful for email: $email")
-                }
-            }
-
-            Timber.d("Attempting to sign in")
-            when (val signInResult = signInUseCase(email, password)) {
-                is DomainResult.Success -> {
-                    Timber.i("Sign in successful for email: $email")
-                    DomainResult.Success(Unit)
-                }
-                is DomainResult.Failure -> {
-                    Timber.e("Sign in failed: ${signInResult.error}")
-                    signInResult
-                }
-            }
-        }
-    }
-}
-package com.openparty.app.features.startup.account.feature_login.presentation
-
-import androidx.compose.runtime.Composable
-import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.navigation.NavHostController
-import com.openparty.app.features.startup.account.shared.presentation.AccountScreen
-
-@Composable
-fun LoginScreen(
-    navController: NavHostController,
-    viewModel: LoginViewModel = hiltViewModel()
-) {
-    AccountScreen(
-        viewModel = viewModel,
-        title = "Login",
-        actionText = "Login",
-        footerText = "Don't have an account? Register",
-        onActionClick = { viewModel.onLoginButtonClick() },
-        onFooterClick = { viewModel.onTextFooterClick() },
-        uiEvent = viewModel.uiEvent,
-        navController = navController
-    )
-}
-package com.openparty.app.features.startup.account.feature_login.presentation
-
-import androidx.lifecycle.viewModelScope
+import com.openparty.app.core.shared.presentation.UiEvent
+import com.openparty.app.features.startup.feature_authentication.domain.usecase.DetermineAuthStatesUseCase
+import com.openparty.app.features.startup.feature_authentication.domain.usecase.SendEmailVerificationUseCase
+import com.openparty.app.features.startup.feature_authentication.presentation.AuthFlowNavigationMapper
 import com.openparty.app.core.shared.domain.DomainResult
 import com.openparty.app.core.shared.domain.error.AppErrorMapper
-import com.openparty.app.core.shared.presentation.UiEvent
-import com.openparty.app.features.startup.account.feature_login.domain.usecase.PerformLoginUseCase
-import com.openparty.app.features.startup.account.shared.presentation.AccountViewModel
-import com.openparty.app.features.startup.account.shared.presentation.model.AccountUiStateUpdate
-import com.openparty.app.features.startup.feature_authentication.domain.usecase.DetermineAuthStatesUseCase
-import com.openparty.app.features.startup.feature_authentication.presentation.AuthFlowNavigationMapper
+import com.openparty.app.core.shared.presentation.UiState
 import com.openparty.app.navigation.NavDestinations
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import timber.log.Timber
 import javax.inject.Inject
+import dagger.hilt.android.lifecycle.HiltViewModel
 
 @HiltViewModel
-class LoginViewModel @Inject constructor(
-    private val performLoginUseCase: PerformLoginUseCase,
+class EmailVerificationViewModel @Inject constructor(
+    private val sendEmailVerificationUseCase: SendEmailVerificationUseCase,
     private val determineAuthStatesUseCase: DetermineAuthStatesUseCase,
     private val authFlowNavigationMapper: AuthFlowNavigationMapper
-) : AccountViewModel() {
+) : ViewModel() {
 
     private val _uiEvent = MutableSharedFlow<UiEvent>()
     val uiEvent: SharedFlow<UiEvent> = _uiEvent
 
-    fun onLoginButtonClick() {
-        viewModelScope.launch {
-            updateState(AccountUiStateUpdate.UpdateLoading(true))
-            val currentState = accountUiState.value
+    private val _uiState = MutableStateFlow(UiState())
+    val uiState: StateFlow<UiState> = _uiState
 
-            when (val loginResult = performLoginUseCase(currentState.email, currentState.password)) {
+    fun onSendVerificationClick() {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true)
+            when (val sendResult = sendEmailVerificationUseCase()) {
                 is DomainResult.Success -> {
-                    when (val authStatesResult = determineAuthStatesUseCase()) {
-                        is DomainResult.Success -> {
-                            val destination = authFlowNavigationMapper.determineDestination(authStatesResult.data)
-                            _uiEvent.emit(UiEvent.Navigate(destination))
-                        }
-                        is DomainResult.Failure -> {
-                            val errorMessage = AppErrorMapper.getUserFriendlyMessage(authStatesResult.error)
-                            updateState(AccountUiStateUpdate.UpdateError(errorMessage))
-                        }
+                    _uiState.value = _uiState.value.copy(isLoading = false)
+                    Timber.d("Verification email sent successfully")
+                }
+                is DomainResult.Failure -> {
+                    Timber.e(sendResult.error, "Error sending verification email")
+                    val errorMessage = AppErrorMapper.getUserFriendlyMessage(sendResult.error)
+                    _uiState.value = _uiState.value.copy(isLoading = false, errorMessage = errorMessage)
+                }
+            }
+        }
+    }
+
+    fun onCheckEmailVerificationStatus() {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true)
+            when (val statesResult = determineAuthStatesUseCase()) {
+                is DomainResult.Success -> {
+                    _uiState.value = _uiState.value.copy(isLoading = false)
+                    val destination = authFlowNavigationMapper.determineDestination(statesResult.data)
+
+                    if (destination == NavDestinations.EmailVerification) {
+                        Timber.d("User email not verified; staying on the current screen.")
+                        _uiState.value = _uiState.value.copy(errorMessage = "Email hasn't been verified yet. Check your emails for the verification email.")
+                    } else {
+                        Timber.d("Navigating to ${destination.route}")
+                        _uiEvent.emit(UiEvent.Navigate(destination))
                     }
                 }
                 is DomainResult.Failure -> {
-                    val errorMessage = AppErrorMapper.getUserFriendlyMessage(loginResult.error)
-                    updateState(AccountUiStateUpdate.UpdateError(errorMessage))
+                    Timber.e(statesResult.error, "Error determining next screen")
+                    val errorMessage = AppErrorMapper.getUserFriendlyMessage(statesResult.error)
+                    _uiState.value = _uiState.value.copy(isLoading = false, errorMessage = errorMessage)
                 }
             }
-            updateState(AccountUiStateUpdate.UpdateLoading(false))
         }
-    }
-
-    fun onTextFooterClick() {
-        viewModelScope.launch {
-            _uiEvent.emit(UiEvent.Navigate(NavDestinations.Register))
-        }
-    }
-
-    fun clearError() {
-        updateState(AccountUiStateUpdate.UpdateError(null))
     }
 }
 
 
+
+-----------------
+
+
+
+
+
+
+
+
+
+
+- I want as much of my code to be in commonMain as possible i.e. i want it to be able to be used across both android and ios, not to be platform specific 
+- That means I want my view models and koin view model injection to be platform independent as well
+- To do this, I want to use  Compose Multiplatform Koin DSL
+    - that means using this import - import org.koin.compose.viewmodel.dsl.viewModel
+- Below is an example of an email verificaiton feature that uses Compose Multiplatform Koin DSL with a platform independent view model
+    - Follow this example when writing your code for koin and view models, so any code you give me is platform independent
+
+//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/startup/verification/feature_email_verification/di/EmailVerificationModule.kt
+package com.openparty.app.features.startup.verification.feature_email_verification.di
+
+import org.koin.dsl.module
+import org.koin.compose.viewmodel.dsl.viewModel
+import com.openparty.app.features.startup.verification.feature_email_verification.presentation.EmailVerificationViewModel
+
+val emailVerificationModule = module {
+    viewModel {
+        EmailVerificationViewModel(
+            sendEmailVerificationUseCase = get(),
+            determineAuthStatesUseCase = get(),
+            authFlowNavigationMapper = get()
+        )
+    }
+}
+//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/startup/verification/feature_email_verification/presentation/EmailVerificationScreen.kt
+package com.openparty.app.features.startup.verification.feature_email_verification.presentation
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import androidx.navigation.NavHostController
+import kotlinx.coroutines.flow.collectLatest
+import org.koin.compose.viewmodel.koinViewModel
+import com.openparty.app.core.shared.presentation.ErrorText
+import com.openparty.app.core.shared.presentation.RoundedButton
+import com.openparty.app.core.shared.presentation.TitleText
+import com.openparty.app.core.shared.presentation.UiEvent
+
+@Composable
+fun EmailVerificationScreen(
+    navController: NavHostController,
+    viewModel: EmailVerificationViewModel = koinViewModel()
+) {
+    LaunchedEffect(Unit) {
+        viewModel.uiEvent.collectLatest { event ->
+            when (event) {
+                is UiEvent.Navigate -> {
+                    navController.navigate(event.destination) {
+                        popUpTo(event.destination) { inclusive = true }
+                    }
+                }
+            }
+        }
+    }
+
+    val uiState by viewModel.uiState.collectAsState()
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        TitleText("Verify Your Email")
+        Spacer(modifier = Modifier.height(16.dp))
+        RoundedButton(
+            onClick = { viewModel.onSendVerificationClick() },
+            text = "Send Verification Email"
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        RoundedButton(
+            onClick = { viewModel.onCheckEmailVerificationStatus() },
+            text = "Check Verification Status"
+        )
+        if (uiState.isLoading) {
+            Spacer(modifier = Modifier.height(16.dp))
+            CircularProgressIndicator()
+        }
+        Spacer(modifier = Modifier.height(16.dp))
+        ErrorText(errorMessage = uiState.errorMessage)
+    }
+}
+//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/startup/verification/feature_email_verification/presentation/EmailVerificationViewModel.kt
+
+package com.openparty.app.features.startup.verification.feature_email_verification.presentation
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.openparty.app.core.shared.domain.DomainResult
+import com.openparty.app.core.shared.domain.GlobalLogger.logger
+import com.openparty.app.core.shared.domain.error.AppErrorMapper
+import com.openparty.app.core.shared.presentation.UiEvent
+import com.openparty.app.core.shared.presentation.UiState
+import com.openparty.app.features.startup.feature_authentication.domain.usecase.DetermineAuthStatesUseCase
+import com.openparty.app.features.startup.feature_authentication.domain.usecase.SendEmailVerificationUseCase
+import com.openparty.app.features.startup.feature_authentication.presentation.AuthFlowNavigationMapper
+import com.openparty.app.navigation.Screen
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
+
+class EmailVerificationViewModel(
+    private val sendEmailVerificationUseCase: SendEmailVerificationUseCase,
+    private val determineAuthStatesUseCase: DetermineAuthStatesUseCase,
+    private val authFlowNavigationMapper: AuthFlowNavigationMapper
+) : ViewModel() {
+
+    private val _uiEvent = MutableSharedFlow<UiEvent>()
+    val uiEvent: SharedFlow<UiEvent> = _uiEvent
+
+    private val _uiState = MutableStateFlow(UiState())
+    val uiState: StateFlow<UiState> = _uiState
+
+    fun onSendVerificationClick() {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true)
+            when (val sendResult = sendEmailVerificationUseCase()) {
+                is DomainResult.Success -> {
+                    _uiState.value = _uiState.value.copy(isLoading = false)
+                    logger.i {"Verification email sent successfully"}
+                }
+                is DomainResult.Failure -> {
+                    logger.e("Error sending verification email", sendResult.error)
+                    val errorMessage = AppErrorMapper.getUserFriendlyMessage(sendResult.error)
+                    _uiState.value = _uiState.value.copy(isLoading = false, errorMessage = errorMessage)
+                }
+            }
+        }
+    }
+
+    fun onCheckEmailVerificationStatus() {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true)
+            when (val statesResult = determineAuthStatesUseCase()) {
+                is DomainResult.Success -> {
+                    _uiState.value = _uiState.value.copy(isLoading = false)
+                    val destination = authFlowNavigationMapper.determineDestination(statesResult.data)
+
+                    if (destination == Screen.EmailVerification) {
+                        logger.d("User email not verified; staying on the current screen.")
+                        _uiState.value = _uiState.value.copy(
+                            errorMessage = "Email hasn't been verified yet. Check your emails for the verification email."
+                        )
+                    } else {
+                        logger.d("Navigating to $destination")
+                        _uiEvent.emit(UiEvent.Navigate(destination))
+                    }
+                }
+                is DomainResult.Failure -> {
+                    logger.e("Error determining next screen", statesResult.error)
+                    val errorMessage = AppErrorMapper.getUserFriendlyMessage(statesResult.error)
+                    _uiState.value = _uiState.value.copy(isLoading = false, errorMessage = errorMessage)
+                }
+            }
+        }
+    }
+}
+
+    
 -----------------
 
 Here is the rough package structure: 
@@ -613,7 +406,7 @@ Notes:
     - Don't create view models, that don't inherit from anything, instead use the above dependency and this import - import androidx.lifecycle.viewmodel.compose.viewModel
 - Don't give me files I haven't given you, only give me the files back that i gave you 
     - The exception to this is koin dependency injection files, you can create those and given them back 
-    
+
 ---------
 
 - The above code is native kotlin android code 
@@ -624,10 +417,15 @@ Notes:
 In order to do this you will need to make some changes: 
 - Right now, dependency injection is done using dagger hilt, I'll need you to change this to koin dependency injection 
     - Put the koin dependency injection files in commonMain (i.e. use them for both platforms, don't make them platform specific)- I'm also using firebase. Put the firebase dependencies in the commonMain gradle so that I can use firebase shared code across platforms 
-- I want to use compose multiplatform navigation, so all navigation should be in commonMain and should be shared across platforms 
-    - implementation("org.jetbrains.compose.navigation:navigation:1.0.0")
-- Use this for navigation - import androidx.navigation.NavController
+- I want to use compose multiplatform navigation, so all navigation should be in comMain and should be shared across platforms 
+    - implementation("org.jetbrains.androidx.navigation:navigation-compose")
+- Use this for navigation - import androidx.navigation.NavControllermon
     - Don't use this - import androidx.navigation.NavController
-- Don't use Timber logs, use normal logs 
+- Don't use Timber logs, use kermit logs like this: 
+    -  import com.openparty.app.core.shared.domain.GlobalLogger.logger
+    -  logger.i {"Verification email sent successfully"}
+- I want my view models and koin injection to work across all platforms, not to be platform specific
+    - for this reason i want to use Compose Multiplatform Koin DSL
+    - that means using this import - import org.koin.compose.viewmodel.dsl.viewModel
 
 Rewrite the files to be mulitplatform and give me  all the files back 
