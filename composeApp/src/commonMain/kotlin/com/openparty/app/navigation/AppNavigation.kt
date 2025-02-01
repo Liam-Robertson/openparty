@@ -5,7 +5,10 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.openparty.app.features.startup.account.feature_login.presentation.LoginScreen
+import com.openparty.app.features.startup.account.feature_register.presentation.RegisterScreen
 import com.openparty.app.features.startup.feature_splash.presentation.SplashScreen
+import com.openparty.app.features.startup.verification.feature_email_verification.presentation.EmailVerificationScreen
+import com.openparty.app.features.startup.verification.feature_location_verification.presentation.LocationVerificationScreen
 
 @Composable
 fun AppNavigation() {
@@ -21,15 +24,15 @@ fun AppNavigation() {
         composable<Screen.Login> {
             LoginScreen(navController)
         }
-//        composable<Screen.Register> {
-//            RegisterScreen(navController)
-//        }
-//        composable<Screen.EmailVerification> {
-//            EmailVerificationScreen(navController)
-//        }
-//        composable<Screen.LocationVerification> {
-//            LocationVerificationScreen(navController)
-//        }
+        composable<Screen.Register> {
+            RegisterScreen(navController)
+        }
+        composable<Screen.EmailVerification> {
+            EmailVerificationScreen(navController)
+        }
+        composable<Screen.LocationVerification> {
+            LocationVerificationScreen(navController)
+        }
 //        composable<Screen.ScreenNameGeneration> {
 //            ScreenNameGenerationScreen(navController)
 //        }

@@ -4,12 +4,13 @@ package com.openparty.app.features.shared.feature_permissions.domain.usecase
 import com.openparty.app.core.shared.domain.DomainResult
 import com.openparty.app.core.shared.domain.error.AppError
 import com.openparty.app.features.shared.feature_permissions.domain.PermissionManager
+import com.openparty.app.features.shared.feature_permissions.domain.PlatformPermissions
 
 class LocationPermissionCheckUseCase(
     private val permissionManager: PermissionManager
 ) {
     fun execute(): DomainResult<Boolean> {
-        val fineLocationResult = permissionManager.hasPermission("android.permission.ACCESS_FINE_LOCATION")
+        val fineLocationResult = permissionManager.hasPermission(PlatformPermissions.FINE_LOCATION)
         when (fineLocationResult) {
             is DomainResult.Failure -> {
                 return DomainResult.Failure(AppError.LocationVerification.LocationPermissionsError)
@@ -21,7 +22,7 @@ class LocationPermissionCheckUseCase(
             }
         }
 
-        val coarseLocationResult = permissionManager.hasPermission("android.permission.ACCESS_COARSE_LOCATION")
+        val coarseLocationResult = permissionManager.hasPermission(PlatformPermissions.COARSE_LOCATION)
         when (coarseLocationResult) {
             is DomainResult.Failure -> {
                 return DomainResult.Failure(AppError.LocationVerification.LocationPermissionsError)

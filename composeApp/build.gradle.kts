@@ -36,6 +36,7 @@ kotlin {
             implementation("androidx.security:security-crypto:1.0.0")
             implementation("io.insert-koin:koin-android:3.5.6")
             implementation("androidx.security:security-crypto:1.0.0")
+            implementation("com.google.android.gms:play-services-location:21.0.1")
         }
         commonMain.dependencies {
             implementation(compose.runtime)

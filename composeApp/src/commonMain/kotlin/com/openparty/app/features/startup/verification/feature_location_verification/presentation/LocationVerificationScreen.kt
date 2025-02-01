@@ -1,7 +1,6 @@
 //File: composeApp/src/commonMain/kotlin/com/openparty/app/features/startup/verification/feature_location_verification/presentation/LocationVerificationScreen.kt
 package com.openparty.app.features.startup.verification.feature_location_verification.presentation
 
-import android.Manifest
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.AlertDialog
@@ -16,13 +15,11 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavHostController
+import kotlinx.coroutines.flow.collectLatest
+import org.koin.compose.viewmodel.koinViewModel
 import com.openparty.app.core.shared.presentation.ErrorText
 import com.openparty.app.features.startup.verification.feature_location_verification.presentation.components.LocationVerificationUiEvent
-import com.openparty.app.features.startup.verification.feature_location_verification.presentation.components.LocationVerificationUiState
-import org.koin.compose.viewmodel.koinViewModel
-import kotlinx.coroutines.flow.collectLatest
 
 @Composable
 fun LocationVerificationScreen(
@@ -30,7 +27,7 @@ fun LocationVerificationScreen(
     viewModel: LocationVerificationViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val context = LocalContext.current
+    // Removed LocalContext as it's Android-specific.
 
     LaunchedEffect(Unit) {
         viewModel.uiEvent.collectLatest { event ->
@@ -41,9 +38,10 @@ fun LocationVerificationScreen(
                     }
                 }
                 is LocationVerificationUiEvent.RequestPermission -> {
-                    // Replace with your platform-specific permission request
-                    // e.g. launch an Android permission flow:
-                    // requestPermissionLauncher.launch(event.permission)
+                    // Trigger your platform-specific permission flow.
+                }
+                is LocationVerificationUiEvent.OpenSettings -> {
+                    // Call platform-specific logic to open app settings.
                 }
             }
         }
@@ -72,7 +70,7 @@ fun LocationVerificationScreen(
                     title = { Text("Enable Location Permissions") },
                     text = { Text("This app requires location permissions. Enable them in your device settings.") },
                     confirmButton = {
-                        TextButton(onClick = { viewModel.onSettingsDialogClicked(context) }) {
+                        TextButton(onClick = { viewModel.onSettingsDialogClicked() }) {
                             Text("Settings")
                         }
                     },

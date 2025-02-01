@@ -1,13 +1,11 @@
 //File: composeApp/src/commonMain/kotlin/com/openparty/app/features/startup/verification/feature_location_verification/presentation/LocationVerificationViewModel.kt
 package com.openparty.app.features.startup.verification.feature_location_verification.presentation
 
-import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.openparty.app.core.shared.domain.DomainResult
 import com.openparty.app.core.shared.domain.error.AppErrorMapper
 import com.openparty.app.core.shared.domain.GlobalLogger.logger
-import com.openparty.app.core.util.AppUtils
 import com.openparty.app.features.startup.feature_authentication.domain.usecase.DetermineAuthStatesUseCase
 import com.openparty.app.features.startup.feature_authentication.presentation.AuthFlowNavigationMapper
 import com.openparty.app.features.startup.verification.feature_location_verification.domain.usecase.HandleLocationPopupUseCase
@@ -15,6 +13,8 @@ import com.openparty.app.features.startup.verification.feature_location_verifica
 import com.openparty.app.features.startup.verification.feature_location_verification.domain.usecase.VerifyLocationUseCase
 import com.openparty.app.features.startup.verification.feature_location_verification.presentation.components.LocationVerificationUiEvent
 import com.openparty.app.features.startup.verification.feature_location_verification.presentation.components.LocationVerificationUiState
+import com.openparty.app.features.shared.feature_permissions.domain.PlatformPermissions
+import com.openparty.app.navigation.Screen
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -46,12 +46,14 @@ class LocationVerificationViewModel(
     fun onVerificationDialogOkClicked() {
         viewModelScope.launch {
             _uiState.emit(_uiState.value.copy(showVerificationDialog = false))
-            _uiEvent.emit(LocationVerificationUiEvent.RequestPermission(android.Manifest.permission.ACCESS_FINE_LOCATION))
+            _uiEvent.emit(LocationVerificationUiEvent.RequestPermission(PlatformPermissions.FINE_LOCATION))
         }
     }
 
-    fun onSettingsDialogClicked(context: Context) {
-        AppUtils.openAppSettings(context)
+    fun onSettingsDialogClicked() {
+        viewModelScope.launch {
+            _uiEvent.emit(LocationVerificationUiEvent.OpenSettings)
+        }
     }
 
     fun handleLocationPopupResult(isGranted: Boolean) {
@@ -119,12 +121,28 @@ class LocationVerificationViewModel(
     private suspend fun navigateToNextAuthScreen() {
         when (val authStatesResult = determineAuthStatesUseCase()) {
             is DomainResult.Success -> {
-                val destination = authFlowNavigationMapper.determineDestination(authStatesResult.data)
-                if (destination == "LocationVerification") {
+                val destination: Screen = authFlowNavigationMapper.determineDestination(authStatesResult.data)
+                if (destination == Screen.LocationVerification) {
                     _uiState.value = _uiState.value.copy(errorMessage = "Location verification is incomplete. Please try again.")
                     logger.e { "Already on LocationVerification. Not navigating." }
                 } else {
-                    _uiEvent.emit(LocationVerificationUiEvent.Navigate(destination.route))
+                    // Manually map the destination to its route string.
+                    val route: String = when (destination) {
+                        Screen.Splash -> "Splash"
+                        Screen.Login -> "Login"
+                        Screen.Register -> "Register"
+                        Screen.EmailVerification -> "EmailVerification"
+                        Screen.LocationVerification -> "LocationVerification"
+                        Screen.ScreenNameGeneration -> "ScreenNameGeneration"
+                        Screen.ManualVerification -> "ManualVerification"
+                        Screen.DiscussionsPreview -> "DiscussionsPreview"
+                        is Screen.DiscussionsArticle -> "DiscussionsArticle/${destination.discussionId}"
+                        Screen.CouncilMeetingsPreview -> "CouncilMeetingsPreview"
+                        is Screen.CouncilMeetingsArticle -> "CouncilMeetingsArticle/${destination.councilMeetingId}"
+                        is Screen.AddComment -> "AddComment/${destination.discussionId}/${destination.titleText}"
+                        Screen.AddDiscussion -> "AddDiscussion"
+                    }
+                    _uiEvent.emit(LocationVerificationUiEvent.Navigate(route))
                 }
             }
             is DomainResult.Failure -> {

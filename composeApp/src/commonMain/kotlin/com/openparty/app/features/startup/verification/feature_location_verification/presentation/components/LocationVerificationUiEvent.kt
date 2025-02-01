@@ -4,4 +4,5 @@ package com.openparty.app.features.startup.verification.feature_location_verific
 sealed class LocationVerificationUiEvent {
     data class Navigate(val destination: String) : LocationVerificationUiEvent()
     data class RequestPermission(val permission: String) : LocationVerificationUiEvent()
+    object OpenSettings : LocationVerificationUiEvent()
 }
