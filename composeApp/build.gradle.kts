@@ -48,7 +48,7 @@ kotlin {
             implementation(libs.androidx.lifecycle.viewmodel)
             implementation(libs.androidx.lifecycle.runtime.compose)
 //            implementation("androidx.compose.material3:material3:1.3.1")
-            implementation("org.jetbrains.androidx.navigation:navigation-compose:2.8.0-alpha10")
+            implementation("org.jetbrains.androidx.navigation:navigation-compose:2.8.0-alpha11")
             implementation("org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-compose:2.8.2")
 //            implementation(compose.material3)
             implementation("com.mixpanel.android:mixpanel-android:8.0.1")

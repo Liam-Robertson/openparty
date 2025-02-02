@@ -1,3 +1,4 @@
+//File: composeApp/src/commonMain/kotlin/com/openparty/app/navigation/AppNavigation.kt
 package com.openparty.app.navigation
 
 import androidx.compose.runtime.Composable
@@ -16,49 +17,51 @@ fun AppNavigation() {
 
     NavHost(
         navController = navController,
-        startDestination = Screen.Splash
+        startDestination = Screen.Splash.route
     ) {
-        composable<Screen.Splash> {
+        composable(route = Screen.Splash.route) {
             SplashScreen(navController)
         }
-        composable<Screen.Login> {
+        composable(route = Screen.Login.route) {
             LoginScreen(navController)
         }
-        composable<Screen.Register> {
+        composable(route = Screen.Register.route) {
             RegisterScreen(navController)
         }
-        composable<Screen.EmailVerification> {
+        composable(route = Screen.EmailVerification.route) {
             EmailVerificationScreen(navController)
         }
-        composable<Screen.LocationVerification> {
+        composable(route = Screen.LocationVerification.route) {
             LocationVerificationScreen(navController)
         }
-//        composable<Screen.ScreenNameGeneration> {
-//            ScreenNameGenerationScreen(navController)
-//        }
-//        composable<Screen.ManualVerification> {
-//            ManualVerificationScreen(navController)
-//        }
-//        composable<Screen.DiscussionsPreview> {
-//            DiscussionsPreviewScreen(navController)
-//        }
-//        composable<Screen.DiscussionsArticle> { backStackEntry ->
-//            val route = backStackEntry.toRoute<Screen.DiscussionsArticle>()
-//            DiscussionArticleScreen(navController, route.discussionId)
-//        }
-//        composable<Screen.CouncilMeetingsPreview> {
-//            CouncilMeetingsPreviewScreen(navController)
-//        }
-//        composable<Screen.CouncilMeetingsArticle> { backStackEntry ->
-//            val route = backStackEntry.toRoute<Screen.CouncilMeetingsArticle>()
-//            CouncilMeetingArticleScreen(navController, route.councilMeetingId)
-//        }
-//        composable<Screen.AddComment> { backStackEntry ->
-//            val route = backStackEntry.toRoute<Screen.AddComment>()
-//            AddCommentScreen(navController, route.discussionId, route.titleText)
-//        }
-//        composable<Screen.AddDiscussion> {
-//            AddDiscussionScreen(navController)
-//        }
+        // composable(route = Screen.ScreenNameGeneration.route) {
+        //     ScreenNameGenerationScreen(navController)
+        // }
+        // composable(route = Screen.ManualVerification.route) {
+        //     ManualVerificationScreen(navController)
+        // }
+        // composable(route = Screen.DiscussionsPreview.route) {
+        //     DiscussionsPreviewScreen(navController)
+        // }
+        // composable(route = Screen.DiscussionsArticle("").route) { backStackEntry ->
+        //     // Extract argument "discussionId" from backStackEntry.arguments and pass to screen
+        //     val discussionId = backStackEntry.arguments?.getString("discussionId") ?: ""
+        //     DiscussionArticleScreen(navController, discussionId)
+        // }
+        // composable(route = Screen.CouncilMeetingsPreview.route) {
+        //     CouncilMeetingsPreviewScreen(navController)
+        // }
+        // composable(route = Screen.CouncilMeetingsArticle("").route) { backStackEntry ->
+        //     val councilMeetingId = backStackEntry.arguments?.getString("councilMeetingId") ?: ""
+        //     CouncilMeetingArticleScreen(navController, councilMeetingId)
+        // }
+        // composable(route = Screen.AddComment("").route) { backStackEntry ->
+        //     val discussionId = backStackEntry.arguments?.getString("discussionId") ?: ""
+        //     val titleText = backStackEntry.arguments?.getString("titleText") ?: ""
+        //     AddCommentScreen(navController, discussionId, titleText)
+        // }
+        // composable(route = Screen.AddDiscussion.route) {
+        //     AddDiscussionScreen(navController)
+        // }
     }
 }

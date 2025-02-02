@@ -1,4 +1,4 @@
-//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/startup/verification/feature_location_verification/di/LocationVerificationModule.kt
+// File: composeApp/src/commonMain/kotlin/com/openparty/app/features/startup/verification/feature_location_verification/di/LocationVerificationModule.kt
 package com.openparty.app.features.startup.verification.feature_location_verification.di
 
 import com.openparty.app.features.shared.feature_permissions.domain.usecase.LocationPermissionCheckUseCase
@@ -8,18 +8,12 @@ import com.openparty.app.features.startup.verification.feature_location_verifica
 import com.openparty.app.features.startup.verification.feature_location_verification.domain.usecase.UpdateUserLocationUseCase
 import com.openparty.app.features.startup.verification.feature_location_verification.domain.usecase.VerifyLocationUseCase
 import com.openparty.app.features.startup.verification.feature_location_verification.presentation.LocationVerificationViewModel
-import com.openparty.app.features.startup.verification.feature_location_verification.domain.LocationClient
-import org.koin.android.ext.koin.androidContext
-import org.koin.dsl.module
 import org.koin.compose.viewmodel.dsl.viewModel
+import org.koin.dsl.module
 
 val locationVerificationModule = module {
     single { HandleLocationPopupUseCase() }
-    single {
-        LocationPermissionCheckUseCase(get())
-    }
-    // Provide the LocationClient by injecting the Android context via Koin.
-    single<LocationClient> { LocationClient(androidContext()) }
+    single { LocationPermissionCheckUseCase(get()) }
     single {
         VerifyLocationUseCase(
             locationClient = get(),

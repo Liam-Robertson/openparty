@@ -1,18 +1,17 @@
-//File: composeApp/src/androidMain/kotlin/com/openparty/app/features/startup/verification/feature_location_verification/domain/LocationClient.kt
+// File: composeApp/src/androidMain/kotlin/com/openparty/app/features/startup/verification/feature_location_verification/domain/LocationClient.kt
 package com.openparty.app.features.startup.verification.feature_location_verification.domain
 
 import android.annotation.SuppressLint
-import android.content.Context
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
+import com.openparty.app.AppContextHolder
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
-// Now the Android actual implementation accepts a Context in its constructor.
-actual class LocationClient actual constructor(private val context: Context) {
+actual class LocationClient actual constructor() {
     private val fusedLocationProviderClient: FusedLocationProviderClient =
-        LocationServices.getFusedLocationProviderClient(context)
+        LocationServices.getFusedLocationProviderClient(AppContextHolder.context)
 
     @SuppressLint("MissingPermission")
     actual suspend fun getLastLocation(): Location? = suspendCancellableCoroutine { cont ->
