@@ -57,8 +57,10 @@ kotlin {
             implementation("dev.gitlive:firebase-auth:2.1.0")
             implementation("dev.gitlive:firebase-firestore:2.1.0")
             implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.0")
-            implementation("io.insert-koin:koin-core:4.1.0")
-            implementation("io.insert-koin:koin-compose:4.1.0")
+            implementation("io.insert-koin:koin-core:4.0.2")
+            implementation("io.insert-koin:koin-compose:4.0.2")
+            implementation("io.insert-koin:koin-compose-viewmodel:4.0.2")
+
             implementation("co.touchlab:kermit:2.0.5")
 
 

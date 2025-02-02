@@ -8,7 +8,7 @@ import com.openparty.app.features.startup.verification.feature_location_verifica
 import com.openparty.app.features.startup.verification.feature_location_verification.domain.usecase.UpdateUserLocationUseCase
 import com.openparty.app.features.startup.verification.feature_location_verification.domain.usecase.VerifyLocationUseCase
 import com.openparty.app.features.startup.verification.feature_location_verification.presentation.LocationVerificationViewModel
-import org.koin.compose.viewmodel.dsl.viewModel
+import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
 
 val locationVerificationModule = module {

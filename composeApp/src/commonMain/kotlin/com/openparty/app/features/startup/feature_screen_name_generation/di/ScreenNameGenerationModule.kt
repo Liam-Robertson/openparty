@@ -2,7 +2,7 @@
 package com.openparty.app.features.startup.feature_screen_name_generation.di
 
 import org.koin.dsl.module
-import org.koin.compose.viewmodel.dsl.viewModel
+import org.koin.core.module.dsl.viewModel
 import com.openparty.app.features.startup.feature_screen_name_generation.domain.usecase.GenerateUniqueScreenNameUseCase
 import com.openparty.app.features.startup.feature_screen_name_generation.domain.usecase.IsScreenNameTakenUseCase
 import com.openparty.app.features.startup.feature_screen_name_generation.presentation.ScreenNameGenerationViewModel
