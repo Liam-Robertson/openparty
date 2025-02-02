@@ -5,5 +5,5 @@ import com.openparty.app.features.startup.verification.feature_location_verifica
 import org.koin.dsl.module
 
 val platformLocationModule = module {
-    single<LocationClient> { LocationClient() }
+    single { LocationClient() }
 }

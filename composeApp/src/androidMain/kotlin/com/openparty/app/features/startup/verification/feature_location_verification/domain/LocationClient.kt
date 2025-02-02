@@ -2,16 +2,21 @@
 package com.openparty.app.features.startup.verification.feature_location_verification.domain
 
 import android.annotation.SuppressLint
+import android.content.Context
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
-import com.openparty.app.AppContextHolder
 import kotlinx.coroutines.suspendCancellableCoroutine
+import org.koin.core.component.KoinComponent
+import org.koin.core.component.inject
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
-actual class LocationClient actual constructor() {
+actual class LocationClient actual constructor() : KoinComponent {
+    // Inject the Android Context from Koin.
+    private val context: Context by inject()
+
     private val fusedLocationProviderClient: FusedLocationProviderClient =
-        LocationServices.getFusedLocationProviderClient(AppContextHolder.context)
+        LocationServices.getFusedLocationProviderClient(context)
 
     @SuppressLint("MissingPermission")
     actual suspend fun getLastLocation(): Location? = suspendCancellableCoroutine { cont ->

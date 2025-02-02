@@ -1,4 +1,4 @@
-//File: composeApp/src/iosMain/kotlin/com/openparty/app/features/startup/verification/feature_location_verification/domain/LocationClient.kt
+// File: composeApp/src/iosMain/kotlin/com/openparty/app/features/startup/verification/feature_location_verification/domain/LocationClient.kt
 package com.openparty.app.features.startup.verification.feature_location_verification.domain
 
 import kotlinx.cinterop.ExperimentalForeignApi

@@ -11,6 +11,7 @@ import com.openparty.app.features.startup.feature_authentication.di.authenticati
 import com.openparty.app.features.startup.feature_screen_name_generation.di.screenNameGenerationModule
 import com.openparty.app.features.startup.feature_splash.di.splashModule
 import com.openparty.app.features.startup.verification.feature_email_verification.di.emailVerificationModule
+import com.openparty.app.features.startup.verification.feature_location_verification.di.locationVerificationModule
 import org.koin.core.module.Module
 
 fun sharedModules(): List<Module> = listOf(
@@ -23,4 +24,5 @@ fun sharedModules(): List<Module> = listOf(
     analyticsModule,
     screenNameGenerationModule,
     emailVerificationModule,
+    locationVerificationModule,
 )
