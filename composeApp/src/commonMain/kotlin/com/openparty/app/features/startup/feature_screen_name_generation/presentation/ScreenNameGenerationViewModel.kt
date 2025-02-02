@@ -97,7 +97,7 @@ class ScreenNameGenerationViewModel(
         when (val result = determineAuthStatesUseCase()) {
             is DomainResult.Success -> {
                 val destination = authFlowNavigationMapper.determineDestination(result.data)
-                _uiEvent.emit(UiEvent.Navigate(destination))
+                _uiEvent.emit(UiEvent.Navigate(destination.route))
             }
             is DomainResult.Failure -> {
                 val errorMessage = AppErrorMapper.getUserFriendlyMessage(result.error)

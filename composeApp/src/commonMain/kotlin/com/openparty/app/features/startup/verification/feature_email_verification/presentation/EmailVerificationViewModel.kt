@@ -63,7 +63,7 @@ class EmailVerificationViewModel(
                         )
                     } else {
                         logger.d("Navigating to $destination")
-                        _uiEvent.emit(UiEvent.Navigate(destination))
+                        _uiEvent.emit(UiEvent.Navigate(destination.route))
                     }
                 }
                 is DomainResult.Failure -> {

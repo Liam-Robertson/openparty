@@ -38,7 +38,7 @@ class SplashViewModel(
             is DomainResult.Success -> {
                 val destination = authFlowNavigationMapper.determineDestination(authStatesResult.data)
                 _uiState.value = _uiState.value.copy(isLoading = false, errorMessage = null)
-                _uiEvent.emit(UiEvent.Navigate(destination))
+                _uiEvent.emit(UiEvent.Navigate(destination.route))
             }
             is DomainResult.Failure -> {
                 val errorMessage = AppErrorMapper.getUserFriendlyMessage(authStatesResult.error)

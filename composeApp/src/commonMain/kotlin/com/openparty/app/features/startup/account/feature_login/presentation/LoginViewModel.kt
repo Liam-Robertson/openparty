@@ -30,7 +30,7 @@ class LoginViewModel(
                     when (val authStatesResult = determineAuthStatesUseCase()) {
                         is DomainResult.Success -> {
                             val destination = authFlowNavigationMapper.determineDestination(authStatesResult.data)
-                            _uiEvent.emit(UiEvent.Navigate(destination))
+                            _uiEvent.emit(UiEvent.Navigate(destination.route))
                         }
                         is DomainResult.Failure -> {
                             val errorMessage = AppErrorMapper.getUserFriendlyMessage(authStatesResult.error)
@@ -48,7 +48,7 @@ class LoginViewModel(
     }
     fun onTextFooterClick() {
         viewModelScope.launch {
-            _uiEvent.emit(UiEvent.Navigate(Screen.Register))
+            _uiEvent.emit(UiEvent.Navigate(Screen.Register.route))
         }
     }
     fun clearError() {

@@ -1,3 +1,4 @@
+// File: composeApp/src/commonMain/kotlin/com/openparty/app/features/shared/feature_user/data/model/UserDto.kt
 package com.openparty.app.features.shared.feature_user.data.model
 
 import kotlinx.serialization.Serializable

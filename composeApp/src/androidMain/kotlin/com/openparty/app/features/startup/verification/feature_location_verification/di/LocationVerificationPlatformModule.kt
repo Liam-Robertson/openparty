@@ -1,4 +1,4 @@
-// File: composeApp/src/androidMain/kotlin/com/openparty/app/features/startup/verification/feature_location_verification/di/LocationVerificationModule.kt
+// File: composeApp/src/androidMain/kotlin/com/openparty/app/features/startup/verification/feature_location_verification/di/LocationVerificationPlatformModule.kt
 package com.openparty.app.features.startup.verification.feature_location_verification.di
 
 import com.openparty.app.features.startup.verification.feature_location_verification.domain.LocationClient
