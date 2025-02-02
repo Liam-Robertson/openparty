@@ -1,749 +1,224 @@
-package com.openparty.app.features.startup.feature_authentication.data.datasource
+package com.openparty.app.features.startup.verification.feature_email_verification.di
 
-import com.google.firebase.auth.FirebaseUser
-import kotlinx.coroutines.flow.Flow
-
-interface AuthDataSource {
-    suspend fun signIn(email: String, password: String): FirebaseUser
-    suspend fun register(email: String, password: String): FirebaseUser
-    suspend fun sendVerificationEmail(user: FirebaseUser)
-    fun authStateFlow(): Flow<FirebaseUser?>
-    fun currentUser(): FirebaseUser?
-    suspend fun getToken(user: FirebaseUser): String
-    fun signOut()
-}package com.openparty.app.features.startup.feature_authentication.data.datasource
-
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.FirebaseAuthUserCollisionException
-import com.google.firebase.auth.FirebaseUser
-import com.openparty.app.core.shared.domain.error.AppError
-import kotlinx.coroutines.channels.awaitClose
-import kotlinx.coroutines.flow.callbackFlow
-import kotlinx.coroutines.tasks.await
-import timber.log.Timber
-import javax.inject.Inject
-import javax.inject.Singleton
-
-@Singleton
-class FirebaseAuthDataSource @Inject constructor(
-    private val firebaseAuth: FirebaseAuth
-) : AuthDataSource {
-
-    override suspend fun signIn(email: String, password: String): FirebaseUser {
-        Timber.d("Attempting to sign in with email: $email")
-        try {
-            val result = firebaseAuth.signInWithEmailAndPassword(email, password).await()
-            Timber.d("Sign-in successful for email: $email")
-            return result.user ?: throw AppError.Authentication.General
-        } catch (e: Exception) {
-            Timber.e(e, "Error signing in with email: $email")
-            throw Exception("Sign-in failed for email: $email. Please check credentials or try again.", e)
-        }
-    }
-
-    override suspend fun register(email: String, password: String): FirebaseUser {
-        Timber.d("Attempting to register with email: $email")
-        try {
-            val result = firebaseAuth.createUserWithEmailAndPassword(email, password).await()
-            Timber.d("Registration successful for email: $email")
-            return result.user ?: throw AppError.Authentication.General
-        } catch (e: FirebaseAuthUserCollisionException) {
-            Timber.e(e, "User with email $email already exists")
-            throw AppError.Authentication.UserAlreadyExists
-        } catch (e: Exception) {
-            Timber.e(e, "Error registering with email: $email")
-            throw Exception("Registration failed for email: $email. Please check input and try again.", e)
-        }
-    }
-
-    override suspend fun sendVerificationEmail(user: FirebaseUser) {
-        Timber.d("Attempting to send verification email to user: ${user.uid}")
-        try {
-            user.sendEmailVerification().await()
-            Timber.d("Verification email sent to user: ${user.uid}")
-        } catch (e: Exception) {
-            Timber.e(e, "Error sending verification email to user: ${user.uid}")
-            throw Exception("Failed to send verification email to user: ${user.uid}. Please try again.", e)
-        }
-    }
-
-    override fun authStateFlow() = callbackFlow {
-        Timber.d("Initializing authStateFlow")
-        try {
-            val listener = FirebaseAuth.AuthStateListener { auth ->
-                try {
-                    val user = auth.currentUser
-                    Timber.d("AuthStateListener triggered, currentUser: $user")
-                    trySend(user).isSuccess
-                } catch (e: Exception) {
-                    Timber.e(e, "Error in AuthStateListener while sending currentUser")
-                    trySend(null).isSuccess
-                }
-            }
-            firebaseAuth.addAuthStateListener(listener)
-            awaitClose {
-                Timber.d("AuthStateListener removed")
-                firebaseAuth.removeAuthStateListener(listener)
-            }
-        } catch (e: Exception) {
-            Timber.e(e, "Error initializing authStateFlow")
-            close(e)
-        }
-    }
-
-    override fun currentUser(): FirebaseUser? {
-        val user = firebaseAuth.currentUser
-        Timber.d("Fetching current user: $user")
-        return user
-    }
-
-    override suspend fun getToken(user: FirebaseUser): String {
-        Timber.d("Fetching token for user: ${user.uid}")
-        try {
-            val token = user.getIdToken(true).await().token
-            Timber.d("Token successfully fetched for user: ${user.uid}")
-            return token ?: throw AppError.Authentication.General
-        } catch (e: Exception) {
-            Timber.e(e, "Error fetching token for user: ${user.uid}")
-            throw Exception("Token fetching failed. Please check logs for details.", e)
-        }
-    }
-
-    override fun signOut() {
-        Timber.d("Attempting to sign out user.")
-        try {
-            firebaseAuth.signOut()
-            Timber.d("User signed out successfully.")
-        } catch (e: Exception) {
-            Timber.e(e, "Error during sign-out process.")
-        }
-    }
-}package com.openparty.app.features.startup.feature_authentication.data
-
-import com.google.firebase.auth.FirebaseUser
-import com.openparty.app.core.storage.SecureStorage
-import com.openparty.app.core.shared.domain.DomainResult
-import com.openparty.app.core.shared.domain.error.AppError
-import com.openparty.app.features.startup.feature_authentication.data.datasource.AuthDataSource
-import com.openparty.app.features.startup.feature_authentication.domain.repository.AuthenticationRepository
-import kotlinx.coroutines.flow.Flow
-import timber.log.Timber
-import javax.inject.Inject
-import javax.inject.Singleton
-
-@Singleton
-class AuthenticationRepositoryImpl @Inject constructor(
-    private val authDataSource: AuthDataSource,
-    private val secureStorage: SecureStorage
-) : AuthenticationRepository {
-
-    override suspend fun login(email: String, password: String): DomainResult<Unit> {
-        Timber.d("Login invoked with email: $email")
-        return try {
-            val user = authDataSource.signIn(email, password)
-            Timber.d("Login successful for email: $email, userId: ${user.uid}")
-            val token = authDataSource.getToken(user)
-            secureStorage.saveToken(token)
-            Timber.d("Token saved successfully for userId: ${user.uid}")
-            DomainResult.Success(Unit)
-        } catch (e: Exception) {
-            Timber.e(e, "Login failed for email: $email")
-            DomainResult.Failure(AppError.Authentication.General)
-        }
-    }
-
-    override suspend fun register(email: String, password: String): DomainResult<String> {
-        Timber.d("Register invoked with email: $email")
-        return try {
-            val user = authDataSource.register(email, password)
-            Timber.d("Registration successful for email: $email, userId: ${user.uid}")
-            val token = authDataSource.getToken(user)
-            secureStorage.saveToken(token)
-            Timber.d("Token saved successfully for userId: ${user.uid}")
-            DomainResult.Success(user.uid)
-        } catch (e: AppError.Authentication.UserAlreadyExists) {
-            Timber.e("Registration failed: User already exists for email: $email")
-            DomainResult.Failure(AppError.Authentication.UserAlreadyExists)
-        } catch (e: Exception) {
-            Timber.e(e, "Registration failed for email: $email")
-            DomainResult.Failure(AppError.Authentication.General)
-        }
-    }
-
-    override suspend fun sendEmailVerification(): DomainResult<Unit> {
-        Timber.d("SendEmailVerification invoked")
-        val currentUser = authDataSource.currentUser()
-        if (currentUser == null) {
-            Timber.w("SendEmailVerification failed: No current user found")
-            return DomainResult.Failure(AppError.Authentication.General)
-        }
-        return try {
-            authDataSource.sendVerificationEmail(currentUser)
-            Timber.d("Verification email sent successfully to userId: ${currentUser.uid}")
-            DomainResult.Success(Unit)
-        } catch (e: Exception) {
-            Timber.e(e, "Failed to send verification email to userId: ${currentUser.uid}")
-            DomainResult.Failure(AppError.Authentication.General)
-        }
-    }
-
-    override fun observeAuthState(): Flow<FirebaseUser?> {
-        Timber.d("ObserveAuthState invoked")
-        return try {
-            authDataSource.authStateFlow()
-        } catch (e: Exception) {
-            Timber.e(e, "Error in observeAuthState")
-            throw Exception("Failed to observe auth state.", e)
-        }
-    }
-
-    override suspend fun logout(): DomainResult<Unit> {
-        Timber.d("Logout invoked")
-        return try {
-            authDataSource.signOut()
-            secureStorage.clearToken()
-            Timber.d("User logged out and token cleared successfully")
-            DomainResult.Success(Unit)
-        } catch (e: Exception) {
-            Timber.e(e, "Logout failed")
-            DomainResult.Failure(AppError.Authentication.General)
-        }
-    }
-
-    override suspend fun getCurrentUser(): FirebaseUser? {
-        Timber.d("GetCurrentUser invoked")
-        return try {
-            val user = authDataSource.currentUser()
-            Timber.d("Current user fetched: $user")
-            user
-        } catch (e: Exception) {
-            Timber.e(e, "Error fetching current user")
-            null
-        }
-    }
-
-    override suspend fun refreshAccessToken(): DomainResult<String> {
-        Timber.d("RefreshAccessToken invoked")
-        val user = authDataSource.currentUser()
-        if (user == null) {
-            Timber.w("RefreshAccessToken failed: No current user found")
-            return DomainResult.Failure(AppError.Authentication.General)
-        }
-        return try {
-            val token = authDataSource.getToken(user)
-            secureStorage.saveToken(token)
-            Timber.d("Access token refreshed and saved successfully for userId: ${user.uid}")
-            DomainResult.Success(token)
-        } catch (e: Exception) {
-            Timber.e(e, "Failed to refresh access token for userId: ${user.uid}")
-            DomainResult.Failure(AppError.Authentication.General)
-        }
-    }
-}
-package com.openparty.app.features.startup.feature_authentication.di
-
-import com.openparty.app.features.shared.feature_user.domain.repository.UserRepository
-import com.openparty.app.features.shared.feature_user.domain.usecase.GetUserUseCase
-import com.openparty.app.features.startup.account.shared.domain.usecase.ValidateCredentialsUseCase
-import com.openparty.app.features.startup.feature_authentication.data.AuthenticationRepositoryImpl
-import com.openparty.app.features.startup.feature_authentication.data.datasource.AuthDataSource
-import com.openparty.app.features.startup.feature_authentication.data.datasource.FirebaseAuthDataSource
-import com.openparty.app.features.startup.feature_authentication.domain.repository.AuthenticationRepository
-import com.openparty.app.features.startup.feature_authentication.domain.usecase.*
-import com.openparty.app.features.startup.feature_authentication.presentation.AuthFlowNavigationMapper
-import dagger.Binds
 import dagger.Module
-import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
-import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
-abstract class AuthenticationModule {
+object EmailVerificationModule
 
-    @Binds
-    @Singleton
-    abstract fun bindAuthenticationRepository(
-        authenticationRepositoryImpl: AuthenticationRepositoryImpl
-    ): AuthenticationRepository
+--
 
-    @Binds
-    @Singleton
-    abstract fun bindAuthDataSource(
-        firebaseAuthDataSource: FirebaseAuthDataSource
-    ): AuthDataSource
+package com.openparty.app.features.startup.verification.feature_email_verification.presentation
 
-    companion object {
-
-        @Provides
-        @Singleton
-        fun provideValidateCredentialsUseCase(): ValidateCredentialsUseCase {
-            return ValidateCredentialsUseCase()
-        }
-
-        @Provides
-        @Singleton
-        fun provideSignInUseCase(
-            authenticationRepository: AuthenticationRepository
-        ): SignInUseCase {
-            return SignInUseCase(authenticationRepository)
-        }
-
-        @Provides
-        @Singleton
-        fun provideRegisterUseCase(
-            authenticationRepository: AuthenticationRepository,
-            userRepository: UserRepository
-        ): RegisterUseCase {
-            return RegisterUseCase(authenticationRepository, userRepository)
-        }
-
-        @Provides
-        @Singleton
-        fun provideSendEmailVerificationUseCase(
-            authenticationRepository: AuthenticationRepository
-        ): SendEmailVerificationUseCase {
-            return SendEmailVerificationUseCase(authenticationRepository)
-        }
-
-        @Provides
-        @Singleton
-        fun provideLogoutUseCase(
-            authenticationRepository: AuthenticationRepository
-        ): LogoutUseCase {
-            return LogoutUseCase(authenticationRepository)
-        }
-
-        @Provides
-        @Singleton
-        fun provideRefreshAccessTokenUseCase(
-            authenticationRepository: AuthenticationRepository
-        ): RefreshAccessTokenUseCase {
-            return RefreshAccessTokenUseCase(authenticationRepository)
-        }
-
-        @Provides
-        @Singleton
-        fun provideDetermineAuthStatesUseCase(
-            authenticationRepository: AuthenticationRepository,
-            getUserUseCase: GetUserUseCase
-        ): DetermineAuthStatesUseCase {
-            return DetermineAuthStatesUseCase(authenticationRepository, getUserUseCase)
-        }
-
-        @Provides
-        @Singleton
-        fun provideAuthFlowNavigationMapper(): AuthFlowNavigationMapper {
-            return AuthFlowNavigationMapper()
-        }
-    }
-}package com.openparty.app.features.startup.feature_authentication.domain.model
-
-sealed class AuthState(val name: String) {
-    object isLoggedIn : AuthState("isLoggedIn")
-    object isEmailVerified : AuthState("isEmailVerified")
-    object isLocationVerified : AuthState("isLocationVerified")
-    object isScreenNameGenerated : AuthState("isScreenNameGenerated")
-    object isManuallyVerified : AuthState("isManuallyVerified")
-}
-package com.openparty.app.features.startup.feature_authentication.domain.repository
-
-import com.google.firebase.auth.FirebaseUser
-import com.openparty.app.core.shared.domain.DomainResult
-import kotlinx.coroutines.flow.Flow
-
-interface AuthenticationRepository {
-    suspend fun login(email: String, password: String): DomainResult<Unit>
-    suspend fun register(email: String, password: String): DomainResult<String>
-    suspend fun sendEmailVerification(): DomainResult<Unit>
-    fun observeAuthState(): Flow<FirebaseUser?>
-    suspend fun logout(): DomainResult<Unit>
-    suspend fun getCurrentUser(): FirebaseUser?
-    suspend fun refreshAccessToken(): DomainResult<String>
-}
-package com.openparty.app.features.startup.feature_authentication.domain.usecase
-
-import com.openparty.app.core.shared.domain.DomainResult
-import com.openparty.app.core.shared.domain.error.AppError
-import timber.log.Timber
-import javax.inject.Inject
-
-class GetCurrentUserIdUseCase @Inject constructor(
-    private val getFirebaseUserUseCase: GetFirebaseUserUseCase
-) {
-    suspend operator fun invoke(): DomainResult<String> {
-        Timber.i("GetCurrentUserIdUseCase invoked")
-        return try {
-            Timber.d("Fetching current user")
-            when (val userResult = getFirebaseUserUseCase()) {
-                is DomainResult.Success -> {
-                    Timber.i("User fetched successfully: UID=${userResult.data.uid}")
-                    DomainResult.Success(userResult.data.uid)
-                }
-                is DomainResult.Failure -> {
-                    Timber.e("Failed to fetch user: ${userResult.error}")
-                    DomainResult.Failure(AppError.Authentication.GetUserId)
-                }
-            }
-        } catch (e: Throwable) {
-            Timber.e(e, "Unexpected error while fetching user ID")
-            DomainResult.Failure(AppError.Authentication.GetUserId)
-        }
-    }
-}
-package com.openparty.app.features.startup.feature_authentication.domain.usecase
-
-import com.google.firebase.auth.FirebaseUser
-import com.openparty.app.core.shared.domain.DomainResult
-import com.openparty.app.core.shared.domain.error.AppError
-import com.openparty.app.features.shared.feature_user.domain.model.User
-import com.openparty.app.features.startup.feature_authentication.domain.model.AuthState
-import com.openparty.app.features.startup.feature_authentication.domain.repository.AuthenticationRepository
-import com.openparty.app.features.shared.feature_user.domain.usecase.GetUserUseCase
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.firstOrNull
-import kotlinx.coroutines.withContext
-import timber.log.Timber
-import javax.inject.Inject
-
-class DetermineAuthStatesUseCase @Inject constructor(
-    private val authenticationRepository: AuthenticationRepository,
-    private val getUserUseCase: GetUserUseCase
-) {
-    suspend operator fun invoke(): DomainResult<List<AuthState>> {
-        return try {
-            withContext(Dispatchers.IO) {
-                Timber.d("Invoking DetermineAuthStatesUseCase")
-                val firebaseUser = getFirebaseUser() ?: return@withContext DomainResult.Success(emptyList())
-                reloadFirebaseUser(firebaseUser)
-                determineAuthStates(firebaseUser)
-            }
-        } catch (e: Exception) {
-            Timber.e(e, "Unexpected error in DetermineAuthStatesUseCase")
-            DomainResult.Failure(AppError.Navigation.DetermineAuthStates)
-        }
-    }
-
-    private suspend fun determineAuthStates(firebaseUser: FirebaseUser): DomainResult<List<AuthState>> {
-        val states = mutableListOf<AuthState>()
-        // If user is not logged in, return failure
-        val domainUser = getUserDetails(firebaseUser.uid) ?: return DomainResult.Failure(AppError.Navigation.DetermineAuthStates)
-        
-        states.add(AuthState.isLoggedIn)
-        if (!firebaseUser.isEmailVerified) {
-            Timber.d("User is logged in but email is not verified.")
-            return DomainResult.Success(states)
-        }
-        states.add(AuthState.isEmailVerified)
-
-        if (!domainUser.isLocationVerified) {
-            Timber.d("Location not verified.")
-            return DomainResult.Success(states)
-        }
-        states.add(AuthState.isLocationVerified)
-
-        if (domainUser.screenName.isBlank()) {
-            Timber.d("Screen name not generated.")
-            return DomainResult.Success(states)
-        }
-        states.add(AuthState.isScreenNameGenerated)
-
-        if (!domainUser.manuallyVerified) {
-            Timber.d("User not manually verified.")
-            return DomainResult.Success(states)
-        }
-        states.add(AuthState.isManuallyVerified)
-
-        Timber.d("All checks passed. Determined auth states: $states")
-        return DomainResult.Success(states)
-    }
-
-    private suspend fun getFirebaseUser(): FirebaseUser? {
-        return try {
-            authenticationRepository.observeAuthState().firstOrNull().also {
-                if (it == null) Timber.d("No Firebase user found.")
-            }
-        } catch (e: Exception) {
-            Timber.e(e, "Error observing auth state")
-            null
-        }
-    }
-
-    private suspend fun reloadFirebaseUser(firebaseUser: FirebaseUser): Boolean {
-        return try {
-            Timber.d("Reloading Firebase user data")
-            firebaseUser.reload()
-            true
-        } catch (e: Exception) {
-            Timber.e(e, "Failed to reload Firebase user data")
-            false
-        }
-    }
-
-    private suspend fun getUserDetails(userId: String): User? {
-        return try {
-            when (val result = getUserUseCase()) {
-                is DomainResult.Success -> result.data.also {
-                    Timber.d("User details fetched successfully for userId: $userId")
-                }
-                is DomainResult.Failure -> {
-                    Timber.e("Failed to fetch user details for userId: $userId")
-                    null
-                }
-            }
-        } catch (e: Throwable) {
-            Timber.e(e, "Unexpected error fetching user details for userId: $userId")
-            null
-        }
-    }
-}
-package com.openparty.app.features.startup.feature_authentication.domain.usecase
-
-import com.google.firebase.auth.FirebaseUser
-import com.openparty.app.core.shared.domain.DomainResult
-import com.openparty.app.core.shared.domain.error.AppError
-import com.openparty.app.features.startup.feature_authentication.domain.repository.AuthenticationRepository
-import timber.log.Timber
-import javax.inject.Inject
-
-class GetFirebaseUserUseCase @Inject constructor(
-    private val authenticationRepository: AuthenticationRepository
-) {
-    suspend operator fun invoke(): DomainResult<FirebaseUser> {
-        Timber.i("GetCurrentUserUseCase invoked")
-
-        return try {
-            Timber.d("Fetching current user from authentication repository")
-            val user = authenticationRepository.getCurrentUser()
-
-            if (user != null) {
-                Timber.i("Current user retrieved successfully: UID=${user.uid}")
-                DomainResult.Success(user)
-            } else {
-                Timber.w("No current user found; returning failure")
-                DomainResult.Failure(AppError.Authentication.GetUser)
-            }
-        } catch (e: Throwable) {
-            Timber.e(e, "Unexpected error while fetching current user")
-            DomainResult.Failure(AppError.Authentication.GetUser)
-        }
-    }
-}
-package com.openparty.app.features.startup.feature_authentication.domain.usecase
-
-import com.openparty.app.core.shared.domain.DomainResult
-import com.openparty.app.core.shared.domain.error.AppError
-import com.openparty.app.features.startup.feature_authentication.domain.repository.AuthenticationRepository
-import timber.log.Timber
-import javax.inject.Inject
-
-class LogoutUseCase @Inject constructor(
-    private val authenticationRepository: AuthenticationRepository
-) {
-    suspend operator fun invoke(): DomainResult<Unit> {
-        Timber.i("LogoutUseCase invoked")
-
-        return try {
-            Timber.d("Attempting to log out user")
-            val result = authenticationRepository.logout()
-
-            when (result) {
-                is DomainResult.Success -> {
-                    Timber.i("User logged out successfully")
-                    DomainResult.Success(Unit)
-                }
-                is DomainResult.Failure -> {
-                    Timber.e("Failed to log out user: ${result.error}")
-                    DomainResult.Failure(result.error)
-                }
-            }
-        } catch (e: Throwable) {
-            Timber.e(e, "Unexpected error during logout")
-            DomainResult.Failure(AppError.Authentication.Logout)
-        }
-    }
-}
-package com.openparty.app.features.startup.feature_authentication.domain.usecase
-
-import com.openparty.app.core.shared.domain.DomainResult
-import com.openparty.app.core.shared.domain.error.AppError
-import com.openparty.app.features.startup.feature_authentication.domain.repository.AuthenticationRepository
-import timber.log.Timber
-import javax.inject.Inject
-
-class RefreshAccessTokenUseCase @Inject constructor(
-    private val authenticationRepository: AuthenticationRepository
-) {
-    suspend operator fun invoke(): DomainResult<String> {
-        Timber.i("RefreshAccessTokenUseCase invoked")
-
-        return try {
-            Timber.d("Attempting to refresh access token")
-            when (val result = authenticationRepository.refreshAccessToken()) {
-                is DomainResult.Success -> {
-                    Timber.i("Access token refreshed successfully: ${result.data}")
-                    result
-                }
-                is DomainResult.Failure -> {
-                    Timber.e("Failed to refresh access token: ${result.error}")
-                    DomainResult.Failure(result.error)
-                }
-            }
-        } catch (e: Throwable) {
-            Timber.e(e, "Unexpected error during access token refresh")
-            DomainResult.Failure(AppError.Authentication.RefreshToken)
-        }
-    }
-}
-package com.openparty.app.features.startup.feature_authentication.domain.usecase
-
-import com.openparty.app.core.shared.domain.DomainResult
-import com.openparty.app.core.shared.domain.error.AppError
-import com.openparty.app.features.shared.feature_user.data.model.OtherUserInfo
-import com.openparty.app.features.shared.feature_user.data.model.UserDto
-import com.openparty.app.features.shared.feature_user.domain.repository.UserRepository
-import com.openparty.app.features.startup.feature_authentication.domain.repository.AuthenticationRepository
-import timber.log.Timber
-import javax.inject.Inject
-
-class RegisterUseCase @Inject constructor(
-    private val authenticationRepository: AuthenticationRepository,
-    private val userRepository: UserRepository
-) {
-    suspend operator fun invoke(email: String, password: String): DomainResult<Unit> {
-        Timber.i("Registering user with email: $email")
-        return try {
-            when (val registerResult = authenticationRepository.register(email, password)) {
-                is DomainResult.Success -> {
-                    Timber.i("User successfully registered in AuthenticationRepository")
-                    val userId = registerResult.data
-                    val user = UserDto(
-                        userId = userId,
-                        accountType = "Constituent",
-                        manuallyVerified = false,
-                        governmentName = null,
-                        location = null,
-                        locationVerified = false,
-                        otherUserInfo = OtherUserInfo(
-                            email = email,
-                            phoneNumber = null,
-                            profilePictureUrl = null
-                        ),
-                        screenName = null,
-                        title = null
-                    )
-                    Timber.i("Creating UserDto with userId: $userId")
-                    when (val addResult = userRepository.addUser(userId, user)) {
-                        is DomainResult.Success -> {
-                            Timber.i("User successfully added in UserRepository with userId: $userId")
-                            DomainResult.Success(Unit)
-                        }
-                        is DomainResult.Failure -> {
-                            Timber.e("Failed to add user in UserRepository with userId: $userId")
-                            DomainResult.Failure(AppError.Authentication.Register)
-                        }
-                    }
-                }
-                is DomainResult.Failure -> {
-                    if (registerResult.error == AppError.Authentication.UserAlreadyExists) {
-                        Timber.e("Failed to register user: User already exists for email: $email")
-                        DomainResult.Failure(AppError.Authentication.UserAlreadyExists)
-                    } else {
-                        Timber.e("Failed to register user in AuthenticationRepository")
-                        DomainResult.Failure(AppError.Authentication.Register)
-                    }
-                }
-            }
-        } catch (e: Throwable) {
-            Timber.e(e, "An exception occurred while registering the user with email: $email")
-            DomainResult.Failure(AppError.Authentication.Register)
-        }
-    }
-}
-package com.openparty.app.features.startup.feature_authentication.domain.usecase
-
-import com.openparty.app.core.shared.domain.DomainResult
-import com.openparty.app.core.shared.domain.error.AppError
-import com.openparty.app.features.startup.feature_authentication.domain.repository.AuthenticationRepository
-import javax.inject.Inject
-
-class SendEmailVerificationUseCase @Inject constructor(
-    private val authenticationRepository: AuthenticationRepository
-) {
-    suspend operator fun invoke(): DomainResult<Unit> {
-        return try {
-            when (val result = authenticationRepository.sendEmailVerification()) {
-                is DomainResult.Success -> result
-                is DomainResult.Failure -> DomainResult.Failure(result.error)
-            }
-        } catch (e: Throwable) {
-            DomainResult.Failure(AppError.Authentication.EmailVerification)
-        }
-    }
-}
-package com.openparty.app.features.startup.feature_authentication.domain.usecase
-
-import com.openparty.app.core.shared.domain.DomainResult
-import com.openparty.app.core.shared.domain.error.AppError
-import com.openparty.app.features.startup.feature_authentication.domain.repository.AuthenticationRepository
-import javax.inject.Inject
-
-class SignInUseCase @Inject constructor(
-    private val authenticationRepository: AuthenticationRepository
-) {
-    suspend operator fun invoke(email: String, password: String): DomainResult<Unit> {
-        return try {
-            when (val result = authenticationRepository.login(email, password)) {
-                is DomainResult.Success -> result
-                is DomainResult.Failure -> DomainResult.Failure(result.error)
-            }
-        } catch (e: Throwable) {
-            DomainResult.Failure(AppError.Authentication.SignIn)
-        }
-    }
-}
-package com.openparty.app.features.startup.feature_authentication.presentation
-
-import com.openparty.app.features.startup.feature_authentication.domain.model.AuthState
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavHostController
+import com.openparty.app.core.shared.presentation.ErrorText
+import com.openparty.app.core.shared.presentation.RoundedButton
+import com.openparty.app.core.shared.presentation.TitleText
+import com.openparty.app.core.shared.presentation.UiEvent
 import com.openparty.app.navigation.NavDestinations
+import kotlinx.coroutines.flow.collectLatest
+
+@Composable
+fun EmailVerificationScreen(
+    navController: NavHostController,
+    viewModel: EmailVerificationViewModel = hiltViewModel()
+) {
+    LaunchedEffect(Unit) {
+        viewModel.uiEvent.collectLatest { event ->
+            when (event) {
+                is UiEvent.Navigate -> {
+                    navController.navigate(event.destination.route) {
+                        popUpTo(NavDestinations.EmailVerification.route) { inclusive = true }
+                    }
+                }
+            }
+        }
+    }
+
+    val uiState by viewModel.uiState.collectAsState()
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        TitleText("Verify Your Email")
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        RoundedButton(onClick = { viewModel.onSendVerificationClick() }, text = "Send Verification Email")
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        RoundedButton(onClick = { viewModel.onCheckEmailVerificationStatus() }, text = "Check Verification Status")
+
+        if (uiState.isLoading) {
+            Spacer(modifier = Modifier.height(16.dp))
+            CircularProgressIndicator()
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        ErrorText(errorMessage = uiState.errorMessage)
+    }
+}
+
+package com.openparty.app.features.startup.verification.feature_email_verification.presentation
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.openparty.app.core.shared.presentation.UiEvent
+import com.openparty.app.features.startup.feature_authentication.domain.usecase.DetermineAuthStatesUseCase
+import com.openparty.app.features.startup.feature_authentication.domain.usecase.SendEmailVerificationUseCase
+import com.openparty.app.features.startup.feature_authentication.presentation.AuthFlowNavigationMapper
+import com.openparty.app.core.shared.domain.DomainResult
+import com.openparty.app.core.shared.domain.error.AppErrorMapper
+import com.openparty.app.core.shared.presentation.UiState
+import com.openparty.app.navigation.NavDestinations
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
 import timber.log.Timber
+import javax.inject.Inject
+import dagger.hilt.android.lifecycle.HiltViewModel
 
-class AuthFlowNavigationMapper {
+@HiltViewModel
+class EmailVerificationViewModel @Inject constructor(
+    private val sendEmailVerificationUseCase: SendEmailVerificationUseCase,
+    private val determineAuthStatesUseCase: DetermineAuthStatesUseCase,
+    private val authFlowNavigationMapper: AuthFlowNavigationMapper
+) : ViewModel() {
 
-    fun determineDestination(states: List<AuthState>): NavDestinations {
-        Timber.i("Determining navigation destination based on auth states: $states")
+    private val _uiEvent = MutableSharedFlow<UiEvent>()
+    val uiEvent: SharedFlow<UiEvent> = _uiEvent
 
-        return when {
-            !states.contains(AuthState.isLoggedIn) -> {
-                Timber.i("User is not logged in; navigating to Login")
-                NavDestinations.Login
+    private val _uiState = MutableStateFlow(UiState())
+    val uiState: StateFlow<UiState> = _uiState
+
+    fun onSendVerificationClick() {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true)
+            when (val sendResult = sendEmailVerificationUseCase()) {
+                is DomainResult.Success -> {
+                    _uiState.value = _uiState.value.copy(isLoading = false)
+                    Timber.d("Verification email sent successfully")
+                }
+                is DomainResult.Failure -> {
+                    Timber.e(sendResult.error, "Error sending verification email")
+                    val errorMessage = AppErrorMapper.getUserFriendlyMessage(sendResult.error)
+                    _uiState.value = _uiState.value.copy(isLoading = false, errorMessage = errorMessage)
+                }
             }
-            !states.contains(AuthState.isEmailVerified) -> {
-                Timber.i("User email is not verified; navigating to EmailVerification")
-                NavDestinations.EmailVerification
-            }
-            !states.contains(AuthState.isLocationVerified) -> {
-                Timber.i("User location is not verified; navigating to LocationVerification")
-                NavDestinations.LocationVerification
-            }
-            !states.contains(AuthState.isScreenNameGenerated) -> {
-                Timber.i("User screen name is not generated; navigating to ScreenNameGeneration")
-                NavDestinations.ScreenNameGeneration
-            }
-            !states.contains(AuthState.isManuallyVerified) -> {
-                Timber.i("User is not manually verified; navigating to ManualVerification")
-                NavDestinations.ManualVerification
-            }
-            else -> {
-                Timber.i("All auth states satisfied; navigating to DiscussionsPreview")
-                NavDestinations.DiscussionsPreview
+        }
+    }
+
+    fun onCheckEmailVerificationStatus() {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true)
+            when (val statesResult = determineAuthStatesUseCase()) {
+                is DomainResult.Success -> {
+                    _uiState.value = _uiState.value.copy(isLoading = false)
+                    val destination = authFlowNavigationMapper.determineDestination(statesResult.data)
+
+                    if (destination == NavDestinations.EmailVerification) {
+                        Timber.d("User email not verified; staying on the current screen.")
+                        _uiState.value = _uiState.value.copy(errorMessage = "Email hasn't been verified yet. Check your emails for the verification email.")
+                    } else {
+                        Timber.d("Navigating to ${destination.route}")
+                        _uiEvent.emit(UiEvent.Navigate(destination))
+                    }
+                }
+                is DomainResult.Failure -> {
+                    Timber.e(statesResult.error, "Error determining next screen")
+                    val errorMessage = AppErrorMapper.getUserFriendlyMessage(statesResult.error)
+                    _uiState.value = _uiState.value.copy(isLoading = false, errorMessage = errorMessage)
+                }
             }
         }
     }
 }
 
+package com.openparty.app.features.startup.verification.feature_manual_verification.presentation
 
+import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material3.*
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.openparty.app.core.shared.presentation.ErrorText
+
+@Composable
+fun ManualVerificationScreen() {
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.background
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(24.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Icon(
+                imageVector = Icons.Filled.LocationOn,
+                contentDescription = "Location Icon",
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(80.dp)
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Text(
+                text = "Manual verification",
+                style = MaterialTheme.typography.headlineSmall.copy(
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold
+                ),
+                color = MaterialTheme.colorScheme.onBackground
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Text(
+                text = "In order to use the app, you need to be personally verified by the tech team.\n\nText this number for verification:\n07749466643",
+                style = MaterialTheme.typography.bodyLarge.copy(
+                    textAlign = TextAlign.Center,
+                    lineHeight = 22.sp
+                ),
+                color = MaterialTheme.colorScheme.onBackground,
+                modifier = Modifier.padding(horizontal = 16.dp)
+            )
+        }
+    }
+}
 
 -----------------
 
@@ -817,6 +292,9 @@ Notes:
 In order to do this you will need to make some changes: 
 - Right now, dependency injection is done using dagger hilt, I'll need you to change this to koin dependency injection 
     - Put the koin dependency injection files in commonMain (i.e. use them for both platforms, don't make them platform specific)- I'm also using firebase. Put the firebase dependencies in the commonMain gradle so that I can use firebase shared code across platforms 
+    - Put the koin dependency files inside each of the individual features 
+    - i.e. don't put koin dependency inside composeApp/src/commonMain/kotlin/com/openparty/app/di/AppModule.kt (unless the dependency is supposed to be used across the whole app)
+    - instead put the koin dependency file inside the specific feature it relates to e.g. feature_authentication
 - I want to use compose multiplatform navigation, so all navigation should be in comMain and should be shared across platforms 
     - implementation("org.jetbrains.androidx.navigation:navigation-compose")
 - Don't use Timber logs, use kermit logs like this: 
