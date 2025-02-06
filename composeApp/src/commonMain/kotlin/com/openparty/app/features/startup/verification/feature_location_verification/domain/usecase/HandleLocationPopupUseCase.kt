@@ -1,12 +1,13 @@
-//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/startup/verification/feature_location_verification/domain/usecase/HandleLocationPopupUseCase.kt
+// File: composeApp/src/commonMain/kotlin/com/openparty/app/features/startup/verification/feature_location_verification/domain/usecase/HandleLocationPopupUseCase.kt
 package com.openparty.app.features.startup.verification.feature_location_verification.domain.usecase
 
 import com.openparty.app.core.shared.domain.DomainResult
 import com.openparty.app.core.shared.domain.error.AppError
-import com.openparty.app.core.shared.domain.GlobalLogger.logger
 import com.openparty.app.features.startup.verification.feature_location_verification.presentation.components.LocationVerificationUiState
+import com.openparty.app.core.shared.domain.GlobalLogger.logger
 
 class HandleLocationPopupUseCase {
+
     fun execute(
         isGranted: Boolean,
         currentState: LocationVerificationUiState,

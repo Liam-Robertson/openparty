@@ -1,4 +1,4 @@
-//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/startup/verification/feature_location_verification/presentation/components/LocationVerificationUiState.kt
+// File: composeApp/src/commonMain/kotlin/com/openparty/app/features/startup/verification/feature_location_verification/presentation/components/LocationVerificationUiState.kt
 package com.openparty.app.features.startup.verification.feature_location_verification.presentation.components
 
 data class LocationVerificationUiState(

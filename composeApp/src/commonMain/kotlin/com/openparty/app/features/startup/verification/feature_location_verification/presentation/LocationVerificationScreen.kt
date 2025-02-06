@@ -1,4 +1,4 @@
-//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/startup/verification/feature_location_verification/presentation/LocationVerificationScreen.kt
+// File: composeApp/src/commonMain/kotlin/com/openparty/app/features/startup/verification/feature_location_verification/presentation/LocationVerificationScreen.kt
 package com.openparty.app.features.startup.verification.feature_location_verification.presentation
 
 import androidx.compose.foundation.layout.Box
@@ -13,37 +13,45 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.navigation.NavHostController
+import androidx.navigation.NavController
+import com.openparty.app.core.shared.presentation.ErrorText
+import com.openparty.app.features.startup.verification.feature_location_verification.domain.RequestLocationPermission
+import com.openparty.app.features.startup.verification.feature_location_verification.presentation.components.LocationVerificationUiEvent
 import kotlinx.coroutines.flow.collectLatest
 import org.koin.compose.viewmodel.koinViewModel
-import com.openparty.app.core.shared.presentation.ErrorText
-import com.openparty.app.features.startup.verification.feature_location_verification.presentation.components.LocationVerificationUiEvent
 
 @Composable
 fun LocationVerificationScreen(
-    navController: NavHostController,
+    navController: NavController,
     viewModel: LocationVerificationViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    // Removed LocalContext as it's Android-specific.
+    var permissionToRequest by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(Unit) {
         viewModel.uiEvent.collectLatest { event ->
             when (event) {
                 is LocationVerificationUiEvent.Navigate -> {
                     navController.navigate(event.destination) {
-                        popUpTo("LocationVerification") { inclusive = true }
+                        popUpTo(event.destination) { inclusive = true }
                     }
                 }
                 is LocationVerificationUiEvent.RequestPermission -> {
-                    // Trigger your platform-specific permission flow.
-                }
-                is LocationVerificationUiEvent.OpenSettings -> {
-                    // Call platform-specific logic to open app settings.
+                    permissionToRequest = event.permission
                 }
             }
+        }
+    }
+
+    if (permissionToRequest != null) {
+        RequestLocationPermission(permissionToRequest!!) { isGranted ->
+            viewModel.handleLocationPopupResult(isGranted)
+            permissionToRequest = null
         }
     }
 

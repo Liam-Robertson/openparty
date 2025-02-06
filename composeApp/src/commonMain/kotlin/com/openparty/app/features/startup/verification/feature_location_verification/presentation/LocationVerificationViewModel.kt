@@ -1,11 +1,10 @@
-//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/startup/verification/feature_location_verification/presentation/LocationVerificationViewModel.kt
+// File: composeApp/src/commonMain/kotlin/com/openparty/app/features/startup/verification/feature_location_verification/presentation/LocationVerificationViewModel.kt
 package com.openparty.app.features.startup.verification.feature_location_verification.presentation
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.openparty.app.core.shared.domain.DomainResult
 import com.openparty.app.core.shared.domain.error.AppErrorMapper
-import com.openparty.app.core.shared.domain.GlobalLogger.logger
 import com.openparty.app.features.startup.feature_authentication.domain.usecase.DetermineAuthStatesUseCase
 import com.openparty.app.features.startup.feature_authentication.presentation.AuthFlowNavigationMapper
 import com.openparty.app.features.startup.verification.feature_location_verification.domain.usecase.HandleLocationPopupUseCase
@@ -13,7 +12,8 @@ import com.openparty.app.features.startup.verification.feature_location_verifica
 import com.openparty.app.features.startup.verification.feature_location_verification.domain.usecase.VerifyLocationUseCase
 import com.openparty.app.features.startup.verification.feature_location_verification.presentation.components.LocationVerificationUiEvent
 import com.openparty.app.features.startup.verification.feature_location_verification.presentation.components.LocationVerificationUiState
-import com.openparty.app.features.shared.feature_permissions.domain.PlatformPermissions
+import com.openparty.app.core.shared.domain.GlobalLogger.logger
+import com.openparty.app.core.shared.domain.openAppSettings
 import com.openparty.app.navigation.Screen
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -39,38 +39,44 @@ class LocationVerificationViewModel(
 
     init {
         viewModelScope.launch {
+            logger.i { "Initializing LocationVerificationViewModel: Showing verification dialog" }
             _uiState.emit(_uiState.value.copy(showVerificationDialog = true))
         }
     }
 
     fun onVerificationDialogOkClicked() {
         viewModelScope.launch {
+            logger.i { "Ok clicked: Hiding verification dialog and emitting RequestPermission event" }
             _uiState.emit(_uiState.value.copy(showVerificationDialog = false))
-            _uiEvent.emit(LocationVerificationUiEvent.RequestPermission(PlatformPermissions.FINE_LOCATION))
+            _uiEvent.emit(LocationVerificationUiEvent.RequestPermission("android.permission.ACCESS_FINE_LOCATION"))
         }
     }
 
     fun onSettingsDialogClicked() {
-        viewModelScope.launch {
-            _uiEvent.emit(LocationVerificationUiEvent.OpenSettings)
-        }
+        logger.i { "Settings dialog clicked: Opening app settings" }
+        openAppSettings()
     }
 
     fun handleLocationPopupResult(isGranted: Boolean) {
         viewModelScope.launch {
+            logger.i { "Handling location popup result: isGranted = $isGranted" }
             val currentState = _uiState.value
             when (val result = handleLocationPopupUseCase.execute(isGranted, currentState, permissionRequestCount)) {
                 is DomainResult.Success -> {
                     val updatedState = result.data
+                    logger.i { "Permission result handled successfully, updated state: $updatedState" }
                     _uiState.value = updatedState
                     if (updatedState.permissionsGranted) {
+                        logger.i { "Permissions granted: Fetching location" }
                         fetchLocation()
                     } else if (updatedState.showVerificationDialog) {
                         permissionRequestCount++
+                        logger.i { "Permissions not granted; incrementing request count to $permissionRequestCount" }
                     }
                 }
                 is DomainResult.Failure -> {
                     val errorMessage = AppErrorMapper.getUserFriendlyMessage(result.error)
+                    logger.e { "Error handling location popup: $errorMessage" }
                     _uiState.value = _uiState.value.copy(errorMessage = errorMessage)
                 }
             }
@@ -79,12 +85,15 @@ class LocationVerificationViewModel(
 
     private fun fetchLocation() {
         viewModelScope.launch {
+            logger.i { "Fetching location: Setting loading state" }
             _uiState.emit(_uiState.value.copy(isLoading = true))
             when (val result = verifyLocationUseCase.execute()) {
                 is DomainResult.Success -> {
+                    logger.i { "Location fetched successfully: result = ${result.data}" }
                     if (result.data) {
                         updateUserLocation()
                     } else {
+                        logger.i { "Location indicates user is outside West Lothian" }
                         _uiState.emit(
                             _uiState.value.copy(
                                 showVerificationDialog = true,
@@ -95,6 +104,7 @@ class LocationVerificationViewModel(
                 }
                 is DomainResult.Failure -> {
                     val errorMessage = AppErrorMapper.getUserFriendlyMessage(result.error)
+                    logger.e { "Error fetching location: $errorMessage" }
                     _uiState.value = _uiState.value.copy(isLoading = false, errorMessage = errorMessage)
                 }
             }
@@ -104,13 +114,16 @@ class LocationVerificationViewModel(
 
     private fun updateUserLocation() {
         viewModelScope.launch {
+            logger.i { "Updating user location: Setting loading state" }
             _uiState.emit(_uiState.value.copy(isLoading = true))
             when (val result = updateUserLocationUseCase.execute()) {
                 is DomainResult.Success -> {
+                    logger.i { "User location updated successfully; navigating to next screen" }
                     navigateToNextAuthScreen()
                 }
                 is DomainResult.Failure -> {
                     val errorMessage = AppErrorMapper.getUserFriendlyMessage(result.error)
+                    logger.e { "Error updating user location: $errorMessage" }
                     _uiState.value = _uiState.value.copy(isLoading = false, errorMessage = errorMessage)
                 }
             }
@@ -121,28 +134,13 @@ class LocationVerificationViewModel(
     private suspend fun navigateToNextAuthScreen() {
         when (val authStatesResult = determineAuthStatesUseCase()) {
             is DomainResult.Success -> {
-                val destination: Screen = authFlowNavigationMapper.determineDestination(authStatesResult.data)
+                val destination = authFlowNavigationMapper.determineDestination(authStatesResult.data)
                 if (destination == Screen.LocationVerification) {
                     _uiState.value = _uiState.value.copy(errorMessage = "Location verification is incomplete. Please try again.")
                     logger.e { "Already on LocationVerification. Not navigating." }
                 } else {
-                    // Manually map the destination to its route string.
-                    val route: String = when (destination) {
-                        Screen.Splash -> "Splash"
-                        Screen.Login -> "Login"
-                        Screen.Register -> "Register"
-                        Screen.EmailVerification -> "EmailVerification"
-                        Screen.LocationVerification -> "LocationVerification"
-                        Screen.ScreenNameGeneration -> "ScreenNameGeneration"
-                        Screen.ManualVerification -> "ManualVerification"
-                        Screen.DiscussionsPreview -> "DiscussionsPreview"
-                        is Screen.DiscussionsArticle -> "DiscussionsArticle/${destination.discussionId}"
-                        Screen.CouncilMeetingsPreview -> "CouncilMeetingsPreview"
-                        is Screen.CouncilMeetingsArticle -> "CouncilMeetingsArticle/${destination.councilMeetingId}"
-                        is Screen.AddComment -> "AddComment/${destination.discussionId}/${destination.titleText}"
-                        Screen.AddDiscussion -> "AddDiscussion"
-                    }
-                    _uiEvent.emit(LocationVerificationUiEvent.Navigate(route))
+                    logger.i { "Navigating to next auth screen: ${destination.route}" }
+                    _uiEvent.emit(LocationVerificationUiEvent.Navigate(destination.route))
                 }
             }
             is DomainResult.Failure -> {

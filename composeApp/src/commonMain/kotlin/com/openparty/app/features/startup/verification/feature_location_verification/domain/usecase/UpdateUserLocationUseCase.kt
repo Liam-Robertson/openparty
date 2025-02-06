@@ -1,12 +1,12 @@
-//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/startup/verification/feature_location_verification/domain/usecase/UpdateUserLocationUseCase.kt
+// File: composeApp/src/commonMain/kotlin/com/openparty/app/features/startup/verification/feature_location_verification/domain/usecase/UpdateUserLocationUseCase.kt
 package com.openparty.app.features.startup.verification.feature_location_verification.domain.usecase
 
 import com.openparty.app.core.shared.domain.DomainResult
 import com.openparty.app.core.shared.domain.error.AppError
-import com.openparty.app.core.shared.domain.GlobalLogger.logger
 import com.openparty.app.features.shared.feature_user.domain.model.UpdateUserRequest
 import com.openparty.app.features.shared.feature_user.domain.usecase.UpdateUserUseCase
 import com.openparty.app.features.startup.feature_authentication.domain.usecase.GetCurrentUserIdUseCase
+import com.openparty.app.core.shared.domain.GlobalLogger.logger
 
 class UpdateUserLocationUseCase(
     private val getCurrentUserIdUseCase: GetCurrentUserIdUseCase,
