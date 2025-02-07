@@ -7,6 +7,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.openparty.app.features.startup.account.feature_login.presentation.LoginScreen
 import com.openparty.app.features.startup.account.feature_register.presentation.RegisterScreen
+import com.openparty.app.features.startup.feature_screen_name_generation.presentation.ScreenNameGenerationScreen
 import com.openparty.app.features.startup.feature_splash.presentation.SplashScreen
 import com.openparty.app.features.startup.verification.feature_email_verification.presentation.EmailVerificationScreen
 import com.openparty.app.features.startup.verification.feature_location_verification.presentation.LocationVerificationScreen
@@ -34,9 +35,9 @@ fun AppNavigation() {
         composable(route = Screen.LocationVerification.route) {
             LocationVerificationScreen(navController)
         }
-        // composable(route = Screen.ScreenNameGeneration.route) {
-        //     ScreenNameGenerationScreen(navController)
-        // }
+         composable(route = Screen.ScreenNameGeneration.route) {
+             ScreenNameGenerationScreen(navController)
+         }
         // composable(route = Screen.ManualVerification.route) {
         //     ManualVerificationScreen(navController)
         // }
