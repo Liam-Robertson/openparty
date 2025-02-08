@@ -1,15 +1,15 @@
-//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/newsfeed/shared/data/repository/FirestoreRepository.kt
+// File: composeApp/src/commonMain/kotlin/com/openparty/app/features/newsfeed/shared/data/repository/FirestoreRepository.kt
 package com.openparty.app.features.newsfeed.shared.data.repository
 
-import androidx.paging.Pager
-import androidx.paging.PagingConfig
-import androidx.paging.PagingData
+import app.cash.paging.Pager
+import app.cash.paging.PagingConfig
+import app.cash.paging.PagingData
 import com.openparty.app.core.shared.domain.DomainResult
 import com.openparty.app.core.shared.domain.error.AppError
-import com.openparty.app.features.newsfeed.shared.data.datasource.FirebaseNewsfeedDataSource
 import com.openparty.app.features.newsfeed.shared.data.datasource.FirestorePagingSource
 import kotlinx.coroutines.flow.Flow
 import com.openparty.app.core.shared.domain.GlobalLogger.logger
+import com.openparty.app.features.newsfeed.shared.data.datasource.FirebaseNewsfeedDataSource
 
 abstract class FirestoreRepository<T : Any>(
     private val dataSource: FirebaseNewsfeedDataSource<T>,

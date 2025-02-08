@@ -1,4 +1,4 @@
-//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/newsfeed/council_meetings/feature_council_meetings_preview/presentation/CouncilMeetingsPreviewScreen.kt
+// File: composeApp/src/commonMain/kotlin/com/openparty/app/features/newsfeed/council_meetings/feature_council_meetings_preview/presentation/CouncilMeetingsPreviewScreen.kt
 package com.openparty.app.features.newsfeed.council_meetings.feature_council_meetings_preview.presentation
 
 import androidx.compose.foundation.layout.Box
@@ -10,7 +10,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
-import androidx.paging.compose.collectAsLazyPagingItems
 import com.openparty.app.core.shared.presentation.ErrorText
 import com.openparty.app.core.shared.presentation.LoadingScreen
 import com.openparty.app.core.shared.presentation.UiEvent
@@ -18,6 +17,7 @@ import com.openparty.app.features.newsfeed.shared.presentation.BaseFeedScreen
 import com.openparty.app.navigation.NavigationFooter
 import kotlinx.coroutines.flow.collectLatest
 import org.koin.compose.viewmodel.koinViewModel
+import app.cash.paging.compose.collectAsLazyPagingItems
 
 @Composable
 fun CouncilMeetingsPreviewScreen(

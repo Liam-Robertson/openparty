@@ -48,7 +48,6 @@ class CouncilMeetingsPreviewViewModel(
     private fun loadCouncilMeetings() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true)
-
             when (val getCouncilMeetingsResult = getCouncilMeetingsUseCase()) {
                 is DomainResult.Success -> {
                     val updatedPagingData = getCouncilMeetingsResult.data.map { pagingData ->
@@ -68,7 +67,6 @@ class CouncilMeetingsPreviewViewModel(
                     _councilMeetings = updatedPagingData
                     _uiState.value = _uiState.value.copy(isLoading = false)
                 }
-
                 is DomainResult.Failure -> {
                     val errorMessage = AppErrorMapper.getUserFriendlyMessage(getCouncilMeetingsResult.error)
                     _uiState.value = _uiState.value.copy(isLoading = false, errorMessage = errorMessage)
@@ -83,7 +81,7 @@ class CouncilMeetingsPreviewViewModel(
                 is DomainResult.Success -> logger.i { "Council meeting selected event tracked: $councilMeetingId" }
                 is DomainResult.Failure -> logger.e { "Failed to track council meeting selected event for ID: $councilMeetingId" }
             }
-            _uiEvent.emit(UiEvent.Navigate(Screen.CouncilMeetingsArticle(councilMeetingId)))
+            _uiEvent.emit(UiEvent.Navigate(Screen.CouncilMeetingsArticle(councilMeetingId).createRoute(councilMeetingId)))
         }
     }
 }

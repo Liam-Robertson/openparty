@@ -313,3 +313,1134 @@ In order to do this you will need to make some changes:
     - For example, if you had to fetch permissions, write a method in commonMain called "fetchPermissions", then write implementations of fetchPermissions in iosMain and androidMain that can be called from commonMain
 
 
+----------
+
+I have already converted most of my kotlin code to compose multiplatform but I'm still getting some errors. here's my current code: 
+//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/newsfeed/council_meetings/feature_council_meetings_article/di/CouncilMeetingArticleModule.kt
+package com.openparty.app.features.newsfeed.council_meetings.feature_council_meetings_article.di
+
+import com.openparty.app.features.newsfeed.council_meetings.feature_council_meetings_article.domain.usecase.GetCouncilMeetingByIdUseCase
+import com.openparty.app.core.firebase.feature_firebase_storage.domain.usecase.ResolveUrlUseCase
+import com.openparty.app.features.newsfeed.council_meetings.feature_media_playback.domain.usecase.PlayAudioUseCase
+import com.openparty.app.features.newsfeed.council_meetings.feature_media_playback.domain.usecase.PauseAudioUseCase
+import com.openparty.app.features.newsfeed.council_meetings.feature_council_meetings_article.presentation.CouncilMeetingArticleViewModel
+import org.koin.core.module.dsl.viewModel
+import org.koin.dsl.module
+
+val councilMeetingArticleModule = module {
+    viewModel { CouncilMeetingArticleViewModel(get(), get(), get(), get(), get()) }
+    factory { GetCouncilMeetingByIdUseCase(get()) }
+    factory { ResolveUrlUseCase(get()) }
+    factory { PlayAudioUseCase(get()) }
+    factory { PauseAudioUseCase(get()) }
+}
+//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/newsfeed/council_meetings/feature_council_meetings_article/domain/usecase/GetCouncilMeetingByIdUseCase.kt
+package com.openparty.app.features.newsfeed.council_meetings.feature_council_meetings_article.domain.usecase
+
+import com.openparty.app.core.shared.domain.DomainResult
+import com.openparty.app.core.shared.domain.error.AppError
+import com.openparty.app.features.newsfeed.council_meetings.shared.domain.repository.CouncilMeetingRepository
+import com.openparty.app.features.newsfeed.council_meetings.shared.domain.model.CouncilMeeting
+import com.openparty.app.core.shared.domain.GlobalLogger.logger
+
+class GetCouncilMeetingByIdUseCase(
+    private val councilMeetingRepository: CouncilMeetingRepository
+) {
+    suspend operator fun invoke(councilMeetingId: String): DomainResult<CouncilMeeting> {
+        logger.d { "GetCouncilMeetingByIdUseCase invoked for ID: $councilMeetingId" }
+        return try {
+            when (val result = councilMeetingRepository.getCouncilMeetingById(councilMeetingId)) {
+                is DomainResult.Success -> {
+                    logger.d { "Successfully fetched council meeting for ID: $councilMeetingId" }
+                    DomainResult.Success(result.data)
+                }
+                is DomainResult.Failure -> {
+                    logger.e { "Failed to fetch council meeting for ID: $councilMeetingId" }
+                    DomainResult.Failure(AppError.CouncilMeeting.FetchCouncilMeetings)
+                }
+            }
+        } catch (e: Exception) {
+            logger.e(e) { "Unexpected error while fetching council meeting for ID: $councilMeetingId" }
+            DomainResult.Failure(AppError.CouncilMeeting.FetchCouncilMeetings)
+        }
+    }
+}//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/newsfeed/council_meetings/feature_council_meetings_article/presentation/components/CouncilMeetingArticleUiState.kt
+package com.openparty.app.features.newsfeed.council_meetings.feature_council_meetings_article.presentation.components
+
+import com.openparty.app.features.newsfeed.council_meetings.shared.domain.model.CouncilMeeting
+
+data class CouncilMeetingArticleUiState(
+    val isLoading: Boolean = false,
+    val errorMessage: String? = null,
+    val councilMeeting: CouncilMeeting? = null,
+    val isPlaying: Boolean = false
+)
+
+//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/newsfeed/council_meetings/feature_council_meetings_article/presentation/components/PlayPauseButton.kt
+package com.openparty.app.features.newsfeed.council_meetings.feature_council_meetings_article.presentation.components
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
+
+@Composable
+fun PlayPauseButton(
+    isPlaying: Boolean,
+    onClick: () -> Unit
+) {
+    IconButton(
+        onClick = onClick,
+        modifier = Modifier.size(80.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(80.dp)
+                .background(
+                    color = MaterialTheme.colorScheme.primary,
+                    shape = CircleShape
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            if (isPlaying) {
+                Icon(
+                    imageVector = Icons.Default.Pause,
+                    contentDescription = null,
+                    modifier = Modifier.size(64.dp),
+                    tint = Color.White
+                )
+            } else {
+                Icon(
+                    imageVector = Icons.Default.PlayArrow,
+                    contentDescription = null,
+                    modifier = Modifier.size(64.dp),
+                    tint = Color.White
+                )
+            }
+        }
+    }
+}
+//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/newsfeed/council_meetings/feature_council_meetings_article/presentation/CouncilMeetingArticleScreen.kt
+package com.openparty.app.features.newsfeed.council_meetings.feature_council_meetings_article.presentation
+
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import androidx.navigation.NavHostController
+import com.openparty.app.core.shared.presentation.ErrorText
+import com.openparty.app.core.shared.presentation.UiEvent
+import com.openparty.app.features.newsfeed.council_meetings.feature_council_meetings_article.presentation.components.PlayPauseButton
+import com.openparty.app.features.newsfeed.council_meetings.shared.domain.model.CouncilMeeting
+import kotlinx.coroutines.flow.collectLatest
+import org.koin.compose.viewmodel.koinViewModel
+
+@Composable
+fun CouncilMeetingArticleScreen(
+    navController: NavHostController,
+    viewModel: CouncilMeetingArticleViewModel = koinViewModel()
+) {
+    val uiState by viewModel.uiState.collectAsState()
+    val uiEvent = viewModel.uiEvent
+    LaunchedEffect(uiEvent) {
+        uiEvent.collectLatest { event ->
+            when (event) {
+                is UiEvent.Navigate -> {
+                    navController.navigate(event.destination) {
+                        popUpTo(event.destination) { inclusive = true }
+                    }
+                }
+            }
+        }
+    }
+    if (uiState.errorMessage != null) {
+        ErrorText(errorMessage = uiState.errorMessage)
+    } else {
+        uiState.councilMeeting?.let { councilMeeting: CouncilMeeting ->
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp)
+            ) {
+                item {
+                    Text(
+                        text = councilMeeting.title,
+                        style = MaterialTheme.typography.headlineMedium
+                    )
+                }
+                item {
+                    Spacer(modifier = Modifier.height(24.dp))
+                }
+                item {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(vertical = 32.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        PlayPauseButton(
+                            isPlaying = uiState.isPlaying,
+                            onClick = { viewModel.togglePlayback() }
+                        )
+                    }
+                }
+                item {
+                    Spacer(modifier = Modifier.height(24.dp))
+                }
+                item {
+                    Text(
+                        text = councilMeeting.contentText,
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                }
+            }
+        }
+    }
+}
+//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/newsfeed/council_meetings/feature_council_meetings_article/presentation/CouncilMeetingArticleViewModel.kt
+package com.openparty.app.features.newsfeed.council_meetings.feature_council_meetings_article.presentation
+
+import androidx.lifecycle.SavedStateHandle
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.openparty.app.core.shared.domain.DomainResult
+import com.openparty.app.core.shared.domain.error.AppError
+import com.openparty.app.core.shared.domain.error.AppErrorMapper
+import com.openparty.app.core.firebase.feature_firebase_storage.domain.usecase.ResolveUrlUseCase
+import com.openparty.app.core.shared.presentation.UiEvent
+import com.openparty.app.features.newsfeed.council_meetings.feature_council_meetings_article.domain.usecase.GetCouncilMeetingByIdUseCase
+import com.openparty.app.features.newsfeed.council_meetings.feature_council_meetings_article.presentation.components.CouncilMeetingArticleUiState
+import com.openparty.app.features.newsfeed.council_meetings.feature_media_playback.domain.usecase.PauseAudioUseCase
+import com.openparty.app.features.newsfeed.council_meetings.feature_media_playback.domain.usecase.PlayAudioUseCase
+import com.openparty.app.features.newsfeed.council_meetings.shared.domain.model.CouncilMeeting
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
+
+class CouncilMeetingArticleViewModel(
+    private val getCouncilMeetingByIdUseCase: GetCouncilMeetingByIdUseCase,
+    private val resolveUrlUseCase: ResolveUrlUseCase,
+    private val playAudioUseCase: PlayAudioUseCase,
+    private val pauseAudioUseCase: PauseAudioUseCase,
+    savedStateHandle: SavedStateHandle
+) : ViewModel() {
+
+    private val _uiState = MutableStateFlow(CouncilMeetingArticleUiState())
+    val uiState: StateFlow<CouncilMeetingArticleUiState> = _uiState
+
+    private val _uiEvent = MutableSharedFlow<UiEvent>()
+    val uiEvent: SharedFlow<UiEvent> = _uiEvent
+
+    val councilMeetingId: String? = savedStateHandle["councilMeetingId"]
+
+    init {
+        initializeCouncilMeeting()
+    }
+
+    private fun initializeCouncilMeeting() {
+        val id = councilMeetingId
+        if (id == null) {
+            handleError(AppError.CouncilMeeting.FetchCouncilMeetings)
+            return
+        }
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true)
+            fetchCouncilMeeting(id)
+        }
+    }
+
+    private suspend fun fetchCouncilMeeting(id: String) {
+        when (val result = getCouncilMeetingByIdUseCase(id)) {
+            is DomainResult.Success -> resolveAudioUrl(result.data)
+            is DomainResult.Failure -> handleError(result.error, isLoading = false)
+        }
+    }
+
+    private suspend fun resolveAudioUrl(meeting: CouncilMeeting) {
+        when (val resolvedResult = resolveUrlUseCase(meeting.audioUrl)) {
+            is DomainResult.Success -> {
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    councilMeeting = meeting.copy(audioUrl = resolvedResult.data)
+                )
+            }
+            is DomainResult.Failure -> handleError(resolvedResult.error, isLoading = false)
+        }
+    }
+
+    fun togglePlayback() {
+        viewModelScope.launch {
+            val audioUrl = _uiState.value.councilMeeting?.audioUrl.orEmpty()
+            if (audioUrl.isEmpty()) {
+                handleError(AppError.CouncilMeeting.PlayAudio)
+                return@launch
+            }
+            if (_uiState.value.isPlaying) {
+                handlePause()
+            } else {
+                handlePlay(audioUrl)
+            }
+        }
+    }
+
+    private fun handlePlay(audioUrl: String) {
+        when (val result = playAudioUseCase.execute(audioUrl)) {
+            is DomainResult.Success -> {
+                _uiState.value = _uiState.value.copy(isPlaying = true)
+            }
+            is DomainResult.Failure -> {
+                handleError(result.error)
+            }
+        }
+    }
+
+    private fun handlePause() {
+        when (val result = pauseAudioUseCase.execute()) {
+            is DomainResult.Success -> {
+                _uiState.value = _uiState.value.copy(isPlaying = false)
+            }
+            is DomainResult.Failure -> {
+                handleError(result.error)
+            }
+        }
+    }
+
+    private fun handleError(error: AppError, isLoading: Boolean = false) {
+        val errorMessage = AppErrorMapper.getUserFriendlyMessage(error)
+        _uiState.value = _uiState.value.copy(
+            isLoading = isLoading,
+            errorMessage = errorMessage
+        )
+    }
+}
+//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/newsfeed/council_meetings/feature_council_meetings_preview/di/CouncilMeetingsUseCaseModule.kt
+package com.openparty.app.features.newsfeed.council_meetings.feature_council_meetings_preview.di
+
+import com.openparty.app.features.newsfeed.council_meetings.feature_council_meetings_preview.domain.usecase.GetCouncilMeetingsUseCase
+import org.koin.dsl.module
+
+val councilMeetingsUseCaseModule = module {
+    single { GetCouncilMeetingsUseCase(get()) }
+}
+//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/newsfeed/council_meetings/feature_council_meetings_preview/domain/usecase/GetCouncilMeetingsUseCase.kt
+package com.openparty.app.features.newsfeed.council_meetings.feature_council_meetings_preview.domain.usecase
+
+import androidx.paging.PagingData
+import com.openparty.app.core.shared.domain.DomainResult
+import com.openparty.app.core.shared.domain.error.AppError
+import com.openparty.app.features.newsfeed.council_meetings.shared.domain.model.CouncilMeeting
+import com.openparty.app.features.newsfeed.council_meetings.shared.domain.repository.CouncilMeetingRepository
+import com.openparty.app.core.shared.domain.GlobalLogger.logger
+import kotlinx.coroutines.flow.Flow
+
+class GetCouncilMeetingsUseCase(
+    private val repository: CouncilMeetingRepository
+) {
+    operator fun invoke(): DomainResult<Flow<PagingData<CouncilMeeting>>> {
+        logger.d { "GetCouncilMeetingsUseCase invoked" }
+        return try {
+            logger.d { "Fetching council meetings from repository" }
+            val councilMeetingsFlow = repository.getCouncilMeetings()
+            logger.d { "Successfully fetched council meetings flow" }
+            DomainResult.Success(councilMeetingsFlow)
+        } catch (e: Exception) {
+            logger.e(e) { "Error occurred while fetching council meetings" }
+            DomainResult.Failure(AppError.CouncilMeeting.FetchCouncilMeetings)
+        }
+    }
+}
+//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/newsfeed/council_meetings/feature_council_meetings_preview/presentation/CouncilMeetingCard.kt
+package com.openparty.app.features.newsfeed.council_meetings.feature_council_meetings_preview.presentation
+
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Card
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.unit.dp
+import com.openparty.app.features.newsfeed.council_meetings.shared.domain.model.CouncilMeeting
+import io.kamel.image.KamelImage
+import io.kamel.image.asyncPainterResource
+
+@Composable
+fun CouncilMeetingCard(
+    councilMeeting: CouncilMeeting,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(240.dp)
+            .padding(8.dp)
+            .clickable { onClick() }
+    ) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            Text(
+                text = councilMeeting.title,
+                style = MaterialTheme.typography.titleLarge,
+                maxLines = 1,
+                modifier = Modifier.padding(8.dp)
+            )
+            KamelImage(
+                resource = asyncPainterResource(data = councilMeeting.thumbnailUrl),
+                contentDescription = null,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
+                contentScale = ContentScale.Crop
+            )
+        }
+    }
+}
+// File: composeApp/src/commonMain/kotlin/com/openparty/app/features/newsfeed/council_meetings/feature_council_meetings_preview/presentation/CouncilMeetingsPreviewScreen.kt
+package com.openparty.app.features.newsfeed.council_meetings.feature_council_meetings_preview.presentation
+
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
+import androidx.navigation.NavHostController
+import com.openparty.app.core.shared.presentation.ErrorText
+import com.openparty.app.core.shared.presentation.LoadingScreen
+import com.openparty.app.core.shared.presentation.UiEvent
+import com.openparty.app.features.newsfeed.shared.presentation.BaseFeedScreen
+import com.openparty.app.navigation.NavigationFooter
+import kotlinx.coroutines.flow.collectLatest
+import org.koin.compose.viewmodel.koinViewModel
+import app.cash.paging.compose.collectAsLazyPagingItems
+
+@Composable
+fun CouncilMeetingsPreviewScreen(
+    navController: NavHostController,
+    viewModel: CouncilMeetingsPreviewViewModel = koinViewModel()
+) {
+    val lazyCouncilMeetings = viewModel.councilMeetings.collectAsLazyPagingItems()
+    val uiEvent = viewModel.uiEvent
+    val uiState by viewModel.uiState.collectAsState()
+
+    LaunchedEffect(uiEvent) {
+        uiEvent.collectLatest { event ->
+            when (event) {
+                is UiEvent.Navigate -> {
+                    navController.navigate(event.destination) {
+                        popUpTo(event.destination) { inclusive = true }
+                    }
+                }
+            }
+        }
+    }
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        if (uiState.isLoading) {
+            LoadingScreen()
+        } else {
+            Column(modifier = Modifier.fillMaxSize()) {
+                Box(modifier = Modifier.weight(1f)) {
+                    BaseFeedScreen(
+                        items = lazyCouncilMeetings,
+                        emptyPlaceholder = "No council meetings yet..."
+                    ) { councilMeeting ->
+                        councilMeeting?.let {
+                            CouncilMeetingCard(councilMeeting = it) {
+                                viewModel.onCouncilMeetingSelected(it.councilMeetingId)
+                            }
+                        }
+                    }
+                }
+                ErrorText(errorMessage = uiState.errorMessage)
+                NavigationFooter(
+                    navController = navController,
+                    currentRoute = navController.currentBackStackEntry?.destination?.route
+                )
+            }
+        }
+    }
+}
+//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/newsfeed/council_meetings/feature_council_meetings_preview/presentation/CouncilMeetingsPreviewViewModel.kt
+package com.openparty.app.features.newsfeed.council_meetings.feature_council_meetings_preview.presentation
+
+import androidx.paging.PagingData
+import androidx.paging.cachedIn
+import androidx.paging.map
+import com.openparty.app.core.analytics.domain.usecase.TrackCouncilMeetingSelectedUseCase
+import com.openparty.app.core.shared.domain.DomainResult
+import com.openparty.app.core.shared.domain.error.AppErrorMapper
+import com.openparty.app.core.shared.presentation.UiEvent
+import com.openparty.app.core.firebase.feature_firebase_storage.domain.usecase.ResolveUrlUseCase
+import com.openparty.app.core.shared.presentation.UiState
+import com.openparty.app.features.newsfeed.council_meetings.feature_council_meetings_preview.domain.usecase.GetCouncilMeetingsUseCase
+import com.openparty.app.features.newsfeed.council_meetings.shared.domain.model.CouncilMeeting
+import com.openparty.app.core.shared.domain.GlobalLogger.logger
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.openparty.app.navigation.Screen
+
+class CouncilMeetingsPreviewViewModel(
+    private val getCouncilMeetingsUseCase: GetCouncilMeetingsUseCase,
+    private val resolveUrlUseCase: ResolveUrlUseCase,
+    private val trackCouncilMeetingSelectedUseCase: TrackCouncilMeetingSelectedUseCase
+) : ViewModel() {
+
+    private val _uiState = MutableStateFlow(UiState())
+    val uiState: StateFlow<UiState> = _uiState
+
+    private val _uiEvent = MutableSharedFlow<UiEvent>()
+    val uiEvent: SharedFlow<UiEvent> = _uiEvent
+
+    private var _councilMeetings: Flow<PagingData<CouncilMeeting>> = flow {}
+    val councilMeetings: Flow<PagingData<CouncilMeeting>>
+        get() = _councilMeetings
+
+    init {
+        loadCouncilMeetings()
+    }
+
+    private fun loadCouncilMeetings() {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true)
+
+            when (val getCouncilMeetingsResult = getCouncilMeetingsUseCase()) {
+                is DomainResult.Success -> {
+                    val updatedPagingData = getCouncilMeetingsResult.data.map { pagingData ->
+                        pagingData.map { councilMeeting ->
+                            when (val urlResult = resolveUrlUseCase(councilMeeting.thumbnailUrl)) {
+                                is DomainResult.Success -> {
+                                    councilMeeting.copy(thumbnailUrl = urlResult.data)
+                                }
+                                is DomainResult.Failure -> {
+                                    val errorMessage = AppErrorMapper.getUserFriendlyMessage(urlResult.error)
+                                    _uiState.value = _uiState.value.copy(isLoading = false, errorMessage = errorMessage)
+                                    councilMeeting
+                                }
+                            }
+                        }
+                    }.cachedIn(viewModelScope)
+                    _councilMeetings = updatedPagingData
+                    _uiState.value = _uiState.value.copy(isLoading = false)
+                }
+
+                is DomainResult.Failure -> {
+                    val errorMessage = AppErrorMapper.getUserFriendlyMessage(getCouncilMeetingsResult.error)
+                    _uiState.value = _uiState.value.copy(isLoading = false, errorMessage = errorMessage)
+                }
+            }
+        }
+    }
+
+    fun onCouncilMeetingSelected(councilMeetingId: String) {
+        viewModelScope.launch {
+            when (val result = trackCouncilMeetingSelectedUseCase(councilMeetingId)) {
+                is DomainResult.Success -> logger.i { "Council meeting selected event tracked: $councilMeetingId" }
+                is DomainResult.Failure -> logger.e { "Failed to track council meeting selected event for ID: $councilMeetingId" }
+            }
+            _uiEvent.emit(UiEvent.Navigate(Screen.CouncilMeetingsArticle(councilMeetingId)))
+        }
+    }
+}
+//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/newsfeed/shared/data/datasource/FirebaseNewsfeedDataSource.kt
+package com.openparty.app.features.newsfeed.shared.data.datasource
+
+import dev.gitlive.firebase.firestore.DocumentSnapshot
+import dev.gitlive.firebase.firestore.FirebaseFirestore
+import dev.gitlive.firebase.firestore.Query
+import dev.gitlive.firebase.firestore.Direction
+import com.openparty.app.core.shared.domain.GlobalLogger.logger
+
+class FirebaseNewsfeedDataSource<T : Any>(
+    private val firestore: FirebaseFirestore,
+    val collectionName: String,
+    private val orderByField: String,
+    val transform: (DocumentSnapshot) -> T?
+) {
+    fun getQuery(startAfter: DocumentSnapshot?, loadSize: Int): Query {
+        val queryDescription = buildString {
+            appendLine("Constructing Firestore query:")
+            appendLine("  Collection: $collectionName")
+            appendLine("  OrderBy: $orderByField (DESC)")
+            appendLine("  Limit: $loadSize")
+            if (startAfter != null) {
+                appendLine("  StartAfter doc ID: ${startAfter.id}")
+            }
+        }
+        logger.d { "getQuery() -> $queryDescription" }
+        return try {
+            val baseQuery = firestore.collection(collectionName)
+                .orderBy(orderByField, Direction.DESCENDING)
+                .limit(loadSize.toLong())
+            if (startAfter != null) {
+                baseQuery.startAfter(startAfter)
+            } else {
+                baseQuery
+            }
+        } catch (e: Exception) {
+            logger.e(e) { "Error creating query for collection: $collectionName" }
+            throw Exception("Failed to create query for collection: $collectionName. Please try again.", e)
+        }
+    }
+
+    suspend fun getItemById(itemId: String): T? {
+        logger.d { "Fetching item by ID: $itemId from collection: $collectionName" }
+        return try {
+            val snapshot = firestore.collection(collectionName)
+                .document(itemId)
+                .get()
+            logger.d { "Item fetched successfully for ID: $itemId in collection: $collectionName" }
+            transform(snapshot)
+        } catch (e: Exception) {
+            logger.e(e) { "Error fetching item by ID: $itemId from collection: $collectionName" }
+            null
+        }
+    }
+}
+// File: composeApp/src/commonMain/kotlin/com/openparty/app/features/newsfeed/shared/data/datasource/FirestorePagingSource.kt
+package com.openparty.app.features.newsfeed.shared.data.datasource
+
+import app.cash.paging.PagingSource
+import app.cash.paging.PagingState
+import dev.gitlive.firebase.firestore.DocumentSnapshot
+import kotlinx.coroutines.tasks.await
+import com.openparty.app.core.shared.domain.GlobalLogger.logger
+
+class FirestorePagingSource<T : Any>(
+    private val dataSource: FirebaseNewsfeedDataSource<T>
+) : PagingSource<DocumentSnapshot, T>() {
+
+    override suspend fun load(params: LoadParams<DocumentSnapshot>): LoadResult<DocumentSnapshot, T> {
+        val collection = dataSource.collectionName
+        val startAfterId = params.key?.id
+        logger.d { "Loading data from FirestorePagingSource for $collection with loadSize: ${params.loadSize} and startAfter: $startAfterId" }
+        return try {
+            val query = dataSource.getQuery(params.key, params.loadSize)
+            val snapshot = query.get().await()
+            val items = snapshot.documents.mapNotNull { dataSource.transform(it) }
+            val nextKey = snapshot.documents.lastOrNull()
+            if (items.isEmpty()) {
+                logger.w { "No items loaded for $collection (startAfter = $startAfterId). Possibly an empty collection or no more data." }
+            } else {
+                logger.d { "Successfully loaded ${items.size} items from $collection, next key: ${nextKey?.id}" }
+            }
+            LoadResult.Page(
+                data = items,
+                prevKey = null,
+                nextKey = nextKey
+            )
+        } catch (e: Exception) {
+            logger.e(e) { "Error loading data in FirestorePagingSource for $collection" }
+            LoadResult.Error(e)
+        }
+    }
+
+    override fun getRefreshKey(state: PagingState<DocumentSnapshot, T>): DocumentSnapshot? {
+        logger.d { "Getting refresh key in FirestorePagingSource for ${dataSource.collectionName}" }
+        return null
+    }
+}
+// File: composeApp/src/commonMain/kotlin/com/openparty/app/features/newsfeed/shared/data/repository/FirestoreRepository.kt
+package com.openparty.app.features.newsfeed.shared.data.repository
+
+import app.cash.paging.Pager
+import app.cash.paging.PagingConfig
+import app.cash.paging.PagingData
+import com.openparty.app.core.shared.domain.DomainResult
+import com.openparty.app.core.shared.domain.error.AppError
+import com.openparty.app.features.newsfeed.shared.data.datasource.FirestorePagingSource
+import kotlinx.coroutines.flow.Flow
+import com.openparty.app.core.shared.domain.GlobalLogger.logger
+import com.openparty.app.features.newsfeed.shared.data.datasource.FirebaseNewsfeedDataSource
+
+abstract class FirestoreRepository<T : Any>(
+    private val dataSource: FirebaseNewsfeedDataSource<T>,
+    private val error: AppError
+) {
+    fun getPagedItems(): Flow<PagingData<T>> {
+        logger.d { "Fetching paged items from FirestoreRepository for ${dataSource.collectionName}" }
+        return Pager(
+            config = PagingConfig(
+                pageSize = 10,
+                enablePlaceholders = false
+            ),
+            pagingSourceFactory = {
+                logger.d { "Creating FirestorePagingSource for ${dataSource.collectionName}" }
+                FirestorePagingSource(dataSource)
+            }
+        ).flow
+    }
+
+    suspend fun getItemById(itemId: String): DomainResult<T> {
+        logger.d { "Fetching item by ID: $itemId in FirestoreRepository for ${dataSource.collectionName}" }
+        return try {
+            val item = dataSource.getItemById(itemId)
+            if (item != null) {
+                logger.d { "Item found for ID: $itemId in ${dataSource.collectionName}" }
+                DomainResult.Success(item)
+            } else {
+                logger.w { "Item not found for ID: $itemId in ${dataSource.collectionName}" }
+                DomainResult.Failure(error)
+            }
+        } catch (e: Exception) {
+            logger.e(e) { "Error fetching item by ID: $itemId in ${dataSource.collectionName}" }
+            DomainResult.Failure(error)
+        }
+    }
+}
+// File: composeApp/src/commonMain/kotlin/com/openparty/app/features/newsfeed/shared/presentation/BaseFeedScreen.kt
+package com.openparty.app.features.newsfeed.shared.presentation
+
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import app.cash.paging.compose.LazyPagingItems
+import app.cash.paging.compose.itemKey
+
+@Composable
+fun <T : Any> BaseFeedScreen(
+    items: LazyPagingItems<T>,
+    emptyPlaceholder: String,
+    content: @Composable (item: T?) -> Unit
+) {
+    if (items.itemCount == 0) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(text = emptyPlaceholder)
+        }
+    } else {
+        LazyColumn {
+            items(
+                count = items.itemCount,
+                key = { index -> items.itemKey { it?.hashCode() ?: 0 }[index] }
+            ) { index ->
+                val item = items[index]
+                content(item)
+            }
+        }
+    }
+}
+
+
+I'm going to give you multiple issues. Fix them all, don't miss any: 
+
+1) 
+// File: composeApp/src/commonMain/kotlin/com/openparty/app/features/newsfeed/shared/presentation/BaseFeedScreen.kt
+package com.openparty.app.features.newsfeed.shared.presentation
+
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import app.cash.paging.compose.LazyPagingItems
+import app.cash.paging.compose.itemKey
+
+@Composable
+fun <T : Any> BaseFeedScreen(
+    items: LazyPagingItems<T>,
+    emptyPlaceholder: String,
+    content: @Composable (item: T?) -> Unit
+) {
+    if (items.itemCount == 0) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(text = emptyPlaceholder)
+        }
+    } else {
+        LazyColumn {
+            items(
+                count = items.itemCount,
+                key = { index -> items.itemKey { it?.hashCode() ?: 0 }[index] }
+            ) { index ->
+                val item = items[index]
+                content(item)
+            }
+        }
+    }
+}
+ in this code block: 
+ else {
+        LazyColumn {
+            items(
+                count = items.itemCount,
+                key = { index -> items.itemKey { it?.hashCode() ?: 0 }[index] }
+            ) { index ->
+                val item = items[index]
+                content(item)
+            }
+        }
+
+on this line - key = { index -> items.itemKey { it?.hashCode() ?: 0 }[index] }
+
+i get this error - No get method providing array access - on this part - [index]
+
+2)
+// File: composeApp/src/commonMain/kotlin/com/openparty/app/features/newsfeed/council_meetings/shared/data/repository/CouncilMeetingRepositoryImpl.kt
+package com.openparty.app.features.newsfeed.council_meetings.shared.data.repository
+
+import androidx.paging.PagingData
+import dev.gitlive.firebase.firestore.FirebaseFirestore
+import com.openparty.app.core.shared.domain.DomainResult
+import com.openparty.app.core.shared.domain.error.AppError
+import com.openparty.app.features.newsfeed.council_meetings.shared.domain.model.CouncilMeeting
+import com.openparty.app.features.newsfeed.shared.data.datasource.FirebaseNewsfeedDataSource
+import com.openparty.app.features.newsfeed.shared.data.repository.FirestoreRepository
+import com.openparty.app.features.newsfeed.council_meetings.shared.domain.repository.CouncilMeetingRepository
+import com.openparty.app.core.shared.domain.GlobalLogger.logger
+import kotlinx.coroutines.flow.Flow
+import kotlinx.serialization.serializer
+
+class CouncilMeetingRepositoryImpl(
+    firestore: FirebaseFirestore
+) : FirestoreRepository<CouncilMeeting>(
+    dataSource = FirebaseNewsfeedDataSource(
+        firestore = firestore,
+        collectionName = "council_meetings",
+        orderByField = "upvoteCount",
+        transform = { documentSnapshot ->
+            try {
+                logger.d { "Transforming document snapshot to CouncilMeeting object: ${documentSnapshot.id}" }
+                // Use decode(...) in a try-catch to return null on failure.
+                documentSnapshot.decode(CouncilMeeting.serializer())
+            } catch (e: Exception) {
+                logger.e(e) { "Error transforming document snapshot to CouncilMeeting object: ${documentSnapshot.id}" }
+                null
+            }
+        }
+    ),
+    error = AppError.CouncilMeeting.General
+), CouncilMeetingRepository {
+    override fun getCouncilMeetings(): Flow<PagingData<CouncilMeeting>> {
+        logger.d { "Fetching council meetings from CouncilMeetingRepositoryImpl" }
+        return getPagedItems()
+    }
+
+    override suspend fun getCouncilMeetingById(councilMeetingId: String): DomainResult<CouncilMeeting> {
+        logger.d { "Fetching council meeting by ID: $councilMeetingId from CouncilMeetingRepositoryImpl" }
+        return getItemById(councilMeetingId)
+    }
+}
+on thsi line - documentSnapshot.decode(CouncilMeeting.serializer())
+.decode cannot be resolved
+
+3) 
+//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/newsfeed/council_meetings/feature_council_meetings_preview/presentation/CouncilMeetingsPreviewViewModel.kt
+package com.openparty.app.features.newsfeed.council_meetings.feature_council_meetings_preview.presentation
+
+import androidx.paging.PagingData
+import androidx.paging.cachedIn
+import androidx.paging.map
+import com.openparty.app.core.analytics.domain.usecase.TrackCouncilMeetingSelectedUseCase
+import com.openparty.app.core.shared.domain.DomainResult
+import com.openparty.app.core.shared.domain.error.AppErrorMapper
+import com.openparty.app.core.shared.presentation.UiEvent
+import com.openparty.app.core.firebase.feature_firebase_storage.domain.usecase.ResolveUrlUseCase
+import com.openparty.app.core.shared.presentation.UiState
+import com.openparty.app.features.newsfeed.council_meetings.feature_council_meetings_preview.domain.usecase.GetCouncilMeetingsUseCase
+import com.openparty.app.features.newsfeed.council_meetings.shared.domain.model.CouncilMeeting
+import com.openparty.app.core.shared.domain.GlobalLogger.logger
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.openparty.app.navigation.Screen
+
+class CouncilMeetingsPreviewViewModel(
+    private val getCouncilMeetingsUseCase: GetCouncilMeetingsUseCase,
+    private val resolveUrlUseCase: ResolveUrlUseCase,
+    private val trackCouncilMeetingSelectedUseCase: TrackCouncilMeetingSelectedUseCase
+) : ViewModel() {
+
+    private val _uiState = MutableStateFlow(UiState())
+    val uiState: StateFlow<UiState> = _uiState
+
+    private val _uiEvent = MutableSharedFlow<UiEvent>()
+    val uiEvent: SharedFlow<UiEvent> = _uiEvent
+
+    private var _councilMeetings: Flow<PagingData<CouncilMeeting>> = flow {}
+    val councilMeetings: Flow<PagingData<CouncilMeeting>>
+        get() = _councilMeetings
+
+    init {
+        loadCouncilMeetings()
+    }
+
+    private fun loadCouncilMeetings() {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true)
+
+            when (val getCouncilMeetingsResult = getCouncilMeetingsUseCase()) {
+                is DomainResult.Success -> {
+                    val updatedPagingData = getCouncilMeetingsResult.data.map { pagingData ->
+                        pagingData.map { councilMeeting ->
+                            when (val urlResult = resolveUrlUseCase(councilMeeting.thumbnailUrl)) {
+                                is DomainResult.Success -> {
+                                    councilMeeting.copy(thumbnailUrl = urlResult.data)
+                                }
+                                is DomainResult.Failure -> {
+                                    val errorMessage = AppErrorMapper.getUserFriendlyMessage(urlResult.error)
+                                    _uiState.value = _uiState.value.copy(isLoading = false, errorMessage = errorMessage)
+                                    councilMeeting
+                                }
+                            }
+                        }
+                    }.cachedIn(viewModelScope)
+                    _councilMeetings = updatedPagingData
+                    _uiState.value = _uiState.value.copy(isLoading = false)
+                }
+
+                is DomainResult.Failure -> {
+                    val errorMessage = AppErrorMapper.getUserFriendlyMessage(getCouncilMeetingsResult.error)
+                    _uiState.value = _uiState.value.copy(isLoading = false, errorMessage = errorMessage)
+                }
+            }
+        }
+    }
+
+    fun onCouncilMeetingSelected(councilMeetingId: String) {
+        viewModelScope.launch {
+            when (val result = trackCouncilMeetingSelectedUseCase(councilMeetingId)) {
+                is DomainResult.Success -> logger.i { "Council meeting selected event tracked: $councilMeetingId" }
+                is DomainResult.Failure -> logger.e { "Failed to track council meeting selected event for ID: $councilMeetingId" }
+            }
+            _uiEvent.emit(UiEvent.Navigate(Screen.CouncilMeetingsArticle(councilMeetingId)))
+        }
+    }
+}
+
+
+on this line 
+_uiEvent.emit(UiEvent.Navigate(Screen.CouncilMeetingsArticle(councilMeetingId)))
+
+i get thsi error: 
+Type mismatch.
+Required:
+String
+Found:
+Screen. CouncilMeetingsArticle
+
+here are the navigation files for refreence: 
+//File: composeApp/src/commonMain/kotlin/com/openparty/app/navigation/Screen.kt
+package com.openparty.app.navigation
+
+import kotlinx.serialization.Serializable
+
+@Serializable
+sealed class Screen(val route: String) {
+    @Serializable
+    object Splash : Screen("splash")
+
+    @Serializable
+    object Login : Screen("login")
+
+    @Serializable
+    object Register : Screen("register")
+
+    @Serializable
+    object EmailVerification : Screen("email_verification")
+
+    @Serializable
+    object LocationVerification : Screen("location_verification")
+
+    @Serializable
+    object ScreenNameGeneration : Screen("screen_name_generation")
+
+    @Serializable
+    object ManualVerification : Screen("manual_verification")
+
+    @Serializable
+    object DiscussionsPreview : Screen("discussions_preview")
+
+    @Serializable
+    data class DiscussionsArticle(val discussionId: String) : Screen("discussions_article/{discussionId}") {
+        fun createRoute(discussionId: String): String = "discussions_article/$discussionId"
+    }
+
+    @Serializable
+    object CouncilMeetingsPreview : Screen("council_meetings_preview")
+
+    @Serializable
+    data class CouncilMeetingsArticle(val councilMeetingId: String) : Screen("council_meetings_article/{councilMeetingId}") {
+        fun createRoute(councilMeetingId: String): String = "council_meetings_article/$councilMeetingId"
+    }
+
+    @Serializable
+    data class AddComment(val discussionId: String, val titleText: String) : Screen("add_comment/{discussionId}/{titleText}") {
+        fun createRoute(discussionId: String, titleText: String): String = "add_comment/$discussionId/$titleText"
+    }
+
+    @Serializable
+    object AddDiscussion : Screen("add_discussion")
+}
+//File: composeApp/src/commonMain/kotlin/com/openparty/app/navigation/AppNavigation.kt
+package com.openparty.app.navigation
+
+import androidx.compose.runtime.Composable
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import com.openparty.app.features.startup.account.feature_login.presentation.LoginScreen
+import com.openparty.app.features.startup.account.feature_register.presentation.RegisterScreen
+import com.openparty.app.features.startup.feature_screen_name_generation.presentation.ScreenNameGenerationScreen
+import com.openparty.app.features.startup.feature_splash.presentation.SplashScreen
+import com.openparty.app.features.startup.verification.feature_email_verification.presentation.EmailVerificationScreen
+import com.openparty.app.features.startup.verification.feature_location_verification.presentation.LocationVerificationScreen
+import com.openparty.app.features.startup.verification.feature_manual_verification.presentation.ManualVerificationScreen
+
+@Composable
+fun AppNavigation() {
+    val navController = rememberNavController()
+
+    NavHost(
+        navController = navController,
+        startDestination = Screen.Splash.route
+    ) {
+        composable(route = Screen.Splash.route) {
+            SplashScreen(navController)
+        }
+        composable(route = Screen.Login.route) {
+            LoginScreen(navController)
+        }
+        composable(route = Screen.Register.route) {
+            RegisterScreen(navController)
+        }
+        composable(route = Screen.EmailVerification.route) {
+            EmailVerificationScreen(navController)
+        }
+        composable(route = Screen.LocationVerification.route) {
+            LocationVerificationScreen(navController)
+        }
+         composable(route = Screen.ScreenNameGeneration.route) {
+             ScreenNameGenerationScreen(navController)
+         }
+         composable(route = Screen.ManualVerification.route) {
+             ManualVerificationScreen()
+         }
+        // composable(route = Screen.DiscussionsPreview.route) {
+        //     DiscussionsPreviewScreen(navController)
+        // }
+        // composable(route = Screen.DiscussionsArticle("").route) { backStackEntry ->
+        //     // Extract argument "discussionId" from backStackEntry.arguments and pass to screen
+        //     val discussionId = backStackEntry.arguments?.getString("discussionId") ?: ""
+        //     DiscussionArticleScreen(navController, discussionId)
+        // }
+        // composable(route = Screen.CouncilMeetingsPreview.route) {
+        //     CouncilMeetingsPreviewScreen(navController)
+        // }
+        // composable(route = Screen.CouncilMeetingsArticle("").route) { backStackEntry ->
+        //     val councilMeetingId = backStackEntry.arguments?.getString("councilMeetingId") ?: ""
+        //     CouncilMeetingArticleScreen(navController, councilMeetingId)
+        // }
+        // composable(route = Screen.AddComment("").route) { backStackEntry ->
+        //     val discussionId = backStackEntry.arguments?.getString("discussionId") ?: ""
+        //     val titleText = backStackEntry.arguments?.getString("titleText") ?: ""
+        //     AddCommentScreen(navController, discussionId, titleText)
+        // }
+        // composable(route = Screen.AddDiscussion.route) {
+        //     AddDiscussionScreen(navController)
+        // }
+    }
+}
+
+4)
+// File: composeApp/src/commonMain/kotlin/com/openparty/app/features/newsfeed/shared/data/datasource/FirestorePagingSource.kt
+package com.openparty.app.features.newsfeed.shared.data.datasource
+
+import app.cash.paging.PagingSource
+import app.cash.paging.PagingState
+import dev.gitlive.firebase.firestore.DocumentSnapshot
+import kotlinx.coroutines.tasks.await
+import com.openparty.app.core.shared.domain.GlobalLogger.logger
+
+class FirestorePagingSource<T : Any>(
+    private val dataSource: FirebaseNewsfeedDataSource<T>
+) : PagingSource<DocumentSnapshot, T>() {
+
+    override suspend fun load(params: LoadParams<DocumentSnapshot>): LoadResult<DocumentSnapshot, T> {
+        val collection = dataSource.collectionName
+        val startAfterId = params.key?.id
+        logger.d { "Loading data from FirestorePagingSource for $collection with loadSize: ${params.loadSize} and startAfter: $startAfterId" }
+        return try {
+            val query = dataSource.getQuery(params.key, params.loadSize)
+            val snapshot = query.get().await()
+            val items = snapshot.documents.mapNotNull { dataSource.transform(it) }
+            val nextKey = snapshot.documents.lastOrNull()
+            if (items.isEmpty()) {
+                logger.w { "No items loaded for $collection (startAfter = $startAfterId). Possibly an empty collection or no more data." }
+            } else {
+                logger.d { "Successfully loaded ${items.size} items from $collection, next key: ${nextKey?.id}" }
+            }
+            LoadResult.Page(
+                data = items,
+                prevKey = null,
+                nextKey = nextKey
+            )
+        } catch (e: Exception) {
+            logger.e(e) { "Error loading data in FirestorePagingSource for $collection" }
+            LoadResult.Error(e)
+        }
+    }
+
+    override fun getRefreshKey(state: PagingState<DocumentSnapshot, T>): DocumentSnapshot? {
+        logger.d { "Getting refresh key in FirestorePagingSource for ${dataSource.collectionName}" }
+        return null
+    }
+}
+
+on this line - val snapshot = query.get().await()
+.await() cannot be resolved

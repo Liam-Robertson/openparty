@@ -70,11 +70,7 @@ kotlin {
             implementation("io.insert-koin:koin-compose-viewmodel:4.0.2")
             implementation("media.kamel:kamel-image:1.0.3")
             implementation("co.touchlab:kermit:2.0.5")
-//            implementation("androidx.paging:3.3.5")
-//            implementation("androidx.paging:paging-runtime:3.3.5")
-//            implementation("androidx.paging:paging-compose:3.3.5")
-            implementation("androidx.paging:paging-common:3.3.5")
-            implementation("androidx.paging:paging-compose:3.3.5")
+            implementation("app.cash.paging:paging-compose-common:3.3.0-alpha02-0.5.1")
 
 
 //            implementation(libs.androidx.material.icons.core)
