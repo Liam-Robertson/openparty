@@ -18,8 +18,6 @@ actual fun RequestLocationPermission(permission: String, onResult: (Boolean) -> 
         onResult(granted)
     }
     LaunchedEffect(permission) {
-        logger.i { "Delaying permission request launch for $permission" }
-        delay(200) // small delay before launching; adjust if necessary
         logger.i { "Launching permission request for $permission" }
         launcher.launch(permission)
     }

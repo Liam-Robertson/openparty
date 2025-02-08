@@ -11,6 +11,7 @@ import com.openparty.app.features.startup.feature_screen_name_generation.present
 import com.openparty.app.features.startup.feature_splash.presentation.SplashScreen
 import com.openparty.app.features.startup.verification.feature_email_verification.presentation.EmailVerificationScreen
 import com.openparty.app.features.startup.verification.feature_location_verification.presentation.LocationVerificationScreen
+import com.openparty.app.features.startup.verification.feature_manual_verification.presentation.ManualVerificationScreen
 
 @Composable
 fun AppNavigation() {
@@ -38,9 +39,9 @@ fun AppNavigation() {
          composable(route = Screen.ScreenNameGeneration.route) {
              ScreenNameGenerationScreen(navController)
          }
-        // composable(route = Screen.ManualVerification.route) {
-        //     ManualVerificationScreen(navController)
-        // }
+         composable(route = Screen.ManualVerification.route) {
+             ManualVerificationScreen()
+         }
         // composable(route = Screen.DiscussionsPreview.route) {
         //     DiscussionsPreviewScreen(navController)
         // }

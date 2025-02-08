@@ -297,6 +297,10 @@ In order to do this you will need to make some changes:
     - instead put the koin dependency file inside the specific feature it relates to e.g. feature_authentication
 - I want to use compose multiplatform navigation, so all navigation should be in comMain and should be shared across platforms 
     - implementation("org.jetbrains.androidx.navigation:navigation-compose")
+- For firebase, don't use this - import com.google.firebase.firestore
+    - That library doesn't work in kotlin compose multiplatform commonMain code 
+    - Instead use this library - import dev.gitlive.firebase.auth
+    - This library can be used in kotlin compose multiplatform commonMain code
 - Don't use Timber logs, use kermit logs like this: 
     -  import com.openparty.app.core.shared.domain.GlobalLogger.logger
     -  logger.i {"Verification email sent successfully"}

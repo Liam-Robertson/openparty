@@ -38,6 +38,12 @@ kotlin {
             implementation("io.insert-koin:koin-android:3.5.6")
             implementation("androidx.security:security-crypto:1.0.0")
             implementation("com.google.android.gms:play-services-location:21.0.1")
+
+            // Audio Player
+            implementation("androidx.media:media:1.5.1")
+            implementation("androidx.media3:media3-exoplayer:1.5.1")
+            implementation("androidx.media3:media3-session:1.5.1")
+            implementation("androidx.media3:media3-ui:1.5.1")
         }
         commonMain.dependencies {
             implementation(compose.runtime)
@@ -57,12 +63,18 @@ kotlin {
             implementation("org.jetbrains.compose.material:material-icons-extended:1.7.3")
             implementation("dev.gitlive:firebase-auth:2.1.0")
             implementation("dev.gitlive:firebase-firestore:2.1.0")
+            implementation("dev.gitlive:firebase-storage:2.1.0")
             implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.0")
             implementation("io.insert-koin:koin-core:4.0.2")
             implementation("io.insert-koin:koin-compose:4.0.2")
             implementation("io.insert-koin:koin-compose-viewmodel:4.0.2")
-
+            implementation("media.kamel:kamel-image:1.0.3")
             implementation("co.touchlab:kermit:2.0.5")
+//            implementation("androidx.paging:3.3.5")
+//            implementation("androidx.paging:paging-runtime:3.3.5")
+//            implementation("androidx.paging:paging-compose:3.3.5")
+            implementation("androidx.paging:paging-common:3.3.5")
+            implementation("androidx.paging:paging-compose:3.3.5")
 
 
 //            implementation(libs.androidx.material.icons.core)
