@@ -88,10 +88,10 @@ fun AccountScreen(
                 ) {
                     Text(text = actionText)
                 }
-                Text(
-                    text = footerText,
-                    modifier = Modifier.clickable { onFooterClick() }
-                )
+//                Text(
+//                    text = footerText,
+//                    modifier = Modifier.clickable { onFooterClick() }
+//                )
                 if (state.isLoading) {
                     Spacer(modifier = Modifier.height(16.dp))
                     CircularProgressIndicator()

@@ -5,6 +5,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.openparty.app.core.shared.domain.DomainResult
+import com.openparty.app.core.shared.domain.error.AppError
 import com.openparty.app.core.shared.domain.error.AppErrorMapper
 import com.openparty.app.core.shared.presentation.UiEvent
 import com.openparty.app.core.shared.presentation.UiState
@@ -38,7 +39,9 @@ class DiscussionArticleViewModel(
 
     private fun loadDiscussion() {
         if (discussionId == null) {
-            val errorMessage = AppErrorMapper.getUserFriendlyMessage(com.openparty.app.core.shared.domain.error.AppError.Discussion.FetchDiscussions)
+            val errorMessage = AppErrorMapper.getUserFriendlyMessage(
+                AppError.Discussion.FetchDiscussions
+            )
             _uiState.value = _uiState.value.copy(isLoading = false, errorMessage = errorMessage)
             return
         }

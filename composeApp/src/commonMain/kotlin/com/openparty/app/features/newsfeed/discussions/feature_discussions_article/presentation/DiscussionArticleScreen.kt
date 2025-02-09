@@ -12,7 +12,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import org.koin.compose.viewmodel.koinViewModel
 import androidx.navigation.NavHostController
 import com.openparty.app.core.shared.presentation.ErrorText
 import com.openparty.app.core.shared.presentation.UiEvent
@@ -20,6 +19,7 @@ import com.openparty.app.features.engagement.comments.feature_add_comment.presen
 import com.openparty.app.features.engagement.comments.feature_comments_section.presentation.CommentsSection
 import com.openparty.app.navigation.Screen
 import kotlinx.coroutines.flow.collectLatest
+import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
 fun DiscussionArticleScreen(
@@ -48,10 +48,10 @@ fun DiscussionArticleScreen(
                     fullyVerified = true,
                     onClick = {
                         navController.navigate(
-                            Screen.AddComment(
+                            Screen.AddComment.createRoute(
                                 discussionId = currentDiscussion.discussionId,
                                 titleText = "Comment on ${currentDiscussion.title}"
-                            ).route
+                            )
                         )
                     }
                 )
@@ -74,9 +74,7 @@ fun DiscussionArticleScreen(
                     )
                 }
                 item {
-                    CommentsSection(
-                        modifier = Modifier
-                    )
+                    CommentsSection(modifier = Modifier)
                 }
                 item {
                     ErrorText(errorMessage = uiState.errorMessage)

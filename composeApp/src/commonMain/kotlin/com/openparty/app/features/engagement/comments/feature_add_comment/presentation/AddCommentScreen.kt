@@ -1,29 +1,26 @@
-// File: composeApp/src/commonMain/kotlin/com/openparty/app/features/engagement/comments/feature_add_comment/presentation/AddCommentScreen.kt
+//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/engagement/comments/feature_add_comment/presentation/AddCommentScreen.kt
 package com.openparty.app.features.engagement.comments.feature_add_comment.presentation
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import org.koin.compose.viewmodel.koinViewModel
 import androidx.navigation.NavController
-import com.openparty.app.core.shared.presentation.ErrorText
-import com.openparty.app.core.shared.presentation.UiEvent
-import com.openparty.app.core.shared.presentation.BodyTextInput
-import com.openparty.app.core.shared.presentation.TopContainer
+import com.openparty.app.core.shared.presentation.*
 import kotlinx.coroutines.flow.collectLatest
+import org.koin.compose.viewmodel.koinViewModel
+import org.koin.core.parameter.parametersOf
 
 @Composable
 fun AddCommentScreen(
     navController: NavController,
-    viewModel: AddCommentViewModel = koinViewModel()
+    discussionId: String,
+    titleText: String,
+    viewModel: AddCommentViewModel = koinViewModel { parametersOf(discussionId, titleText) }
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val titleText = viewModel.titleText
+    val viewTitleText = viewModel.titleText
 
     LaunchedEffect(viewModel.uiEvent) {
         viewModel.uiEvent.collectLatest { event ->
@@ -49,10 +46,8 @@ fun AddCommentScreen(
             onPostClicked = { viewModel.onPostClicked() }
         )
         Spacer(modifier = Modifier.height(16.dp))
-        Box(
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text(titleText)
+        Box(modifier = Modifier.fillMaxWidth()) {
+            Text(viewTitleText)
         }
         Spacer(modifier = Modifier.height(16.dp))
         BodyTextInput(

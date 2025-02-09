@@ -1,0 +1,62 @@
+OpenParty/
+├── build.gradle.kts
+├── gradle/
+│   ├── libs.versions.toml
+│   └── wrapper/
+│       ├── gradle-wrapper.jar
+│       └── gradle-wrapper.properties
+├── gradle.properties
+├── gradlew
+├── gradlew.bat
+├── composeApp/
+│   ├── build.gradle.kts
+│   └── src/
+│       ├── androidMain/
+│       │   ├── AndroidManifest.xml
+│       │   └── kotlin/
+│       │       └── com/
+│       │           └── openparty/
+│       │               └── app/
+│       │                   └── [Placeholder]
+│       ├── commonMain/
+│       │   └── kotlin/
+│       │       └── com/
+│       │           └── openparty/
+│       │               └── app/
+│       │                   └── [Placeholder]
+│       └── iosMain/
+│           └── kotlin/
+│               └── com/
+│                   └── openparty/
+│                       └── app/
+│                           └── [Placeholder]
+└── iosApp/
+    ├── configuration/
+    ├── iosApp/
+    │   ├── Assets.xcassets/
+    │   ├── ContentView.swift
+    │   ├── Info.plist
+    │   ├── iOSApp.swift
+    │   ├── iosApp.xcodeproj/
+    │   └── Preview Content/
+    └── iosApp.xcodeproj/
+
+---------
+
+
+
+---------
+
+Notes: 
+- When you give code, give the entire file, don't abbreviate anything
+- Don't leave comments in the code, except a comment at a top of the file stating the file path
+    - e.g. //File: composeApp/src/androidMain/kotlin/com/openparty/app/main/MainViewModel.kt
+- Use the cleanest, most robust, scalable architecture you can 
+- For every gradle dependency, give it in this format: implementation("org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-compose:2.8.2")
+    - don't give it in the libs.version.toml format. i.e. don't do this - implementation(compose.components.uiToolingPreview)
+    - The exception to this is the dependencies that are already in my gradle files, leave them in the original format
+- I'm using koin compose multiplatform for my depedency injection, that means that in my screen classes, I use this import - import org.koin.compose.viewmodel.koinViewModel
+    - And the view model is injected like this - viewModel: DiscussionArticleViewModel = koinViewModel()
+    - This might look odd to you since it's a new approach but don't change it, assume it's correct 
+
+---------

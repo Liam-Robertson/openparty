@@ -37,7 +37,7 @@ class CouncilMeetingsPreviewViewModel(
     private val _uiEvent = MutableSharedFlow<UiEvent>()
     val uiEvent: SharedFlow<UiEvent> = _uiEvent
 
-    private var _councilMeetings: Flow<PagingData<CouncilMeeting>> = flow {}
+    private var _councilMeetings: Flow<PagingData<CouncilMeeting>> = flow { }
     val councilMeetings: Flow<PagingData<CouncilMeeting>>
         get() = _councilMeetings
 
@@ -81,7 +81,7 @@ class CouncilMeetingsPreviewViewModel(
                 is DomainResult.Success -> logger.i { "Council meeting selected event tracked: $councilMeetingId" }
                 is DomainResult.Failure -> logger.e { "Failed to track council meeting selected event for ID: $councilMeetingId" }
             }
-            _uiEvent.emit(UiEvent.Navigate(Screen.CouncilMeetingsArticle(councilMeetingId).createRoute(councilMeetingId)))
+            _uiEvent.emit(UiEvent.Navigate(Screen.CouncilMeetingsArticle.createRoute(councilMeetingId)))
         }
     }
 }

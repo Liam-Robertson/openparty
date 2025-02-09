@@ -31,7 +31,7 @@ class DiscussionsPreviewViewModel(
     private val _uiEvent = MutableSharedFlow<UiEvent>()
     val uiEvent: SharedFlow<UiEvent> = _uiEvent
 
-    private var _discussions: kotlinx.coroutines.flow.Flow<PagingData<Discussion>> = kotlinx.coroutines.flow.flow {}
+    private var _discussions: kotlinx.coroutines.flow.Flow<PagingData<Discussion>> = kotlinx.coroutines.flow.flow { }
     val discussions: kotlinx.coroutines.flow.Flow<PagingData<Discussion>>
         get() = _discussions
 
@@ -61,7 +61,7 @@ class DiscussionsPreviewViewModel(
                 is DomainResult.Success -> logger.i { "Discussion selected event tracked: $discussionId" }
                 is DomainResult.Failure -> logger.e { "Failed to track discussion selected event for ID: $discussionId" }
             }
-            _uiEvent.emit(UiEvent.Navigate(Screen.DiscussionsArticle(discussionId).createRoute(discussionId)))
+            _uiEvent.emit(UiEvent.Navigate(Screen.DiscussionsArticle.createRoute(discussionId)))
         }
     }
 }
