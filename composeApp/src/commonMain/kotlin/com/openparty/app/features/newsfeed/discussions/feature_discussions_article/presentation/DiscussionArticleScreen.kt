@@ -41,13 +41,12 @@ fun DiscussionArticleScreen(
         }
     }
 
+    // Removed the popUpTo configuration to preserve the preview screen in the back stack.
     LaunchedEffect(viewModel.uiEvent) {
         viewModel.uiEvent.collectLatest { event ->
             when (event) {
                 is UiEvent.Navigate -> {
-                    navController.navigate(event.destination) {
-                        popUpTo(event.destination) { inclusive = true }
-                    }
+                    navController.navigate(event.destination)
                 }
             }
         }
