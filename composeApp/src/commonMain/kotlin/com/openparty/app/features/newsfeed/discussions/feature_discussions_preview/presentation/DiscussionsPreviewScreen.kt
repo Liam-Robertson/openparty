@@ -60,10 +60,10 @@ fun DiscussionsPreviewScreen(
                 }
             }
             ErrorText(errorMessage = uiState.errorMessage)
-            NavigationFooter(
-                navController = navController,
-                currentRoute = navController.currentBackStackEntry?.destination?.route
-            )
+//            NavigationFooter(
+//                navController = navController,
+//                currentRoute = navController.currentBackStackEntry?.destination?.route
+//            )
         }
     }
 }

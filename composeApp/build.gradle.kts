@@ -73,6 +73,7 @@ kotlin {
             implementation("app.cash.paging:paging-compose-common:3.3.0-alpha02-0.5.1")
             implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.6.1")
             implementation("com.squareup.okhttp3:okhttp:4.12.0")
+            implementation("com.benasher44:uuid:0.8.4")
 
 
 //            implementation(libs.androidx.material.icons.core)

@@ -3,7 +3,11 @@
 package com.openparty.app.di
 
 import com.openparty.app.core.analytics.di.analyticsModule
+import com.openparty.app.features.engagement.comments.feature_add_comment.di.addCommentKoinModule
+import com.openparty.app.features.engagement.comments.feature_comments_section.di.commentsSectionModule
 import com.openparty.app.features.newsfeed.council_meetings.shared.di.councilMeetingsModule
+import com.openparty.app.features.newsfeed.discussions.feature_add_discussion.di.addDiscussionModule
+import com.openparty.app.features.newsfeed.discussions.feature_discussions_article.di.discussionArticleKoinModule
 import com.openparty.app.features.newsfeed.discussions.feature_discussions_preview.di.discussionsKoinModule
 import com.openparty.app.features.shared.feature_permissions.di.permissionModule
 import com.openparty.app.features.shared.feature_user.di.userModule
@@ -28,5 +32,9 @@ fun sharedModules(): List<Module> = listOf(
     emailVerificationModule,
     locationVerificationModule,
     discussionsKoinModule,
+    discussionArticleKoinModule,
+    addDiscussionModule,
     councilMeetingsModule,
+    commentsSectionModule,
+    addCommentKoinModule,
 )

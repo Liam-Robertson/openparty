@@ -4,6 +4,7 @@ package com.openparty.app.features.engagement.comments.shared.data.datasource
 import com.openparty.app.features.engagement.comments.feature_comments_section.domain.model.Comment
 import dev.gitlive.firebase.firestore.FirebaseFirestore
 import com.openparty.app.core.shared.domain.GlobalLogger.logger
+import com.benasher44.uuid.uuid4
 import kotlinx.serialization.serializer
 
 class FirebaseCommentsDataSource(
@@ -27,8 +28,9 @@ class FirebaseCommentsDataSource(
     override suspend fun addComment(comment: Comment) {
         logger.i { "Adding comment: $comment" }
         try {
-            val docRef = firestore.collection("comments").document(comment.commentId)
-            val newComment = comment.copy(commentId = docRef.id)
+            val newId = uuid4().toString()
+            val docRef = firestore.collection("comments").document(newId)
+            val newComment = comment.copy(commentId = newId)
             docRef.set(newComment)
             logger.i { "Successfully added comment with ID: ${docRef.id}" }
         } catch (e: Exception) {

@@ -1,4 +1,4 @@
-//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/engagement/comments/feature_add_comment/presentation/AddCommentScreen.kt
+// File: composeApp/src/commonMain/kotlin/com/openparty/app/features/engagement/comments/feature_add_comment/presentation/AddCommentScreen.kt
 package com.openparty.app.features.engagement.comments.feature_add_comment.presentation
 
 import androidx.compose.foundation.layout.*
@@ -7,7 +7,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import com.openparty.app.core.shared.presentation.*
+import com.openparty.app.core.shared.presentation.ErrorText
+import com.openparty.app.core.shared.presentation.BodyTextInput
+import com.openparty.app.core.shared.presentation.TopContainer
+import com.openparty.app.core.shared.presentation.UiEvent
 import kotlinx.coroutines.flow.collectLatest
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
@@ -26,8 +29,12 @@ fun AddCommentScreen(
         viewModel.uiEvent.collectLatest { event ->
             when (event) {
                 is UiEvent.Navigate -> {
-                    navController.navigate(event.destination) {
-                        popUpTo(event.destination) { inclusive = true }
+                    if (event.destination == "back") {
+                        navController.popBackStack()
+                    } else {
+                        navController.navigate(event.destination) {
+                            popUpTo(event.destination) { inclusive = true }
+                        }
                     }
                 }
             }
