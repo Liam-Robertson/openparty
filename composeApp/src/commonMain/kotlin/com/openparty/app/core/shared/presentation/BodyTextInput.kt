@@ -1,3 +1,4 @@
+//File: composeApp/src/commonMain/kotlin/com/openparty/app/core/shared/presentation/BodyTextInput.kt
 package com.openparty.app.core.shared.presentation
 
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -5,9 +6,10 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.graphics.Color
+import androidx.compose.material3.MaterialTheme
 
 @Composable
 fun BodyTextInput(
@@ -25,6 +27,8 @@ fun BodyTextInput(
                 color = Color.Gray
             )
         },
-        textStyle = TextStyle(color = Color.White)
+        textStyle = MaterialTheme.typography.bodyLarge.copy(
+            color = MaterialTheme.colorScheme.onSurface
+        )
     )
 }

@@ -45,9 +45,11 @@ fun AddDiscussionScreen(
             .padding(16.dp)
     ) {
         TopContainer(
+            headerText = "Add Discussion",
             onBackClicked = { viewModel.onBackClicked() },
             onPostClicked = { viewModel.onPostClicked() }
         )
+
 
         Spacer(modifier = Modifier.height(16.dp))
 

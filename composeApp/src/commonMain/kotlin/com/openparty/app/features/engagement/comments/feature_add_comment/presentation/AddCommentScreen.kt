@@ -30,6 +30,7 @@ fun AddCommentScreen(
             when (event) {
                 is UiEvent.Navigate -> {
                     if (event.destination == "back") {
+                        navController.previousBackStackEntry?.savedStateHandle?.set("refreshComments", true)
                         navController.popBackStack()
                     } else {
                         navController.navigate(event.destination) {
@@ -49,6 +50,7 @@ fun AddCommentScreen(
             .padding(16.dp)
     ) {
         TopContainer(
+            headerText = "Add Comment",
             onBackClicked = { viewModel.onBackClicked() },
             onPostClicked = { viewModel.onPostClicked() }
         )

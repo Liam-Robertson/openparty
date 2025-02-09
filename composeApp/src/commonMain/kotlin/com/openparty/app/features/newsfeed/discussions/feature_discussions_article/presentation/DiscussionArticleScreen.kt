@@ -17,6 +17,7 @@ import com.openparty.app.core.shared.presentation.ErrorText
 import com.openparty.app.core.shared.presentation.UiEvent
 import com.openparty.app.features.engagement.comments.feature_add_comment.presentation.components.AddCommentFooter
 import com.openparty.app.features.engagement.comments.feature_comments_section.presentation.CommentsSection
+import com.openparty.app.features.engagement.comments.feature_comments_section.presentation.CommentsSectionViewModel
 import com.openparty.app.navigation.Screen
 import kotlinx.coroutines.flow.collectLatest
 import org.koin.compose.viewmodel.koinViewModel
@@ -24,10 +25,21 @@ import org.koin.compose.viewmodel.koinViewModel
 @Composable
 fun DiscussionArticleScreen(
     navController: NavHostController,
-    viewModel: DiscussionArticleViewModel = koinViewModel()
+    viewModel: DiscussionArticleViewModel = koinViewModel(),
+    commentsViewModel: CommentsSectionViewModel = koinViewModel()
 ) {
     val discussion by viewModel.discussion.collectAsState()
     val uiState by viewModel.uiState.collectAsState()
+    val currentBackStackEntry = navController.currentBackStackEntry
+
+    LaunchedEffect(currentBackStackEntry) {
+        currentBackStackEntry?.savedStateHandle?.get<Boolean>("refreshComments")?.let { shouldRefresh ->
+            if (shouldRefresh) {
+                commentsViewModel.refreshComments()
+                currentBackStackEntry.savedStateHandle.remove<Boolean>("refreshComments")
+            }
+        }
+    }
 
     LaunchedEffect(viewModel.uiEvent) {
         viewModel.uiEvent.collectLatest { event ->
@@ -58,7 +70,9 @@ fun DiscussionArticleScreen(
             }
         ) { paddingValues ->
             LazyColumn(
-                modifier = Modifier.padding(paddingValues).padding(16.dp)
+                modifier = Modifier
+                    .padding(paddingValues)
+                    .padding(16.dp)
             ) {
                 item {
                     Text(
@@ -74,7 +88,7 @@ fun DiscussionArticleScreen(
                     )
                 }
                 item {
-                    CommentsSection(modifier = Modifier)
+                    CommentsSection(viewModel = commentsViewModel, modifier = Modifier)
                 }
                 item {
                     ErrorText(errorMessage = uiState.errorMessage)

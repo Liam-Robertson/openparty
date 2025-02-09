@@ -6,7 +6,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.openparty.app.core.shared.domain.DomainResult
 import com.openparty.app.core.shared.domain.error.AppErrorMapper
-import com.openparty.app.features.engagement.comments.feature_comments_section.domain.model.Comment
 import com.openparty.app.features.engagement.comments.feature_comments_section.domain.model.CommentFetchCriteria
 import com.openparty.app.features.engagement.comments.feature_comments_section.domain.usecase.GetCommentsUseCase
 import com.openparty.app.features.engagement.comments.feature_comments_section.presentation.components.CommentsUiState
@@ -14,7 +13,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import com.openparty.app.core.shared.domain.GlobalLogger.logger
-import dev.gitlive.firebase.firestore.Timestamp
 import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
 
@@ -38,17 +36,11 @@ class CommentsSectionViewModel(
             _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
             val getCommentsResult = when {
                 discussionId != null -> getCommentsUseCase(
-                    CommentFetchCriteria.ForDiscussion(
-                        discussionId
-                    )
+                    CommentFetchCriteria.ForDiscussion(discussionId)
                 )
-
                 councilMeetingId != null -> getCommentsUseCase(
-                    CommentFetchCriteria.ForCouncilMeeting(
-                        councilMeetingId
-                    )
+                    CommentFetchCriteria.ForCouncilMeeting(councilMeetingId)
                 )
-
                 else -> {
                     _uiState.value = _uiState.value.copy(
                         comments = emptyList(),
@@ -66,10 +58,8 @@ class CommentsSectionViewModel(
                         errorMessage = null
                     )
                 }
-
                 is DomainResult.Failure -> {
-                    val errorMessage =
-                        AppErrorMapper.getUserFriendlyMessage(getCommentsResult.error)
+                    val errorMessage = AppErrorMapper.getUserFriendlyMessage(getCommentsResult.error)
                     logger.e(getCommentsResult.error) { "Error loading discussions" }
                     _uiState.value.copy(
                         comments = emptyList(),
@@ -79,6 +69,10 @@ class CommentsSectionViewModel(
                 }
             }
         }
+    }
+
+    fun refreshComments() {
+        loadComments()
     }
 
     fun formatTimeDiff(date: Instant?): String {

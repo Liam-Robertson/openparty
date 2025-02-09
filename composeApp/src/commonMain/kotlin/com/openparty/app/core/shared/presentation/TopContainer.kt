@@ -1,12 +1,11 @@
+//File: composeApp/src/commonMain/kotlin/com/openparty/app/core/shared/presentation/TopContainer.kt
 package com.openparty.app.core.shared.presentation
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
@@ -18,14 +17,14 @@ import androidx.compose.ui.unit.sp
 
 @Composable
 fun TopContainer(
+    headerText: String,
     onBackClicked: () -> Unit,
     onPostClicked: () -> Unit
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(8.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
+            .padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         IconButton(onClick = onBackClicked) {
@@ -34,9 +33,16 @@ fun TopContainer(
                 contentDescription = "Back"
             )
         }
+        Box(
+            modifier = Modifier.weight(1f),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(text = headerText)
+        }
         Text(
             text = "Post",
             modifier = Modifier.clickable { onPostClicked() },
+            color = MaterialTheme.colorScheme.primary,
             fontSize = 18.sp
         )
     }

@@ -43,7 +43,741 @@ OpenParty/
 
 ---------
 
+// File: composeApp/src/commonMain/kotlin/com/openparty/app/features/engagement/comments/feature_add_comment/domain/usecase/AddCommentUseCase.kt
+package com.openparty.app.features.engagement.comments.feature_add_comment.domain.usecase
 
+import com.openparty.app.core.shared.domain.DomainResult
+import com.openparty.app.core.shared.domain.error.AppError
+import com.openparty.app.features.engagement.comments.feature_comments_section.domain.model.Comment
+import com.openparty.app.features.engagement.comments.shared.domain.repository.CommentsRepository
+import com.openparty.app.core.shared.domain.GlobalLogger.logger
+
+class AddCommentUseCase(
+    private val repository: CommentsRepository
+) {
+    suspend operator fun invoke(comment: Comment): DomainResult<Unit> {
+        logger.i { "AddCommentUseCase invoked with comment: $comment" }
+        return try {
+            repository.addComment(comment)
+            logger.i { "Successfully added comment with ID: ${comment.commentId}" }
+            DomainResult.Success(Unit)
+        } catch (e: Exception) {
+            logger.e(e) { "Error occurred while adding comment: $comment" }
+            DomainResult.Failure(AppError.Comments.AddComment)
+        }
+    }
+}
+
+// File: composeApp/src/commonMain/kotlin/com/openparty/app/features/engagement/comments/feature_add_comment/presentation/components/AddCommentFooter.kt
+package com.openparty.app.features.engagement.comments.feature_add_comment.presentation.components
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
+
+@Composable
+fun AddCommentFooter(
+    fullyVerified: Boolean,
+    onClick: () -> Unit
+) {
+    BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+        val footerHeight = maxHeight * 0.07f
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(footerHeight)
+                .background(Color.Black)
+                .clickable {
+                    if (fullyVerified) onClick()
+                },
+            contentAlignment = Alignment.Center
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth(0.95f)
+                    .fillMaxHeight(0.7f)
+                    .background(Color(0xFF333333), shape = RoundedCornerShape(8.dp)),
+                contentAlignment = Alignment.CenterStart
+            ) {
+                Text(
+                    text = "Add a comment",
+                    color = Color.LightGray,
+                    modifier = Modifier.padding(start = 16.dp)
+                )
+            }
+        }
+    }
+}
+// File: composeApp/src/commonMain/kotlin/com/openparty/app/features/engagement/comments/feature_add_comment/presentation/components/AddCommentUiState.kt
+package com.openparty.app.features.engagement.comments.feature_add_comment.presentation.components
+
+import androidx.compose.ui.text.input.TextFieldValue
+
+data class AddCommentUiState(
+    val commentText: TextFieldValue = TextFieldValue(""),
+    val errorMessage: String = "",
+    val isLoading: Boolean = false
+)
+// File: composeApp/src/commonMain/kotlin/com/openparty/app/features/engagement/comments/feature_add_comment/presentation/AddCommentScreen.kt
+package com.openparty.app.features.engagement.comments.feature_add_comment.presentation
+
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.Text
+import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import androidx.navigation.NavController
+import com.openparty.app.core.shared.presentation.ErrorText
+import com.openparty.app.core.shared.presentation.BodyTextInput
+import com.openparty.app.core.shared.presentation.TopContainer
+import com.openparty.app.core.shared.presentation.UiEvent
+import kotlinx.coroutines.flow.collectLatest
+import org.koin.compose.viewmodel.koinViewModel
+import org.koin.core.parameter.parametersOf
+
+@Composable
+fun AddCommentScreen(
+    navController: NavController,
+    discussionId: String,
+    titleText: String,
+    viewModel: AddCommentViewModel = koinViewModel { parametersOf(discussionId, titleText) }
+) {
+    val uiState by viewModel.uiState.collectAsState()
+    val viewTitleText = viewModel.titleText
+
+    LaunchedEffect(viewModel.uiEvent) {
+        viewModel.uiEvent.collectLatest { event ->
+            when (event) {
+                is UiEvent.Navigate -> {
+                    if (event.destination == "back") {
+                        navController.popBackStack()
+                    } else {
+                        navController.navigate(event.destination) {
+                            popUpTo(event.destination) { inclusive = true }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    ErrorText(uiState.errorMessage)
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+    ) {
+        TopContainer(
+            headerText = "Add Comment",
+            onBackClicked = { viewModel.onBackClicked() },
+            onPostClicked = { viewModel.onPostClicked() }
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+        Box(modifier = Modifier.fillMaxWidth()) {
+            Text(viewTitleText)
+        }
+        Spacer(modifier = Modifier.height(16.dp))
+        BodyTextInput(
+            textFieldValue = uiState.commentText,
+            onTextChange = { viewModel.onCommentTextChanged(it) },
+            placeholderText = "Enter your comment..."
+        )
+    }
+}
+// File: composeApp/src/commonMain/kotlin/com/openparty/app/features/engagement/comments/feature_add_comment/presentation/AddCommentViewModel.kt
+package com.openparty.app.features.engagement.comments.feature_add_comment.presentation
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.SavedStateHandle
+import com.openparty.app.core.shared.domain.DomainResult
+import com.openparty.app.core.shared.presentation.UiEvent
+import com.openparty.app.features.engagement.comments.feature_add_comment.domain.usecase.AddCommentUseCase
+import com.openparty.app.features.engagement.comments.feature_comments_section.domain.model.Comment
+import com.openparty.app.features.shared.feature_user.domain.usecase.GetUserUseCase
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.launch
+import androidx.compose.ui.text.input.TextFieldValue
+import com.openparty.app.core.analytics.domain.usecase.TrackCommentPostedUseCase
+import com.openparty.app.core.shared.domain.error.AppErrorMapper
+import com.openparty.app.features.engagement.comments.feature_add_comment.presentation.components.AddCommentUiState
+import com.openparty.app.features.shared.feature_user.domain.model.User
+import kotlinx.datetime.Clock
+import dev.gitlive.firebase.firestore.Timestamp
+
+class AddCommentViewModel(
+    private val getUserUseCase: GetUserUseCase,
+    private val addCommentUseCase: AddCommentUseCase,
+    private val trackCommentPostedUseCase: TrackCommentPostedUseCase,
+    savedStateHandle: SavedStateHandle
+) : ViewModel() {
+
+    val discussionId: String = savedStateHandle["discussionId"] ?: ""
+    val titleText: String = savedStateHandle["titleText"] ?: ""
+
+    private val _uiState = MutableStateFlow(AddCommentUiState())
+    val uiState: StateFlow<AddCommentUiState> = _uiState
+
+    private val _uiEvent = MutableSharedFlow<UiEvent>()
+    val uiEvent: SharedFlow<UiEvent> = _uiEvent
+
+    fun onCommentTextChanged(newText: TextFieldValue) {
+        _uiState.value = _uiState.value.copy(commentText = newText)
+    }
+
+    fun onBackClicked() {
+        emitUiEvent(UiEvent.Navigate("back"))
+    }
+
+    fun onPostClicked() {
+        val currentState = _uiState.value
+        if (currentState.commentText.text.isBlank()) {
+            _uiState.value = _uiState.value.copy(isLoading = false, errorMessage = "Comment cannot be empty")
+            return
+        }
+        viewModelScope.launch {
+            _uiState.value = currentState.copy(isLoading = true)
+            when (val userResult = getUserUseCase()) {
+                is DomainResult.Success -> handleSuccessfulUserFetch(currentState, userResult.data)
+                is DomainResult.Failure -> {
+                    val errorMessage = AppErrorMapper.getUserFriendlyMessage(userResult.error)
+                    _uiState.value = _uiState.value.copy(isLoading = false, errorMessage = errorMessage)
+                }
+            }
+        }
+    }
+
+    private fun handleSuccessfulUserFetch(currentState: AddCommentUiState, user: User) {
+        val commentData = createCommentData(currentState, user)
+        viewModelScope.launch {
+            when (val result = addCommentUseCase(commentData)) {
+                is DomainResult.Success -> {
+                    trackCommentPostedUseCase(commentData.commentId, discussionId, currentState.commentText.text)
+                    emitUiEvent(UiEvent.Navigate("back"))
+                    resetUiState()
+                }
+                is DomainResult.Failure -> {
+                    val errorMessage = AppErrorMapper.getUserFriendlyMessage(result.error)
+                    _uiState.value = _uiState.value.copy(isLoading = false, errorMessage = errorMessage)
+                }
+            }
+        }
+    }
+
+    private fun createCommentData(currentState: AddCommentUiState, user: User): Comment {
+        val now = Clock.System.now()
+        return Comment(
+            commentId = "",
+            userId = user.userId,
+            screenName = user.screenName,
+            contentText = currentState.commentText.text,
+            timestamp = Timestamp(now.epochSeconds, now.nanosecondsOfSecond),
+            upvoteCount = 0,
+            downvoteCount = 0,
+            parentCommentId = null,
+            discussionId = discussionId,
+            councilMeetingId = null
+        )
+    }
+
+    private fun resetUiState() {
+        _uiState.value = AddCommentUiState()
+    }
+
+    private fun emitUiEvent(event: UiEvent) {
+        viewModelScope.launch {
+            _uiEvent.emit(event)
+        }
+    }
+}
+// File: composeApp/src/commonMain/kotlin/com/openparty/app/features/engagement/comments/feature_comments_section/di/CommentsSectionKoinModule.kt
+package com.openparty.app.features.engagement.comments.feature_comments_section.di
+
+import org.koin.dsl.module
+import org.koin.core.module.dsl.viewModel
+import com.openparty.app.features.engagement.comments.feature_comments_section.presentation.CommentsSectionViewModel
+import com.openparty.app.features.engagement.comments.feature_comments_section.domain.usecase.GetCommentsUseCase
+import com.openparty.app.features.engagement.comments.shared.data.repository.CommentsRepositoryImpl
+import com.openparty.app.features.engagement.comments.shared.data.datasource.FirebaseCommentsDataSource
+import com.openparty.app.features.engagement.comments.shared.data.datasource.CommentsDataSource
+import com.openparty.app.features.engagement.comments.shared.domain.repository.CommentsRepository
+import dev.gitlive.firebase.firestore.FirebaseFirestore
+import androidx.lifecycle.SavedStateHandle
+
+val commentsSectionModule = module {
+    single<CommentsDataSource> { FirebaseCommentsDataSource(firestore = get<FirebaseFirestore>()) }
+    single<CommentsRepository> { CommentsRepositoryImpl(get()) }
+    factory { GetCommentsUseCase(get()) }
+    viewModel { (savedStateHandle: SavedStateHandle) -> CommentsSectionViewModel(get(), savedStateHandle) }
+}
+// File: composeApp/src/commonMain/kotlin/com/openparty/app/features/engagement/comments/feature_comments_section/domain/model/Comment.kt
+package com.openparty.app.features.engagement.comments.feature_comments_section.domain.model
+
+import dev.gitlive.firebase.firestore.Timestamp
+import kotlinx.serialization.Serializable
+
+@Serializable
+data class Comment(
+    var commentId: String = "",
+    var contentText: String = "",
+    var councilMeetingId: Int? = null,
+    var discussionId: String? = null,
+    var downvoteCount: Int = 0,
+    var upvoteCount: Int = 0,
+    var parentCommentId: String? = null,
+    var screenName: String = "",
+    val timestamp: Timestamp? = null,
+    var userId: String = ""
+)
+// File: composeApp/src/commonMain/kotlin/com/openparty/app/features/engagement/comments/feature_comments_section/domain/model/CommentFetchCriteria.kt
+package com.openparty.app.features.engagement.comments.feature_comments_section.domain.model
+
+sealed class CommentFetchCriteria {
+    data class ForDiscussion(val discussionId: String) : CommentFetchCriteria()
+    data class ForCouncilMeeting(val councilMeetingId: String) : CommentFetchCriteria()
+}
+// File: composeApp/src/commonMain/kotlin/com/openparty/app/features/engagement/comments/feature_comments_section/domain/usecase/GetCommentsUseCase.kt
+package com.openparty.app.features.engagement.comments.feature_comments_section.domain.usecase
+
+import com.openparty.app.core.shared.domain.DomainResult
+import com.openparty.app.core.shared.domain.error.AppError
+import com.openparty.app.features.engagement.comments.feature_comments_section.domain.model.Comment
+import com.openparty.app.features.engagement.comments.feature_comments_section.domain.model.CommentFetchCriteria
+import com.openparty.app.features.engagement.comments.shared.domain.repository.CommentsRepository
+import com.openparty.app.core.shared.domain.GlobalLogger.logger
+
+class GetCommentsUseCase(
+    private val repository: CommentsRepository
+) {
+    suspend operator fun invoke(criteria: CommentFetchCriteria): DomainResult<List<Comment>> {
+        logger.i { "GetCommentsUseCase invoked with criteria: $criteria" }
+        val commentsResult = try {
+            when (criteria) {
+                is CommentFetchCriteria.ForDiscussion -> {
+                    logger.i { "Fetching comments for discussionId: ${criteria.discussionId}" }
+                    repository.getComments(criteria.discussionId, null)
+                }
+                is CommentFetchCriteria.ForCouncilMeeting -> {
+                    logger.i { "Fetching comments for councilMeetingId: ${criteria.councilMeetingId}" }
+                    repository.getComments(null, criteria.councilMeetingId)
+                }
+            }
+        } catch (e: Exception) {
+            logger.e(e) { "Error while executing GetCommentsUseCase with criteria: $criteria" }
+            return DomainResult.Failure(AppError.Comments.FetchComments)
+        }
+
+        return when (commentsResult) {
+            is DomainResult.Success -> {
+                val sortedComments = commentsResult.data.sortedByDescending { it.upvoteCount }
+                logger.i { "Successfully fetched and sorted ${sortedComments.size} comments." }
+                DomainResult.Success(sortedComments)
+            }
+            is DomainResult.Failure -> {
+                logger.e { "Failed to fetch comments for criteria: $criteria" }
+                DomainResult.Failure(AppError.Comments.FetchComments)
+            }
+        }
+    }
+}
+package com.openparty.app.features.engagement.comments.feature_comments_section.presentation.components
+
+import com.openparty.app.features.engagement.comments.feature_comments_section.domain.model.Comment
+
+
+data class CommentsUiState(
+    val comments: List<Comment> = emptyList(),
+    val isLoading: Boolean = false,
+    val errorMessage: String? = null
+)// File: composeApp/src/commonMain/kotlin/com/openparty/app/features/engagement/comments/feature_comments_section/presentation/components/CommentItem.kt
+package com.openparty.app.features.engagement.comments.feature_comments_section.presentation
+
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.unit.dp
+import com.openparty.app.features.engagement.comments.feature_comments_section.domain.model.Comment
+
+@Composable
+fun CommentItem(
+    comment: Comment,
+    indentLevel: Int,
+    timeDiffText: String
+) {
+    val indentPadding = (indentLevel * 16).dp
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = indentPadding, top = 8.dp, bottom = 8.dp)
+    ) {
+        Row(modifier = Modifier.alpha(0.7f)) {
+            Text(
+                text = comment.screenName,
+                style = MaterialTheme.typography.labelSmall
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = timeDiffText,
+                style = MaterialTheme.typography.labelSmall
+            )
+        }
+        Text(
+            text = comment.contentText,
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.padding(top = 4.dp, bottom = 4.dp)
+        )
+    }
+}// File: composeApp/src/commonMain/kotlin/com/openparty/app/features/engagement/comments/feature_comments_section/presentation/CommentsSection.kt
+package com.openparty.app.features.engagement.comments.feature_comments_section.presentation
+
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Divider
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import com.openparty.app.core.shared.presentation.ErrorText
+import com.openparty.app.core.shared.presentation.InlineLoading
+import com.openparty.app.core.util.toInstant
+import com.openparty.app.features.engagement.comments.feature_comments_section.domain.model.Comment
+import org.koin.compose.viewmodel.koinViewModel
+
+@Composable
+fun CommentsSection(
+    viewModel: CommentsSectionViewModel = koinViewModel(),
+    modifier: Modifier = Modifier
+) {
+    val uiState = viewModel.uiState.collectAsState().value
+    Column(modifier = modifier) {
+        ErrorText(errorMessage = uiState.errorMessage)
+        when {
+            uiState.isLoading -> {
+                InlineLoading()
+            }
+            uiState.comments.isEmpty() -> {
+                Box(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "No comments yet...",
+                        style = MaterialTheme.typography.bodyLarge,
+                        modifier = Modifier.padding(16.dp)
+                    )
+                }
+            }
+            else -> {
+                val commentMap = uiState.comments.associateBy { comment: Comment -> comment.commentId }
+                val topLevelComments = uiState.comments.filter { comment: Comment -> comment.parentCommentId == null }
+                    .sortedByDescending { comment: Comment -> comment.upvoteCount }
+                Column {
+                    Divider(thickness = 1.dp, modifier = Modifier.fillMaxWidth())
+                    Text(
+                        text = "Comments",
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.padding(vertical = 16.dp)
+                    )
+                    for (comment in topLevelComments) {
+                        val timeDiffText = viewModel.formatTimeDiff(comment.timestamp?.toInstant())
+                        CommentThreadRecursive(
+                            comment = comment,
+                            commentMap = commentMap,
+                            indentLevel = 0,
+                            timeDiffText = timeDiffText
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+// File: composeApp/src/commonMain/kotlin/com/openparty/app/features/engagement/comments/feature_comments_section/presentation/CommentsSectionViewModel.kt
+package com.openparty.app.features.engagement.comments.feature_comments_section.presentation
+
+import androidx.lifecycle.SavedStateHandle
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.openparty.app.core.shared.domain.DomainResult
+import com.openparty.app.core.shared.domain.error.AppErrorMapper
+import com.openparty.app.features.engagement.comments.feature_comments_section.domain.model.Comment
+import com.openparty.app.features.engagement.comments.feature_comments_section.domain.model.CommentFetchCriteria
+import com.openparty.app.features.engagement.comments.feature_comments_section.domain.usecase.GetCommentsUseCase
+import com.openparty.app.features.engagement.comments.feature_comments_section.presentation.components.CommentsUiState
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
+import com.openparty.app.core.shared.domain.GlobalLogger.logger
+import dev.gitlive.firebase.firestore.Timestamp
+import kotlinx.datetime.Clock
+import kotlinx.datetime.Instant
+
+class CommentsSectionViewModel(
+    private val getCommentsUseCase: GetCommentsUseCase,
+    savedStateHandle: SavedStateHandle
+) : ViewModel() {
+
+    private val _uiState = MutableStateFlow(CommentsUiState())
+    val uiState: StateFlow<CommentsUiState> = _uiState
+
+    private val discussionId: String? = savedStateHandle["discussionId"]
+    private val councilMeetingId: String? = savedStateHandle["councilMeetingId"]
+
+    init {
+        loadComments()
+    }
+
+    private fun loadComments() {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
+            val getCommentsResult = when {
+                discussionId != null -> getCommentsUseCase(
+                    CommentFetchCriteria.ForDiscussion(
+                        discussionId
+                    )
+                )
+
+                councilMeetingId != null -> getCommentsUseCase(
+                    CommentFetchCriteria.ForCouncilMeeting(
+                        councilMeetingId
+                    )
+                )
+
+                else -> {
+                    _uiState.value = _uiState.value.copy(
+                        comments = emptyList(),
+                        isLoading = false,
+                        errorMessage = "No valid discussion or council meeting ID provided"
+                    )
+                    return@launch
+                }
+            }
+            _uiState.value = when (getCommentsResult) {
+                is DomainResult.Success -> {
+                    _uiState.value.copy(
+                        comments = getCommentsResult.data,
+                        isLoading = false,
+                        errorMessage = null
+                    )
+                }
+
+                is DomainResult.Failure -> {
+                    val errorMessage =
+                        AppErrorMapper.getUserFriendlyMessage(getCommentsResult.error)
+                    logger.e(getCommentsResult.error) { "Error loading discussions" }
+                    _uiState.value.copy(
+                        comments = emptyList(),
+                        isLoading = false,
+                        errorMessage = errorMessage
+                    )
+                }
+            }
+        }
+    }
+
+    fun formatTimeDiff(date: Instant?): String {
+        if (date == null) return "Unknown time"
+        val now = Clock.System.now()
+        val diff = now - date
+        val minutes = diff.inWholeMinutes
+        val hours = diff.inWholeHours
+        val days = diff.inWholeDays
+        val years = days / 365
+        return when {
+            years >= 1 -> "$years years ago"
+            days >= 1 -> "$days days ago"
+            hours >= 1 -> "$hours hours ago"
+            minutes >= 1 -> "$minutes minutes ago"
+            else -> "Just now"
+        }
+    }
+}
+// File: composeApp/src/commonMain/kotlin/com/openparty/app/features/engagement/comments/feature_comments_section/presentation/CommentThreadRecursive.kt
+package com.openparty.app.features.engagement.comments.feature_comments_section.presentation
+
+import androidx.compose.runtime.Composable
+import com.openparty.app.features.engagement.comments.feature_comments_section.domain.model.Comment
+
+@Composable
+fun CommentThreadRecursive(
+    comment: Comment,
+    commentMap: Map<String, Comment>,
+    indentLevel: Int,
+    timeDiffText: String
+) {
+    CommentItem(comment = comment, indentLevel = indentLevel, timeDiffText = timeDiffText)
+    val childComments = commentMap.values.filter { it.parentCommentId == comment.commentId }
+    childComments.forEach { childComment ->
+        CommentThreadRecursive(
+            comment = childComment,
+            commentMap = commentMap,
+            indentLevel = indentLevel + 1,
+            timeDiffText = timeDiffText
+        )
+    }
+}
+// File: composeApp/src/commonMain/kotlin/com/openparty/app/features/engagement/comments/shared/data/datasource/CommentsDataSource.kt
+package com.openparty.app.features.engagement.comments.shared.data.datasource
+
+import com.openparty.app.features.engagement.comments.feature_comments_section.domain.model.Comment
+
+interface CommentsDataSource {
+    suspend fun getCommentsForDiscussion(discussionId: String): List<Comment>
+    suspend fun getCommentsForCouncilMeeting(councilMeetingId: String): List<Comment>
+    suspend fun addComment(comment: Comment)
+}
+// File: composeApp/src/commonMain/kotlin/com/openparty/app/features/engagement/comments/shared/data/datasource/FirebaseCommentsDataSource.kt
+package com.openparty.app.features.engagement.comments.shared.data.datasource
+
+import com.openparty.app.features.engagement.comments.feature_comments_section.domain.model.Comment
+import dev.gitlive.firebase.firestore.FirebaseFirestore
+import com.openparty.app.core.shared.domain.GlobalLogger.logger
+import com.benasher44.uuid.uuid4
+import kotlinx.serialization.serializer
+
+class FirebaseCommentsDataSource(
+    private val firestore: FirebaseFirestore
+) : CommentsDataSource {
+
+    override suspend fun getCommentsForDiscussion(discussionId: String): List<Comment> {
+        logger.i { "Fetching comments for discussionId: $discussionId" }
+        return fetchComments("discussionId", discussionId).also {
+            logger.i { "Fetched ${it.size} comments for discussionId: $discussionId" }
+        }
+    }
+
+    override suspend fun getCommentsForCouncilMeeting(councilMeetingId: String): List<Comment> {
+        logger.i { "Fetching comments for councilMeetingId: $councilMeetingId" }
+        return fetchComments("councilMeetingId", councilMeetingId).also {
+            logger.i { "Fetched ${it.size} comments for councilMeetingId: $councilMeetingId" }
+        }
+    }
+
+    override suspend fun addComment(comment: Comment) {
+        logger.i { "Adding comment: $comment" }
+        try {
+            val newId = uuid4().toString()
+            val docRef = firestore.collection("comments").document(newId)
+            val newComment = comment.copy(commentId = newId)
+            docRef.set(newComment)
+            logger.i { "Successfully added comment with ID: ${docRef.id}" }
+        } catch (e: Exception) {
+            logger.e(e) { "Error occurred while adding comment: $comment" }
+            throw Exception("Failed to add comment", e)
+        }
+    }
+
+    private suspend fun <T> fetchComments(field: String, value: T): List<Comment> {
+        logger.i { "Fetching comments for field: $field with value: $value" }
+        return try {
+            val collectionRef = firestore.collection("comments")
+            val query = collectionRef.where { field equalTo value }
+            val snapshot = query.get()
+            if (snapshot.documents.isEmpty()) {
+                logger.i { "No comments found for $field: $value" }
+                emptyList()
+            } else {
+                val comments = snapshot.documents.mapNotNull { doc ->
+                    val decoded: Comment? = try {
+                        doc.data(Comment.serializer())
+                    } catch (e: Exception) {
+                        null
+                    }
+                    decoded?.copy(commentId = doc.id)
+                }
+                logger.i { "Fetched ${comments.size} comments for $field: $value" }
+                comments
+            }
+        } catch (e: Exception) {
+            logger.e(e) { "Error occurred while fetching comments for $field: $value" }
+            throw Exception("Failed to fetch comments for $field: $value", e)
+        }
+    }
+}
+// File: composeApp/src/commonMain/kotlin/com/openparty/app/features/engagement/comments/shared/data/repository/CommentsRepositoryImpl.kt
+package com.openparty.app.features.engagement.comments.shared.data.repository
+
+import com.openparty.app.core.shared.domain.DomainResult
+import com.openparty.app.core.shared.domain.error.AppError
+import com.openparty.app.features.engagement.comments.feature_comments_section.domain.model.Comment
+import com.openparty.app.features.engagement.comments.shared.data.datasource.CommentsDataSource
+import com.openparty.app.features.engagement.comments.shared.domain.repository.CommentsRepository
+import com.openparty.app.core.shared.domain.GlobalLogger.logger
+
+class CommentsRepositoryImpl(
+    private val commentsDataSource: CommentsDataSource
+) : CommentsRepository {
+
+    override suspend fun getComments(
+        discussionId: String?,
+        councilMeetingId: String?
+    ): DomainResult<List<Comment>> {
+        logger.d { "Fetching comments with discussionId: $discussionId, councilMeetingId: $councilMeetingId" }
+        return try {
+            val comments = when {
+                discussionId != null -> commentsDataSource.getCommentsForDiscussion(discussionId)
+                councilMeetingId != null -> commentsDataSource.getCommentsForCouncilMeeting(councilMeetingId)
+                else -> throw IllegalArgumentException("Either discussionId or councilMeetingId must be provided.")
+            }
+            logger.d { "Successfully fetched ${comments.size} comments." }
+            DomainResult.Success(comments)
+        } catch (e: Exception) {
+            logger.e(e) { "Error fetching comments." }
+            DomainResult.Failure(AppError.Comments.General)
+        }
+    }
+
+    override suspend fun addComment(comment: Comment) {
+        logger.d { "Adding comment: $comment" }
+        try {
+            commentsDataSource.addComment(comment)
+            logger.d { "Successfully added comment with ID: ${comment.commentId}" }
+        } catch (e: Exception) {
+            logger.e(e) { "Error adding comment: $comment" }
+            throw Exception(AppError.Comments.General.toString(), e)
+        }
+    }
+}
+// File: composeApp/src/commonMain/kotlin/com/openparty/app/features/engagement/comments/shared/domain/repository/CommentsRepository.kt
+package com.openparty.app.features.engagement.comments.shared.domain.repository
+
+import com.openparty.app.core.shared.domain.DomainResult
+import com.openparty.app.features.engagement.comments.feature_comments_section.domain.model.Comment
+
+interface CommentsRepository {
+    suspend fun getComments(
+        discussionId: String? = null,
+        councilMeetingId: String? = null
+    ): DomainResult<List<Comment>>
+
+    suspend fun addComment(comment: Comment)
+}
 
 ---------
 
@@ -60,3 +794,21 @@ Notes:
     - This might look odd to you since it's a new approach but don't change it, assume it's correct 
 
 ---------
+
+When the user is on the discussions article screen, this is supposed to happen: 
+- The user decides they want to leave a comment so they click the add comment footer
+- This navigates them to the add comment page 
+- They type in a comment and click submit to post the comment 
+- They are navigated back to the discussions article page they came from
+- The page has updated wiht the new information and the user can see the comment they just posted 
+
+However this happens instead:
+- The user decides they want to leave a comment so they click the add comment footer
+- This navigates them to the add comment page 
+- They type in a comment and click submit to post the comment 
+- They are navigated back to the discussions article page they came from
+- The page has failed to update with the new information and the user cannot see the comment they just posted 
+
+The problem is that, when the user is navigated back to the discussions article screen after posting a comment, the discussions article screen has not updated with the new comment they just posted 
+
+Research this problme and think carefully about why it happens. Then give a code fix 
