@@ -1,4 +1,4 @@
-//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/newsfeed/discussions/shared/data/repository/DiscussionRepositoryImpl.kt
+// File: composeApp/src/commonMain/kotlin/com/openparty/app/features/newsfeed/discussions/shared/data/repository/DiscussionRepositoryImpl.kt
 package com.openparty.app.features.newsfeed.discussions.shared.data.repository
 
 import androidx.paging.PagingData
@@ -11,8 +11,8 @@ import com.openparty.app.features.newsfeed.shared.data.repository.FirestoreRepos
 import kotlinx.coroutines.flow.Flow
 import com.openparty.app.core.shared.domain.GlobalLogger.logger
 import dev.gitlive.firebase.firestore.FirebaseFirestore
-import com.openparty.app.features.newsfeed.discussions.shared.domain.decodeDiscussion
 import kotlin.random.Random
+import kotlinx.serialization.serializer
 
 class DiscussionRepositoryImpl(
     private val firestore: FirebaseFirestore
@@ -24,7 +24,12 @@ class DiscussionRepositoryImpl(
         transform = { documentSnapshot ->
             try {
                 logger.i { "Transforming document snapshot to Discussion object: ${documentSnapshot.id}" }
-                decodeDiscussion(documentSnapshot)
+                val decoded: Discussion? = try {
+                    documentSnapshot.data(Discussion.serializer())
+                } catch (e: Exception) {
+                    null
+                }
+                decoded?.copy(discussionId = documentSnapshot.id)
             } catch (e: Exception) {
                 logger.e(e) { "Error transforming document snapshot to Discussion object: ${documentSnapshot.id}" }
                 null

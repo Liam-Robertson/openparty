@@ -1,4 +1,4 @@
-//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/newsfeed/council_meetings/shared/data/repository/CouncilMeetingRepositoryImpl.kt
+// File: composeApp/src/commonMain/kotlin/com/openparty/app/features/newsfeed/council_meetings/shared/data/repository/CouncilMeetingRepositoryImpl.kt
 package com.openparty.app.features.newsfeed.council_meetings.shared.data.repository
 
 import androidx.paging.PagingData
@@ -11,7 +11,6 @@ import com.openparty.app.features.newsfeed.shared.data.repository.FirestoreRepos
 import com.openparty.app.features.newsfeed.council_meetings.shared.domain.repository.CouncilMeetingRepository
 import com.openparty.app.core.shared.domain.GlobalLogger.logger
 import kotlinx.coroutines.flow.Flow
-import decodeCouncilMeeting
 
 class CouncilMeetingRepositoryImpl(
     firestore: FirebaseFirestore
@@ -23,7 +22,12 @@ class CouncilMeetingRepositoryImpl(
         transform = { documentSnapshot ->
             try {
                 logger.d { "Transforming document snapshot to CouncilMeeting object: ${documentSnapshot.id}" }
-                decodeCouncilMeeting(documentSnapshot)
+                val decoded: CouncilMeeting? = try {
+                    documentSnapshot.data(CouncilMeeting.serializer())
+                } catch (e: Exception) {
+                    null
+                }
+                decoded?.copy(councilMeetingId = documentSnapshot.id)
             } catch (e: Exception) {
                 logger.e(e) { "Error transforming document snapshot to CouncilMeeting object: ${documentSnapshot.id}" }
                 null

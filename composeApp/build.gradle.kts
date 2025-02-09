@@ -71,6 +71,7 @@ kotlin {
             implementation("media.kamel:kamel-image:1.0.3")
             implementation("co.touchlab:kermit:2.0.5")
             implementation("app.cash.paging:paging-compose-common:3.3.0-alpha02-0.5.1")
+            implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.6.1")
 
 
 //            implementation(libs.androidx.material.icons.core)
