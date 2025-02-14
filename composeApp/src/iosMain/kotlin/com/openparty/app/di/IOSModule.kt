@@ -1,5 +1,4 @@
-// composeApp/src/iosMain/kotlin/com/openparty/app/di/IOSModule.kt
-
+// File: composeApp/src/iosMain/kotlin/com/openparty/app/di/IOSModule.kt
 package com.openparty.app.di
 
 import com.openparty.app.core.storage.PlatformSecureStorage

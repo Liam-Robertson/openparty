@@ -1,3 +1,4 @@
+//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/startup/feature_authentication/di/AuthenticationModule.kt
 package com.openparty.app.features.startup.feature_authentication.di
 
 import com.openparty.app.features.startup.feature_authentication.data.datasource.AuthDataSource

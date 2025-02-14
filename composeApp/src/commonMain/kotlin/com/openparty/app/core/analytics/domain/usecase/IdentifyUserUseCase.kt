@@ -4,6 +4,7 @@ package com.openparty.app.core.analytics.domain.usecase
 import com.openparty.app.core.analytics.domain.repository.AnalyticsService
 import com.openparty.app.core.shared.domain.DomainResult
 import com.openparty.app.core.shared.domain.error.AppError
+import kotlinx.datetime.Clock
 
 class IdentifyUserUseCase(
     private val analyticsService: AnalyticsService
@@ -17,7 +18,7 @@ class IdentifyUserUseCase(
                     userId,
                     mapOf(
                         "is_logged_in" to true,
-                        "login_date" to System.currentTimeMillis()
+                        "login_date" to Clock.System.now().toEpochMilliseconds()
                     )
                 )
                 println("User identified: $userId")
