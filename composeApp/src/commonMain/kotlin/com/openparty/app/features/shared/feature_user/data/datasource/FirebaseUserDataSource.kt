@@ -6,6 +6,7 @@ import com.openparty.app.features.shared.feature_user.data.model.UserDto
 import com.openparty.app.features.shared.feature_user.domain.model.UpdateUserRequest
 import dev.gitlive.firebase.Firebase
 import dev.gitlive.firebase.firestore.FirebaseFirestore
+import dev.gitlive.firebase.firestore.FieldValue
 import dev.gitlive.firebase.firestore.firestore
 import dev.gitlive.firebase.firestore.where
 import org.koin.core.component.KoinComponent
@@ -56,9 +57,27 @@ class FirebaseUserDataSource(
                 request.screenName?.let { updates["screenName"] = it }
                 if (updates.isNotEmpty()) {
                     firestore.collection("users").document(userId).update(updates)
-                    logger.d { "Successfully updated user with userId: $userId" }
+                    logger.d { "Successfully updated user document for userId: $userId" }
                 } else {
-                    logger.d { "No updates to apply for userId: $userId" }
+                    logger.d { "No document updates to apply for userId: $userId" }
+                }
+                request.locationCoordinates?.let { coordinates ->
+                    val parts = coordinates.split(",")
+                    if (parts.size == 2) {
+                        val lat = parts[0].toDoubleOrNull() ?: 0.0
+                        val lon = parts[1].toDoubleOrNull() ?: 0.0
+                        val historyData = mapOf(
+                            "latitude" to lat,
+                            "longitude" to lon,
+                            "timestamp" to FieldValue.serverTimestamp
+                        )
+                        firestore.collection("users").document(userId)
+                            .collection("locationHistory")
+                            .add(historyData)
+                        logger.d { "Successfully added location history for userId: $userId" }
+                    } else {
+                        logger.e { "Invalid locationCoordinates format for userId: $userId" }
+                    }
                 }
             } else {
                 logger.e { "Invalid update request type for userId: $userId" }

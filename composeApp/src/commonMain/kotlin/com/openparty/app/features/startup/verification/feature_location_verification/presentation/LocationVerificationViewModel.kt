@@ -8,8 +8,7 @@ import com.openparty.app.core.shared.domain.error.AppErrorMapper
 import com.openparty.app.features.startup.feature_authentication.domain.usecase.DetermineAuthStatesUseCase
 import com.openparty.app.features.startup.feature_authentication.presentation.AuthFlowNavigationMapper
 import com.openparty.app.features.startup.verification.feature_location_verification.domain.usecase.HandleLocationPopupUseCase
-import com.openparty.app.features.startup.verification.feature_location_verification.domain.usecase.UpdateUserLocationUseCase
-import com.openparty.app.features.startup.verification.feature_location_verification.domain.usecase.VerifyLocationUseCase
+import com.openparty.app.features.startup.verification.feature_location_verification.domain.usecase.VerifyAndUpdateLocationUseCase
 import com.openparty.app.features.startup.verification.feature_location_verification.presentation.components.LocationVerificationUiEvent
 import com.openparty.app.features.startup.verification.feature_location_verification.presentation.components.LocationVerificationUiState
 import com.openparty.app.core.shared.domain.GlobalLogger.logger
@@ -22,9 +21,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
 class LocationVerificationViewModel(
-    private val verifyLocationUseCase: VerifyLocationUseCase,
+    private val verifyAndUpdateLocationUseCase: VerifyAndUpdateLocationUseCase,
     private val handleLocationPopupUseCase: HandleLocationPopupUseCase,
-    private val updateUserLocationUseCase: UpdateUserLocationUseCase,
     private val determineAuthStatesUseCase: DetermineAuthStatesUseCase,
     private val authFlowNavigationMapper: AuthFlowNavigationMapper
 ) : ViewModel() {
@@ -67,8 +65,8 @@ class LocationVerificationViewModel(
                     logger.i { "Permission result handled successfully, updated state: $updatedState" }
                     _uiState.value = updatedState
                     if (updatedState.permissionsGranted) {
-                        logger.i { "Permissions granted: Fetching location" }
-                        fetchLocation()
+                        logger.i { "Permissions granted: Verifying and updating location" }
+                        fetchAndUpdateLocation()
                     } else if (updatedState.showVerificationDialog) {
                         permissionRequestCount++
                         logger.i { "Permissions not granted; incrementing request count to $permissionRequestCount" }
@@ -83,17 +81,16 @@ class LocationVerificationViewModel(
         }
     }
 
-    private fun fetchLocation() {
+    private fun fetchAndUpdateLocation() {
         viewModelScope.launch {
-            logger.i { "Fetching location: Setting loading state" }
+            logger.i { "Verifying and updating location: Setting loading state" }
             _uiState.emit(_uiState.value.copy(isLoading = true))
-            when (val result = verifyLocationUseCase.execute()) {
+            when (val result = verifyAndUpdateLocationUseCase.execute()) {
                 is DomainResult.Success -> {
-                    logger.i { "Location fetched successfully: result = ${result.data}" }
                     if (result.data) {
-                        updateUserLocation()
+                        navigateToNextAuthScreen()
                     } else {
-                        logger.i { "Location indicates user is outside West Lothian" }
+                        logger.i { "User is outside West Lothian" }
                         _uiState.emit(
                             _uiState.value.copy(
                                 showVerificationDialog = true,
@@ -104,26 +101,7 @@ class LocationVerificationViewModel(
                 }
                 is DomainResult.Failure -> {
                     val errorMessage = AppErrorMapper.getUserFriendlyMessage(result.error)
-                    logger.e { "Error fetching location: $errorMessage" }
-                    _uiState.value = _uiState.value.copy(isLoading = false, errorMessage = errorMessage)
-                }
-            }
-            _uiState.emit(_uiState.value.copy(isLoading = false))
-        }
-    }
-
-    private fun updateUserLocation() {
-        viewModelScope.launch {
-            logger.i { "Updating user location: Setting loading state" }
-            _uiState.emit(_uiState.value.copy(isLoading = true))
-            when (val result = updateUserLocationUseCase.execute()) {
-                is DomainResult.Success -> {
-                    logger.i { "User location updated successfully; navigating to next screen" }
-                    navigateToNextAuthScreen()
-                }
-                is DomainResult.Failure -> {
-                    val errorMessage = AppErrorMapper.getUserFriendlyMessage(result.error)
-                    logger.e { "Error updating user location: $errorMessage" }
+                    logger.e { "Error verifying/updating location: $errorMessage" }
                     _uiState.value = _uiState.value.copy(isLoading = false, errorMessage = errorMessage)
                 }
             }

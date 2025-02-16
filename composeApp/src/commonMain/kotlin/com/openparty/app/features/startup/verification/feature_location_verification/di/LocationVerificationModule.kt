@@ -7,7 +7,7 @@ import com.openparty.app.features.startup.feature_authentication.presentation.Au
 import com.openparty.app.features.startup.verification.feature_location_verification.domain.usecase.GetUserLocationUseCase
 import com.openparty.app.features.startup.verification.feature_location_verification.domain.usecase.HandleLocationPopupUseCase
 import com.openparty.app.features.startup.verification.feature_location_verification.domain.usecase.UpdateUserLocationUseCase
-import com.openparty.app.features.startup.verification.feature_location_verification.domain.usecase.VerifyLocationUseCase
+import com.openparty.app.features.startup.verification.feature_location_verification.domain.usecase.VerifyAndUpdateLocationUseCase
 import com.openparty.app.features.startup.verification.feature_location_verification.presentation.LocationVerificationViewModel
 import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
@@ -15,9 +15,8 @@ import org.koin.dsl.module
 val locationVerificationModule = module {
     viewModel {
         LocationVerificationViewModel(
-            verifyLocationUseCase = get<VerifyLocationUseCase>(),
+            verifyAndUpdateLocationUseCase = get<VerifyAndUpdateLocationUseCase>(),
             handleLocationPopupUseCase = get<HandleLocationPopupUseCase>(),
-            updateUserLocationUseCase = get<UpdateUserLocationUseCase>(),
             determineAuthStatesUseCase = get<DetermineAuthStatesUseCase>(),
             authFlowNavigationMapper = get<AuthFlowNavigationMapper>()
         )
@@ -25,6 +24,6 @@ val locationVerificationModule = module {
     single { HandleLocationPopupUseCase() }
     single { LocationPermissionCheckUseCase(get()) }
     single { GetUserLocationUseCase() }
-    single { VerifyLocationUseCase(get(), get()) }
     single { UpdateUserLocationUseCase(get(), get()) }
+    single { VerifyAndUpdateLocationUseCase(get(), get(), get()) }
 }
