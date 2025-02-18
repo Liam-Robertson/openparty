@@ -508,166 +508,329 @@ class LocationVerificationViewModel(
         }
     }
 }
-// File: composeApp/src/iosMain/kotlin/com/openparty/app/features/startup/verification/feature_location_verification/domain/usecase/GetUserLocationUseCase.ios.kt
-package com.openparty.app.features.startup.verification.feature_location_verification.domain.usecase
+//File: composeApp/src/commonMain/kotlin/com/openparty/app/navigation/AppNavigation.kt
+package com.openparty.app.navigation
 
-import kotlinx.coroutines.suspendCancellableCoroutine
-import platform.CoreLocation.*
-import kotlin.coroutines.resume
+import androidx.compose.runtime.Composable
+import androidx.navigation.NavType
+import androidx.navigation.compose.*
+import androidx.navigation.navArgument
+import com.openparty.app.features.engagement.comments.feature_add_comment.presentation.AddCommentScreen
+import com.openparty.app.features.newsfeed.council_meetings.feature_council_meetings_article.presentation.CouncilMeetingArticleScreen
+import com.openparty.app.features.newsfeed.council_meetings.feature_council_meetings_preview.presentation.CouncilMeetingsPreviewScreen
+import com.openparty.app.features.newsfeed.discussions.feature_add_discussion.presentation.AddDiscussionScreen
+import com.openparty.app.features.newsfeed.discussions.feature_discussions_article.presentation.DiscussionArticleScreen
+import com.openparty.app.features.newsfeed.discussions.feature_discussions_preview.presentation.DiscussionsPreviewScreen
+import com.openparty.app.features.startup.account.feature_login.presentation.LoginScreen
+import com.openparty.app.features.startup.account.feature_register.presentation.RegisterScreen
+import com.openparty.app.features.startup.feature_screen_name_generation.presentation.ScreenNameGenerationScreen
+import com.openparty.app.features.startup.feature_splash.presentation.SplashScreen
+import com.openparty.app.features.startup.verification.feature_email_verification.presentation.EmailVerificationScreen
+import com.openparty.app.features.startup.verification.feature_location_verification.presentation.LocationVerificationScreen
+import com.openparty.app.features.startup.verification.feature_manual_verification.presentation.ManualVerificationScreen
+import org.koin.compose.viewmodel.koinViewModel
+import org.koin.core.parameter.parametersOf
 
-actual class GetUserLocationUseCase actual constructor() {
-    actual suspend fun execute(): Coordinate? = suspendCancellableCoroutine { cont ->
-        val locationManager = CLLocationManager().apply {
-            desiredAccuracy = kCLLocationAccuracyBest
+@Composable
+fun AppNavigation() {
+    val navController = rememberNavController()
+
+    NavHost(
+        navController = navController,
+        startDestination = Screen.Splash.route
+    ) {
+        composable(Screen.Splash.route) { SplashScreen(navController) }
+        composable(Screen.Login.route) { LoginScreen(navController) }
+        composable(Screen.Register.route) { RegisterScreen(navController) }
+        composable(Screen.EmailVerification.route) { EmailVerificationScreen(navController) }
+        composable(Screen.LocationVerification.route) { LocationVerificationScreen(navController) }
+        composable(Screen.ScreenNameGeneration.route) { ScreenNameGenerationScreen(navController) }
+        composable(Screen.ManualVerification.route) { ManualVerificationScreen() }
+        composable(Screen.DiscussionsPreview.route) { DiscussionsPreviewScreen(navController) }
+        composable(Screen.CouncilMeetingsPreview.route) { CouncilMeetingsPreviewScreen(navController) }
+        composable(Screen.AddDiscussion.route) { AddDiscussionScreen(navController) }
+
+        composable(
+            route = Screen.DiscussionsArticle("").route,
+            arguments = listOf(navArgument("discussionId") { type = NavType.StringType })
+        ) {
+            DiscussionArticleScreen(navController)
         }
-//        val delegate = object : NSObject(), CLLocationManagerDelegateProtocol {
-//            override fun locationManager(manager: CLLocationManager, didUpdateLocations: List<*>) {
-//                val location = didUpdateLocations.lastOrNull() as? CLLocation
-//                if (location != null) {
-//                    cont.resume(Coordinate(location.coordinate.latitude, location.coordinate.longitude))
-//                    manager.stopUpdatingLocation()
-//                }
-//            }
-//            override fun locationManager(manager: CLLocationManager, didFailWithError: NSError) {
-//                cont.resume(null)
-//            }
-//        }
-//        locationManager.delegate = delegate
-//        locationManager.startUpdatingLocation()
-//        cont.invokeOnCancellation { locationManager.stopUpdatingLocation() }
-    }
-}
-// File: composeApp/src/iosMain/kotlin/com/openparty/app/features/startup/verification/feature_location_verification/RequestLocationPermission.ios.kt
-package com.openparty.app.features.startup.verification.feature_location_verification.domain
 
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import platform.CoreLocation.CLLocationManager
-import platform.CoreLocation.CLLocationManagerDelegateProtocol
-import platform.CoreLocation.kCLAuthorizationStatusAuthorizedAlways
-import platform.CoreLocation.kCLAuthorizationStatusAuthorizedWhenInUse
-import platform.CoreLocation.CLAuthorizationStatus
-//import platform.Foundation.NSObject
-
-//class LocationManagerDelegate(private val onResult: (Boolean) -> Unit) : NSObject(), CLLocationManagerDelegateProtocol {
-//    override fun locationManager(manager: CLLocationManager, didChangeAuthorizationStatus: CLAuthorizationStatus) {
-//        when (didChangeAuthorizationStatus) {
-//            kCLAuthorizationStatusAuthorizedAlways, kCLAuthorizationStatusAuthorizedWhenInUse -> onResult(true)
-//            else -> onResult(false)
-//        }
-//    }
-//}
-
-@Composable
-actual fun RequestLocationPermission(permission: String, onResult: (Boolean) -> Unit) {
-    LaunchedEffect(Unit) {
-//        val locationManager = CLLocationManager()
-//        val delegate = LocationManagerDelegate(onResult)
-//        locationManager.delegate = delegate
-//        locationManager.requestWhenInUseAuthorization()
-    }
-}
-// File: composeApp/src/iosMain/kotlin/com/openparty/app/features/startup/verification/feature_location_verification/domain/usecase/GetUserLocationUseCase.ios.kt
-package com.openparty.app.features.startup.verification.feature_location_verification.domain.usecase
-
-import kotlinx.coroutines.suspendCancellableCoroutine
-import platform.CoreLocation.*
-import kotlin.coroutines.resume
-
-actual class GetUserLocationUseCase actual constructor() {
-    actual suspend fun execute(): Coordinate? = suspendCancellableCoroutine { cont ->
-        val locationManager = CLLocationManager().apply {
-            desiredAccuracy = kCLLocationAccuracyBest
+        composable(
+            route = Screen.CouncilMeetingsArticle("").route,
+            arguments = listOf(navArgument("councilMeetingId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val councilMeetingId = backStackEntry.arguments?.getString("councilMeetingId") ?: ""
+            val viewModel = koinViewModel<com.openparty.app.features.newsfeed.council_meetings.feature_council_meetings_article.presentation.CouncilMeetingArticleViewModel> {
+                parametersOf(councilMeetingId)
+            }
+            CouncilMeetingArticleScreen(navController, viewModel)
         }
-//        val delegate = object : NSObject(), CLLocationManagerDelegateProtocol {
-//            override fun locationManager(manager: CLLocationManager, didUpdateLocations: List<*>) {
-//                val location = didUpdateLocations.lastOrNull() as? CLLocation
-//                if (location != null) {
-//                    cont.resume(Coordinate(location.coordinate.latitude, location.coordinate.longitude))
-//                    manager.stopUpdatingLocation()
-//                }
-//            }
-//            override fun locationManager(manager: CLLocationManager, didFailWithError: NSError) {
-//                cont.resume(null)
-//            }
-//        }
-//        locationManager.delegate = delegate
-//        locationManager.startUpdatingLocation()
-//        cont.invokeOnCancellation { locationManager.stopUpdatingLocation() }
+
+        composable(
+            route = Screen.AddComment("", "").route,
+            arguments = listOf(
+                navArgument("discussionId") { type = NavType.StringType },
+                navArgument("titleText") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val discussionId = backStackEntry.arguments?.getString("discussionId") ?: ""
+            val titleText = backStackEntry.arguments?.getString("titleText") ?: ""
+            val viewModel = koinViewModel<com.openparty.app.features.engagement.comments.feature_add_comment.presentation.AddCommentViewModel> {
+                parametersOf(discussionId, titleText)
+            }
+            AddCommentScreen(navController, discussionId, titleText, viewModel)
+        }
     }
 }
-// File: composeApp/src/androidMain/kotlin/com/openparty/app/features/startup/verification/feature_location_verification/domain/usecase/GetUserLocationUseCase.android.kt
-package com.openparty.app.features.startup.verification.feature_location_verification.domain.usecase
+//File: composeApp/src/commonMain/kotlin/com/openparty/app/navigation/Screen.kt
+package com.openparty.app.navigation
 
-import android.annotation.SuppressLint
-import android.content.Context
-import com.google.android.gms.location.LocationServices
-import kotlinx.coroutines.tasks.await
-import org.koin.core.context.GlobalContext.get
-import com.openparty.app.features.startup.verification.feature_location_verification.domain.model.LocationCoordinate
+import kotlinx.serialization.Serializable
 
-actual class GetUserLocationUseCase actual constructor() {
-    @SuppressLint("MissingPermission")
-    actual suspend fun execute(): LocationCoordinate? {
-        val context: Context = get().get()
-        val fusedLocationClient = LocationServices.getFusedLocationProviderClient(context)
-        val location = fusedLocationClient.lastLocation.await()
-        return location?.let { LocationCoordinate(it.latitude, it.longitude) }
+@Serializable
+sealed class Screen(val route: String) {
+
+    @Serializable object Splash : Screen("splash")
+    @Serializable object Login : Screen("login")
+    @Serializable object Register : Screen("register")
+    @Serializable object EmailVerification : Screen("email_verification")
+    @Serializable object LocationVerification : Screen("location_verification")
+    @Serializable object ScreenNameGeneration : Screen("screen_name_generation")
+    @Serializable object ManualVerification : Screen("manual_verification")
+    @Serializable object DiscussionsPreview : Screen("discussions_preview")
+    @Serializable object CouncilMeetingsPreview : Screen("council_meetings_preview")
+    @Serializable object AddDiscussion : Screen("add_discussion")
+
+    @Serializable
+    data class DiscussionsArticle(val discussionId: String) : Screen("discussions_article/{discussionId}") {
+        companion object {
+            fun createRoute(discussionId: String): String = "discussions_article/$discussionId"
+        }
+    }
+
+    @Serializable
+    data class CouncilMeetingsArticle(val councilMeetingId: String) : Screen("council_meetings_article/{councilMeetingId}") {
+        companion object {
+            fun createRoute(councilMeetingId: String): String = "council_meetings_article/$councilMeetingId"
+        }
+    }
+
+    @Serializable
+    data class AddComment(val discussionId: String, val titleText: String) : Screen("add_comment/{discussionId}/{titleText}") {
+        companion object {
+            fun createRoute(discussionId: String, titleText: String): String = "add_comment/$discussionId/$titleText"
+        }
     }
 }
-// File: composeApp/src/iosMain/kotlin/com/openparty/app/features/startup/verification/feature_location_verification/RequestLocationPermission.ios.kt
-package com.openparty.app.features.startup.verification.feature_location_verification.domain
+//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/startup/feature_authentication/domain/usecase/DetermineAuthStatesUseCase.kt
+package com.openparty.app.features.startup.feature_authentication.domain.usecase
 
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import platform.CoreLocation.CLLocationManager
-import platform.CoreLocation.CLLocationManagerDelegateProtocol
-import platform.CoreLocation.kCLAuthorizationStatusAuthorizedAlways
-import platform.CoreLocation.kCLAuthorizationStatusAuthorizedWhenInUse
-import platform.CoreLocation.CLAuthorizationStatus
-//import platform.Foundation.NSObject
+import dev.gitlive.firebase.auth.FirebaseUser
+import com.openparty.app.core.shared.domain.DomainResult
+import com.openparty.app.core.shared.domain.error.AppError
+import com.openparty.app.features.shared.feature_user.domain.model.User
+import com.openparty.app.features.startup.feature_authentication.domain.model.AuthState
+import com.openparty.app.features.startup.feature_authentication.domain.repository.AuthenticationRepository
+import com.openparty.app.features.shared.feature_user.domain.usecase.GetUserUseCase
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.withContext
 
-//class LocationManagerDelegate(private val onResult: (Boolean) -> Unit) : NSObject(), CLLocationManagerDelegateProtocol {
-//    override fun locationManager(manager: CLLocationManager, didChangeAuthorizationStatus: CLAuthorizationStatus) {
-//        when (didChangeAuthorizationStatus) {
-//            kCLAuthorizationStatusAuthorizedAlways, kCLAuthorizationStatusAuthorizedWhenInUse -> onResult(true)
-//            else -> onResult(false)
-//        }
-//    }
-//}
-
-@Composable
-actual fun RequestLocationPermission(permission: String, onResult: (Boolean) -> Unit) {
-    LaunchedEffect(Unit) {
-//        val locationManager = CLLocationManager()
-//        val delegate = LocationManagerDelegate(onResult)
-//        locationManager.delegate = delegate
-//        locationManager.requestWhenInUseAuthorization()
+class DetermineAuthStatesUseCase(
+    private val authenticationRepository: AuthenticationRepository,
+    private val getUserUseCase: GetUserUseCase
+) {
+    suspend operator fun invoke(): DomainResult<List<AuthState>> {
+        return try {
+            withContext(Dispatchers.Default) {
+                println("Invoking DetermineAuthStatesUseCase")
+                val firebaseUser = getFirebaseUser() ?: return@withContext DomainResult.Success(emptyList())
+                reloadFirebaseUser(firebaseUser)
+                determineAuthStates(firebaseUser)
+            }
+        } catch (e: Exception) {
+            println("Unexpected error in DetermineAuthStatesUseCase: ${e.message}")
+            DomainResult.Failure(AppError.Navigation.DetermineAuthStates)
+        }
     }
-}// File: composeApp/src/androidMain/kotlin/com/openparty/app/features/startup/verification/feature_location_verification/domain/RequestLocationPermission.android.kt
-package com.openparty.app.features.startup.verification.feature_location_verification.domain
 
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import com.openparty.app.core.shared.domain.GlobalLogger.logger
-import kotlinx.coroutines.delay
+    private suspend fun determineAuthStates(firebaseUser: FirebaseUser): DomainResult<List<AuthState>> {
+        val states = mutableListOf<AuthState>()
 
-@Composable
-actual fun RequestLocationPermission(permission: String, onResult: (Boolean) -> Unit) {
-    logger.i { "Inside RequestLocationPermission (Android): Preparing launcher for permission: $permission" }
-    val launcher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission()
-    ) { granted ->
-        logger.i { "Permission launcher result for $permission: $granted" }
-        onResult(granted)
+        // If user is not logged in, return failure
+        val domainUser = getUserDetails(firebaseUser.uid) ?: return DomainResult.Failure(AppError.Navigation.DetermineAuthStates)
+
+        states.add(AuthState.isLoggedIn)
+        if (!firebaseUser.isEmailVerified) {
+            println("User is logged in but email is not verified.")
+            return DomainResult.Success(states)
+        }
+        states.add(AuthState.isEmailVerified)
+
+        if (!domainUser.isLocationVerified) {
+            println("Location not verified.")
+            return DomainResult.Success(states)
+        }
+        states.add(AuthState.isLocationVerified)
+
+        if (domainUser.screenName.isBlank()) {
+            println("Screen name not generated.")
+            return DomainResult.Success(states)
+        }
+        states.add(AuthState.isScreenNameGenerated)
+
+        if (!domainUser.manuallyVerified) {
+            println("User not manually verified.")
+            return DomainResult.Success(states)
+        }
+        states.add(AuthState.isManuallyVerified)
+
+        println("All checks passed. Determined auth states: $states")
+        return DomainResult.Success(states)
     }
-    LaunchedEffect(permission) {
-        logger.i { "Launching permission request for $permission" }
-        launcher.launch(permission)
+
+    private suspend fun getFirebaseUser(): FirebaseUser? {
+        return try {
+            authenticationRepository.observeAuthState().firstOrNull().also {
+                if (it == null) println("No Firebase user found.")
+            }
+        } catch (e: Exception) {
+            println("Error observing auth state: ${e.message}")
+            null
+        }
+    }
+
+    private suspend fun reloadFirebaseUser(firebaseUser: FirebaseUser): Boolean {
+        return try {
+            println("Reloading Firebase user data")
+            firebaseUser.reload()
+            true
+        } catch (e: Exception) {
+            println("Failed to reload Firebase user data: ${e.message}")
+            false
+        }
+    }
+
+    private suspend fun getUserDetails(userId: String): User? {
+        return try {
+            when (val result = getUserUseCase()) {
+                is DomainResult.Success -> {
+                    println("User details fetched successfully for userId: $userId")
+                    result.data
+                }
+                is DomainResult.Failure -> {
+                    println("Failed to fetch user details for userId: $userId")
+                    null
+                }
+            }
+        } catch (e: Throwable) {
+            println("Unexpected error fetching user details for userId: $userId, error: ${e.message}")
+            null
+        }
     }
 }
+//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/startup/feature_authentication/presentation/AuthFlowNavigationMapper.kt
+package com.openparty.app.features.startup.feature_authentication.presentation
+
+import com.openparty.app.features.startup.feature_authentication.domain.model.AuthState
+import com.openparty.app.navigation.Screen
+
+class AuthFlowNavigationMapper {
+
+    fun determineDestination(states: List<AuthState>): Screen {
+        println("Determining navigation destination based on auth states: $states")
+
+        return when {
+            !states.contains(AuthState.isLoggedIn) -> {
+                println("User is not logged in; navigating to Login")
+                Screen.Login
+            }
+            !states.contains(AuthState.isEmailVerified) -> {
+                println("User email is not verified; navigating to EmailVerification")
+                Screen.EmailVerification
+            }
+            !states.contains(AuthState.isLocationVerified) -> {
+                println("User location is not verified; navigating to LocationVerification")
+                Screen.LocationVerification
+            }
+            !states.contains(AuthState.isScreenNameGenerated) -> {
+                println("User screen name is not generated; navigating to ScreenNameGeneration")
+                Screen.ScreenNameGeneration
+            }
+            !states.contains(AuthState.isManuallyVerified) -> {
+                println("User is not manually verified; navigating to ManualVerification")
+                Screen.ManualVerification
+            }
+            else -> {
+                println("All auth states satisfied; navigating to DiscussionsPreview")
+                Screen.DiscussionsPreview
+            }
+        }
+    }
+}
+// File: composeApp/src/iosMain/kotlin/com/openparty/app/di/IOSKoinInitializer.kt
+package com.openparty.app.di
+
+import com.openparty.app.core.analytics.di.analyticsModule
+import com.openparty.app.features.engagement.comments.feature_add_comment.di.addCommentKoinModule
+import com.openparty.app.features.engagement.comments.feature_comments_section.di.commentsSectionModule
+import com.openparty.app.features.newsfeed.council_meetings.shared.di.councilMeetingsModule
+import com.openparty.app.features.newsfeed.discussions.feature_add_discussion.di.addDiscussionModule
+import com.openparty.app.features.newsfeed.discussions.feature_discussions_article.di.discussionArticleKoinModule
+import com.openparty.app.features.newsfeed.discussions.feature_discussions_preview.di.discussionsKoinModule
+import com.openparty.app.features.shared.feature_permissions.di.permissionModule
+import com.openparty.app.features.shared.feature_user.di.userModule
+import com.openparty.app.features.startup.account.feature_login.di.loginModule
+import com.openparty.app.features.startup.account.feature_register.di.registerModule
+import com.openparty.app.features.startup.feature_authentication.di.authenticationModule
+import com.openparty.app.features.startup.feature_screen_name_generation.di.screenNameGenerationModule
+import com.openparty.app.features.startup.feature_splash.di.splashModule
+import com.openparty.app.features.startup.verification.feature_email_verification.di.emailVerificationModule
+import com.openparty.app.features.startup.verification.feature_location_verification.di.locationVerificationModule
+import org.koin.core.context.startKoin
+
+object IOSKoinInitializer {
+    fun initializeKoin() {
+        startKoin {
+            modules(
+                listOf(
+                    iosModule,
+                    permissionModule,
+                    userModule,
+                    loginModule,
+                    registerModule,
+                    authenticationModule,
+                    splashModule,
+                    analyticsModule,
+                    screenNameGenerationModule,
+                    emailVerificationModule,
+                    locationVerificationModule,
+                    discussionsKoinModule,
+                    discussionArticleKoinModule,
+                    addDiscussionModule,
+                    councilMeetingsModule,
+                    commentsSectionModule,
+                    addCommentKoinModule
+                )
+            )
+        }
+    }
+}
+// File: composeApp/src/iosMain/kotlin/com/openparty/app/di/IOSModule.kt
+package com.openparty.app.di
+
+import com.openparty.app.core.storage.PlatformSecureStorage
+import com.openparty.app.core.storage.SecureStorage
+import com.openparty.app.core.storage.SecureStorageImpl
+import org.koin.dsl.module
+
+val iosModule = module {
+    single { PlatformSecureStorage() }
+    single<SecureStorage> { SecureStorageImpl(platformSecureStorage = get()) }
+}
+
 ---------
 
 Notes: 
@@ -686,12 +849,142 @@ Notes:
 
 So above i've given you the location verification feature for my app. It's job is to get location permissions from the user, and verify that the user is in West Lothian. 
 
-The feature_location_verification works fine for android since I've written all the code and make sure it works, but it doesn't work for ios 
+The feature_location_verification works fine for android since I've written all the code and make sure it works, but it doesn't work for ios yet 
 
-Make the feature work for ios 
+when i run this for ios in xcode, i get this error log: 
 
-in particular, the actual fun RequestLocationPermission and actual fun GetUserLocationUseCase doesn't work at all in ios
-
-Look at how the android app works and replicate the same thing for ios 
-
-Remember - the android functionality all works exactly as intended, so all you need to do is create an ios version of that code
+uccessfully fetched user with userId: QMqUwp4jzIRz0wNRtlu4JVsy4243
+User details fetched successfully for userId: QMqUwp4jzIRz0wNRtlu4JVsy4243
+Location not verified.
+Determining navigation destination based on auth states: [com.openparty.app.features.startup.feature_authentication.domain.model.AuthState.isLoggedIn@49a5b60, com.openparty.app.features.startup.feature_authentication.domain.model.AuthState.isEmailVerified@10132188]
+User location is not verified; navigating to LocationVerification
+🔵 (GlobalLogger) Navigating to com.openparty.app.navigation.Screen.LocationVerification@4a1ff68
+Ignoring popBackStack to route location_verification as it was not found on the current back stack
+Uncaught Kotlin exception: org.koin.core.error.InstanceCreationException: Could not create instance for '[Factory: 'com.openparty.app.features.startup.verification.feature_location_verification.presentation.LocationVerificationViewModel']'
+    at 0   OpenParty.debug.dylib               0x1092a5f53        kfun:kotlin.Exception#<init>(kotlin.String?;kotlin.Throwable?){} + 123 
+    at 1   OpenParty.debug.dylib               0x10a5385eb        kfun:org.koin.core.error.InstanceCreationException#<init>(kotlin.String;kotlin.Exception){} + 123 
+    at 2   OpenParty.debug.dylib               0x10a539a17        kfun:org.koin.core.instance.InstanceFactory#create(org.koin.core.instance.ResolutionContext){}1:0 + 1703 
+    at 3   OpenParty.debug.dylib               0x10a539247        kfun:org.koin.core.instance.FactoryInstanceFactory#get(org.koin.core.instance.ResolutionContext){}1:0 + 103 
+    at 4   OpenParty.debug.dylib               0x10a553073        kfun:org.koin.core.instance.InstanceFactory#get(org.koin.core.instance.ResolutionContext){}1:0-trampoline + 67 
+    at 5   OpenParty.debug.dylib               0x10a54417f        kfun:org.koin.core.registry.InstanceRegistry#resolveInstance(org.koin.core.qualifier.Qualifier?;kotlin.reflect.KClass<*>;org.koin.core.qualifier.Qualifier;org.koin.core.instance.ResolutionContext){0§<kotlin.Any?>}0:0? + 343 
+    at 6   OpenParty.debug.dylib               0x10a54cc37        kfun:org.koin.core.scope.Scope.resolveFromRegistry#internal + 323 
+    at 7   OpenParty.debug.dylib               0x10a54c097        kfun:org.koin.core.scope.Scope.resolveFromContext#internal + 1503 
+    at 8   OpenParty.debug.dylib               0x10a54b3ff        kfun:org.koin.core.scope.Scope.stackParametersCall#internal + 871 
+    at 9   OpenParty.debug.dylib               0x10a54b04f        kfun:org.koin.core.scope.Scope.resolveInstance#internal + 867 
+    at 10  OpenParty.debug.dylib               0x10a54a543        kfun:org.koin.core.scope.Scope.resolve#internal + 1019 
+    at 11  OpenParty.debug.dylib               0x10a54a113        kfun:org.koin.core.scope.Scope#getWithParameters(kotlin.reflect.KClass<*>;org.koin.core.qualifier.Qualifier?;org.koin.core.parameter.ParametersHolder?){0§<kotlin.Any?>}0:0 + 159 
+    at 12  OpenParty.debug.dylib               0x10a555e0f        kfun:org.koin.viewmodel.factory.KoinViewModelFactory#create(kotlin.reflect.KClass<0:0>;androidx.lifecycle.viewmodel.CreationExtras){0§<androidx.lifecycle.ViewModel>}0:0 + 411 
+    at 13  OpenParty.debug.dylib               0x109546763        kfun:androidx.lifecycle.ViewModelProvider.Factory#create(kotlin.reflect.KClass<0:0>;androidx.lifecycle.viewmodel.CreationExtras){0§<androidx.lifecycle.ViewModel>}0:0-trampoline + 115 
+    at 14  OpenParty.debug.dylib               0x109545eaf        kfun:androidx.lifecycle.viewmodel#createViewModel(androidx.lifecycle.ViewModelProvider.Factory;kotlin.reflect.KClass<0:0>;androidx.lifecycle.viewmodel.CreationExtras){0§<androidx.lifecycle.ViewModel>}0:0 + 131 
+    at 15  OpenParty.debug.dylib               0x109542023        kfun:androidx.lifecycle.viewmodel.ViewModelProviderImpl#getViewModel(kotlin.reflect.KClass<0:0>;kotlin.String){0§<androidx.lifecycle.ViewModel>}0:0 + 1163 
+    at 16  OpenParty.debug.dylib               0x109542293        kfun:androidx.lifecycle.viewmodel.ViewModelProviderImpl#getViewModel$default(kotlin.reflect.KClass<0:0>;kotlin.String?;kotlin.Int){0§<androidx.lifecycle.ViewModel>}0:0 + 311 
+    at 17  OpenParty.debug.dylib               0x109544c77        kfun:androidx.lifecycle.ViewModelProvider#get(kotlin.reflect.KClass<0:0>){0§<androidx.lifecycle.ViewModel>}0:0 + 183 
+    at 18  OpenParty.debug.dylib               0x10a555093        kfun:org.koin.viewmodel#resolveViewModel(kotlin.reflect.KClass<0:0>;androidx.lifecycle.ViewModelStore;kotlin.String?;androidx.lifecycle.viewmodel.CreationExtras;org.koin.core.qualifier.Qualifier?;org.koin.core.scope.Scope;kotlin.Function0<org.koin.core.parameter.ParametersHolder>?){0§<androidx.lifecycle.ViewModel>}0:0 + 711 
+    at 19  OpenParty.debug.dylib               0x108e34e9b        kfun:com.openparty.app.features.startup.verification.feature_location_verification.presentation#LocationVerificationScreen(androidx.navigation.NavController;com.openparty.app.features.startup.verification.feature_location_verification.presentation.LocationVerificationViewModel?;androidx.compose.runtime.Composer?;kotlin.Int;kotlin.Int){} + 3119 
+    at 20  OpenParty.debug.dylib               0x108e4763b        kfun:com.openparty.app.navigation.AppNavigation$lambda$18$lambda$4#internal + 303 
+    at 21  OpenParty.debug.dylib               0x108e4ba0b        kfun:com.openparty.app.navigation.$AppNavigation$lambda$18$lambda$4$FUNCTION_REFERENCE$9.invoke#internal + 171 
+    at 22  OpenParty.debug.dylib               0x108e4bb7b        kfun:com.openparty.app.navigation.$AppNavigation$lambda$18$lambda$4$FUNCTION_REFERENCE$9.$<bridge-DNNNNNU>invoke(androidx.compose.animation.AnimatedContentScope;androidx.navigation.NavBackStackEntry;androidx.compose.runtime.Composer;kotlin.Int){}#internal + 231 
+    at 23  OpenParty.debug.dylib               0x109403477        kfun:kotlin.Function4#invoke(1:0;1:1;1:2;1:3){}1:4-trampoline + 131 
+    at 24  OpenParty.debug.dylib               0x10974eb07        kfun:androidx.compose.runtime.internal.ComposableLambdaImpl#invoke(kotlin.Any?;kotlin.Any?;androidx.compose.runtime.Composer;kotlin.Int){}kotlin.Any? + 687 
+    at 25  OpenParty.debug.dylib               0x10975c6af        kfun:androidx.compose.runtime.internal.ComposableLambdaImpl#$<bridge-NNNNNNU>invoke(kotlin.Any?;kotlin.Any?;androidx.compose.runtime.Composer;kotlin.Int){}kotlin.Any?(kotlin.Any?;kotlin.Any?;androidx.compose.runtime.Composer;kotlin.Any?){}kotlin.Any? + 235 
+    at 26  OpenParty.debug.dylib               0x109403477        kfun:kotlin.Function4#invoke(1:0;1:1;1:2;1:3){}1:4-trampoline + 131 
+    at 27  OpenParty.debug.dylib               0x10a33082f        kfun:androidx.navigation.compose.NavHost$lambda$41$lambda$40#internal + 659 
+    at 28  OpenParty.debug.dylib               0x10a334823        kfun:androidx.navigation.compose.$NavHost$lambda$41$lambda$40$FUNCTION_REFERENCE$37.invoke#internal + 119 
+    at 29  OpenParty.debug.dylib               0x10a334977        kfun:androidx.navigation.compose.$NavHost$lambda$41$lambda$40$FUNCTION_REFERENCE$37.$<bridge-DNNNU>invoke(androidx.compose.runtime.Composer;kotlin.Int){}#internal + 159 
+    at 30  OpenParty.debug.dylib               0x1093f596b        kfun:kotlin.Function2#invoke(1:0;1:1){}1:2-trampoline + 115 
+    at 31  OpenParty.debug.dylib               0x10974e3ef        kfun:androidx.compose.runtime.internal.ComposableLambdaImpl#invoke(androidx.compose.runtime.Composer;kotlin.Int){}kotlin.Any? + 607 
+    at 32  OpenParty.debug.dylib               0x10975c493        kfun:androidx.compose.runtime.internal.ComposableLambdaImpl#$<bridge-NNNNU>invoke(androidx.compose.runtime.Composer;kotlin.Int){}kotlin.Any?(androidx.compose.runtime.Composer;kotlin.Any?){}kotlin.Any? + 163 
+    at 33  OpenParty.debug.dylib               0x1093f596b        kfun:kotlin.Function2#invoke(1:0;1:1){}1:2-trampoline + 115 
+    at 34  OpenParty.debug.dylib               0x10963ad3b        kfun:androidx.compose.runtime#CompositionLocalProvider(androidx.compose.runtime.ProvidedValue<*>;kotlin.Function2<androidx.compose.runtime.Composer,kotlin.Int,kotlin.Unit>;androidx.compose.runtime.Composer?;kotlin.Int){} + 611 
+    at 35  OpenParty.debug.dylib               0x109f3a943        kfun:androidx.compose.runtime.saveable.SaveableStateHolderImpl.SaveableStateProvider#internal + 2963 
+    at 36  OpenParty.debug.dylib               0x109f3fbbb        kfun:androidx.compose.runtime.saveable.SaveableStateHolder#SaveableStateProvider(kotlin.Any;kotlin.Function2<androidx.compose.runtime.Composer,kotlin.Int,kotlin.Unit>;androidx.compose.runtime.Composer?;kotlin.Int){}-trampoline + 123 
+    at 37  OpenParty.debug.dylib               0x10a33815b        kfun:androidx.navigation.compose.SaveableStateProvider#internal + 1547 
+    at 38  OpenParty.debug.dylib               0x10a338a73        kfun:androidx.navigation.compose.LocalOwnersProvider$lambda$0#internal + 475 
+    at 39  OpenParty.debug.dylib               0x10a338e3f        kfun:androidx.navigation.compose.$LocalOwnersProvider$lambda$0$FUNCTION_REFERENCE$0.invoke#internal + 119 
+    at 40  OpenParty.debug.dylib               0x10a338f93        kfun:androidx.navigation.compose.$LocalOwnersProvider$lambda$0$FUNCTION_REFERENCE$0.$<bridge-DNNNU>invoke(androidx.compose.runtime.Composer;kotlin.Int){}#internal + 159 
+    at 41  OpenParty.debug.dylib               0x1093f596b        kfun:kotlin.Function2#invoke(1:0;1:1){}1:2-trampoline + 115 
+    at 42  OpenParty.debug.dylib               0x10974e3ef        kfun:androidx.compose.runtime.internal.ComposableLambdaImpl#invoke(androidx.compose.runtime.Composer;kotlin.Int){}kotlin.Any? + 607 
+    at 43  OpenParty.debug.dylib               0x10975c493        kfun:androidx.compose.runtime.internal.ComposableLambdaImpl#$<bridge-NNNNU>invoke(androidx.compose.runtime.Composer;kotlin.Int){}kotlin.Any?(androidx.compose.runtime.Composer;kotlin.Any?){}kotlin.Any? + 163 
+    at 44  OpenParty.debug.dylib               0x1093f596b        kfun:kotlin.Function2#invoke(1:0;1:1){}1:2-trampoline + 115 
+    at 45  OpenParty.debug.dylib               0x10963a9bf        kfun:androidx.compose.runtime#CompositionLocalProvider(kotlin.Array<out|androidx.compose.runtime.ProvidedValue<*>>...;kotlin.Function2<androidx.compose.runtime.Composer,kotlin.Int,kotlin.Unit>;androidx.compose.runtime.Composer?;kotlin.Int){} + 611 
+    at 46  OpenParty.debug.dylib               0x10a337a27        kfun:androidx.navigation.compose#LocalOwnersProvider__at__androidx.navigation.NavBackStackEntry(androidx.compose.runtime.saveable.SaveableStateHolder;kotlin.Function2<androidx.compose.runtime.Composer,kotlin.Int,kotlin.Unit>;androidx.compose.runtime.Composer?;kotlin.Int){} + 1503 
+    at 47  OpenParty.debug.dylib               0x10a330d37        kfun:androidx.navigation.compose.NavHost$lambda$41#internal + 1171 
+    at 48  OpenParty.debug.dylib               0x10a333503        kfun:androidx.navigation.compose.$NavHost$lambda$41$FUNCTION_REFERENCE$31.invoke#internal + 179 
+    at 49  OpenParty.debug.dylib               0x10a3336cb        kfun:androidx.navigation.compose.$NavHost$lambda$41$FUNCTION_REFERENCE$31.$<bridge-DNNNNNU>invoke(androidx.compose.animation.AnimatedContentScope;androidx.navigation.NavBackStackEntry;androidx.compose.runtime.Composer;kotlin.Int){}#internal + 231 
+    at 50  OpenParty.debug.dylib               0x109403477        kfun:kotlin.Function4#invoke(1:0;1:1;1:2;1:3){}1:4-trampoline + 131 
+    at 51  OpenParty.debug.dylib               0x10974eb07        kfun:androidx.compose.runtime.internal.ComposableLambdaImpl#invoke(kotlin.Any?;kotlin.Any?;androidx.compose.runtime.Composer;kotlin.Int){}kotlin.Any? + 687 
+    at 52  OpenParty.debug.dylib               0x10975c6af        kfun:androidx.compose.runtime.internal.ComposableLambdaImpl#$<bridge-NNNNNNU>invoke(kotlin.Any?;kotlin.Any?;androidx.compose.runtime.Composer;kotlin.Int){}kotlin.Any?(kotlin.Any?;kotlin.Any?;androidx.compose.runtime.Composer;kotlin.Any?){}kotlin.Any? + 235 
+    at 53  OpenParty.debug.dylib               0x109403477        kfun:kotlin.Function4#invoke(1:0;1:1;1:2;1:3){}1:4-trampoline + 131 
+    at 54  OpenParty.debug.dylib               0x1090fc6cb        kfun:androidx.compose.animation.AnimatedContent$lambda$12$lambda$11#internal + 2775 
+    at 55  OpenParty.debug.dylib               0x1090ff597        kfun:androidx.compose.animation.$AnimatedContent$lambda$12$lambda$11$FUNCTION_REFERENCE$27.invoke#internal + 155 
+    at 56  OpenParty.debug.dylib               0x1090ff767        kfun:androidx.compose.animation.$AnimatedContent$lambda$12$lambda$11$FUNCTION_REFERENCE$27.$<bridge-DNNNNU>invoke(androidx.compose.animation.AnimatedVisibilityScope;androidx.compose.runtime.Composer;kotlin.Int){}#internal + 195 
+    at 57  OpenParty.debug.dylib               0x1093f5a5f        kfun:kotlin.Function3#invoke(1:0;1:1;1:2){}1:3-trampoline + 123 
+    at 58  OpenParty.debug.dylib               0x10974e763        kfun:androidx.compose.runtime.internal.ComposableLambdaImpl#invoke(kotlin.Any?;androidx.compose.runtime.Composer;kotlin.Int){}kotlin.Any? + 651 
+    at 59  OpenParty.debug.dylib               0x10975c58f        kfun:androidx.compose.runtime.internal.ComposableLambdaImpl#$<bridge-NNNNNU>invoke(kotlin.Any?;androidx.compose.runtime.Composer;kotlin.Int){}kotlin.Any?(kotlin.Any?;androidx.compose.runtime.Composer;kotlin.Any?){}kotlin.Any? + 199 
+    at 60  OpenParty.debug.dylib               0x1093f5a5f        kfun:kotlin.Function3#invoke(1:0;1:1;1:2){}1:3-trampoline + 123 
+    at 61  OpenParty.debug.dylib               0x109104017        kfun:androidx.compose.animation#AnimatedEnterExitImpl(androidx.compose.animation.core.Transition<0:0>;kotlin.Function1<0:0,kotlin.Boolean>;androidx.compose.ui.Modifier;androidx.compose.animation.EnterTransition;androidx.compose.animation.ExitTransition;kotlin.Function2<androidx.compose.animation.EnterExitState,androidx.compose.animation.EnterExitState,kotlin.Boolean>;androidx.compose.animation.OnLookaheadMeasured?;kotlin.Function3<androidx.compose.animation.AnimatedVisibilityScope,androidx.compose.runtime. + 11687 
+    at 62  OpenParty.debug.dylib               0x1090fdf4f        kfun:androidx.compose.animation.AnimatedContent$lambda$12#internal + 6151 
+    at 63  OpenParty.debug.dylib               0x1090fe503        kfun:androidx.compose.animation.$AnimatedContent$lambda$12$FUNCTION_REFERENCE$20.invoke#internal + 135 
+    at 64  OpenParty.debug.dylib               0x1090fe707        kfun:androidx.compose.animation.$AnimatedContent$lambda$12$FUNCTION_REFERENCE$20.$<bridge-DNNNU>invoke(androidx.compose.runtime.Composer;kotlin.Int){}#internal + 159 
+    at 65  OpenParty.debug.dylib               0x1093f596b        kfun:kotlin.Function2#invoke(1:0;1:1){}1:2-trampoline + 115 
+    at 66  OpenParty.debug.dylib               0x10974e3ef        kfun:androidx.compose.runtime.internal.ComposableLambdaImpl#invoke(androidx.compose.runtime.Composer;kotlin.Int){}kotlin.Any? + 607 
+    at 67  OpenParty.debug.dylib               0x10975c493        kfun:androidx.compose.runtime.internal.ComposableLambdaImpl#$<bridge-NNNNU>invoke(androidx.compose.runtime.Composer;kotlin.Int){}kotlin.Any?(androidx.compose.runtime.Composer;kotlin.Any?){}kotlin.Any? + 163 
+    at 68  OpenParty.debug.dylib               0x1093f596b        kfun:kotlin.Function2#invoke(1:0;1:1){}1:2-trampoline + 115 
+    at 69  OpenParty.debug.dylib               0x1090f87bb        kfun:androidx.compose.animation#AnimatedContent__at__androidx.compose.animation.core.Transition<0:0>(androidx.compose.ui.Modifier?;kotlin.Function1<androidx.compose.animation.AnimatedContentTransitionScope<0:0>,androidx.compose.animation.ContentTransform>?;androidx.compose.ui.Alignment?;kotlin.Function1<0:0,kotlin.Any?>?;kotlin.Function4<androidx.compose.animation.AnimatedContentScope,0:0,androidx.compose.runtime.Composer,kotlin.Int,kotlin.Unit>;androidx.compose.runtime.Composer?;kotlin.Int;kotlin.Int){0§ + 12707 
+    at 70  OpenParty.debug.dylib               0x10a32b1bf        kfun:androidx.navigation.compose#NavHost(androidx.navigation.NavHostController;androidx.navigation.NavGraph;androidx.compose.ui.Modifier?;androidx.compose.ui.Alignment?;kotlin.Function1<androidx.compose.animation.AnimatedContentTransitionScope<androidx.navigation.NavBackStackEntry>,androidx.compose.animation.EnterTransition>?;kotlin.Function1<androidx.compose.animation.AnimatedContentTransitionScope<androidx.navigation.NavBackStackEntry>,androidx.compose.animation.ExitTransition>?;kotlin.Function1<androidx + 17523 
+    at 71  OpenParty.debug.dylib               0x10a331b13        kfun:androidx.navigation.compose.NavHost$lambda$44#internal + 727 
+    at 72  OpenParty.debug.dylib               0x10a333d2f        kfun:androidx.navigation.compose.$NavHost$lambda$44$FUNCTION_REFERENCE$34.invoke#internal + 183 
+    at 73  OpenParty.debug.dylib               0x10a334007        kfun:androidx.navigation.compose.$NavHost$lambda$44$FUNCTION_REFERENCE$34.$<bridge-DNNNU>invoke(androidx.compose.runtime.Composer?;kotlin.Int){}#internal + 159 
+    at 74  OpenParty.debug.dylib               0x1093f596b        kfun:kotlin.Function2#invoke(1:0;1:1){}1:2-trampoline + 115 
+    at 75  OpenParty.debug.dylib               0x109649cd7        kfun:androidx.compose.runtime.RecomposeScopeImpl#compose(androidx.compose.runtime.Composer){} + 811 
+    at 76  OpenParty.debug.dylib               0x1096106ff        kfun:androidx.compose.runtime.ComposerImpl.recomposeToGroupEnd#internal + 1395 
+    at 77  OpenParty.debug.dylib               0x10961343f        kfun:androidx.compose.runtime.ComposerImpl#skipCurrentGroup(){} + 2375 
+    at 78  OpenParty.debug.dylib               0x109618a4f        kfun:androidx.compose.runtime.ComposerImpl.doCompose#internal + 3091 
+    at 79  OpenParty.debug.dylib               0x109617dc7        kfun:androidx.compose.runtime.ComposerImpl#recompose(androidx.compose.runtime.collection.ScopeMap<androidx.compose.runtime.RecomposeScopeImpl,kotlin.Any>){}kotlin.Boolean + 523 
+    at 80  OpenParty.debug.dylib               0x10962e3af        kfun:androidx.compose.runtime.CompositionImpl#recompose(){}kotlin.Boolean + 1155 
+    at 81  OpenParty.debug.dylib               0x109768a7f        kfun:androidx.compose.runtime.ControlledComposition#recompose(){}kotlin.Boolean-trampoline + 91 
+    at 82  OpenParty.debug.dylib               0x1096555c7        kfun:androidx.compose.runtime.Recomposer.performRecompose#internal + 1511 
+    at 83  OpenParty.debug.dylib               0x10965db87        kfun:androidx.compose.runtime.Recomposer.runRecomposeAndApplyChanges$lambda$4$lambda$3#internal + 3083 
+    at 84  OpenParty.debug.dylib               0x109663b7b        kfun:androidx.compose.runtime.Recomposer.$runRecomposeAndApplyChanges$lambda$4$lambda$3$FUNCTION_REFERENCE$12.invoke#internal + 135 
+    at 85  OpenParty.debug.dylib               0x109663df3        kfun:androidx.compose.runtime.Recomposer.$runRecomposeAndApplyChanges$lambda$4$lambda$3$FUNCTION_REFERENCE$12.$<bridge-DNNU>invoke(kotlin.Long){}#internal + 123 
+    at 86  OpenParty.debug.dylib               0x1093f1343        kfun:kotlin.Function1#invoke(1:0){}1:1-trampoline + 107 
+    at 87  OpenParty.debug.dylib               0x1095f8c53        kfun:androidx.compose.runtime.BroadcastFrameClock.FrameAwaiter.resume#internal + 531 
+    at 88  OpenParty.debug.dylib               0x1095f9523        kfun:androidx.compose.runtime.BroadcastFrameClock#sendFrame(kotlin.Long){} + 667 
+    at 89  OpenParty.debug.dylib               0x10a1db7eb        kfun:androidx.compose.ui.scene.BaseComposeScene#render(androidx.compose.ui.graphics.Canvas;kotlin.Long){} + 1415 
+    at 90  OpenParty.debug.dylib               0x10a2cca4b        kfun:androidx.compose.ui.scene.ComposeScene#render(androidx.compose.ui.graphics.Canvas;kotlin.Long){}-trampoline + 107 
+    at 91  OpenParty.debug.dylib               0x10a24ef9f        kfun:androidx.compose.ui.scene.ComposeSceneMediator#render(androidx.compose.ui.graphics.Canvas;kotlin.Long){} + 183 
+    at 92  OpenParty.debug.dylib               0x10a243f67        kfun:androidx.compose.ui.scene.ComposeHostingViewController.<init>$lambda$2$lambda$1#internal + 267 
+    at 93  OpenParty.debug.dylib               0x10a246697        kfun:androidx.compose.ui.scene.ComposeHostingViewController.$<init>$lambda$2$lambda$1$FUNCTION_REFERENCE$13.invoke#internal + 115 
+    at 94  OpenParty.debug.dylib               0x10a2467bf        kfun:androidx.compose.ui.scene.ComposeHostingViewController.$<init>$lambda$2$lambda$1$FUNCTION_REFERENCE$13.$<bridge-DNNNU>invoke(org.jetbrains.skia.Canvas;kotlin.Long){}#internal + 159 
+    at 95  OpenParty.debug.dylib               0x1093f596b        kfun:kotlin.Function2#invoke(1:0;1:1){}1:2-trampoline + 115 
+    at 96  OpenParty.debug.dylib               0x10a2a11c7        kfun:androidx.compose.ui.window.MetalView.<init>$lambda$0#internal + 275 
+    at 97  OpenParty.debug.dylib               0x10a2a125f        kfun:androidx.compose.ui.window.MetalView.$<init>$lambda$0$FUNCTION_REFERENCE$0.invoke#internal + 115 
+    at 98  OpenParty.debug.dylib               0x10a2a1387        kfun:androidx.compose.ui.window.MetalView.$<init>$lambda$0$FUNCTION_REFERENCE$0.$<bridge-DNNNU>invoke(org.jetbrains.skia.Canvas;kotlin.Double){}#internal + 159 
+    at 99  OpenParty.debug.dylib               0x1093f596b        kfun:kotlin.Function2#invoke(1:0;1:1){}1:2-trampoline + 115 
+    at 100 OpenParty.debug.dylib               0x10a29719f        kfun:androidx.compose.ui.window.MetalRedrawer.draw#internal + 4651 
+    at 101 OpenParty.debug.dylib               0x10a299f23        kfun:androidx.compose.ui.window.MetalRedrawer.<init>$lambda$1#internal + 471 
+    at 102 OpenParty.debug.dylib               0x10a29c31b        kfun:androidx.compose.ui.window.MetalRedrawer.$<init>$lambda$1$FUNCTION_REFERENCE$1.invoke#internal + 71 
+    at 103 OpenParty.debug.dylib               0x10a29c3eb        kfun:androidx.compose.ui.window.MetalRedrawer.$<init>$lambda$1$FUNCTION_REFERENCE$1.$<bridge-DNN>invoke(){}#internal + 71 
+    at 104 OpenParty.debug.dylib               0x1093f262f        kfun:kotlin.Function0#invoke(){}1:0-trampoline + 99 
+    at 105 OpenParty.debug.dylib               0x10a29d2c3        kfun:androidx.compose.ui.window.DisplayLinkProxy.handleDisplayLinkTick#internal + 151 
+    at 106 OpenParty.debug.dylib               0x10a29d377        kfun:androidx.compose.ui.window.DisplayLinkProxy.$imp:handleDisplayLinkTick#internal + 143 
+    at 107 QuartzCore                          0x1949089cb        <redacted> + 47 
+    at 108 QuartzCore                          0x19490839f        <redacted> + 883 
+    at 109 QuartzCore                          0x194907f37        <redacted> + 351 
+    at 110 UIKitCore                           0x19560470f        <redacted> + 83 
+    at 111 UIKitCore                           0x19560703f        <redacted> + 171 
+    at 112 UIKitCore                           0x195604c5b        <redacted> + 91 
+    at 113 CoreFoundation                      0x192db8f4b        <redacted> + 27 
+    at 114 CoreFoundation                      0x192db8edf        <redacted> + 175 
+    at 115 CoreFoundation                      0x192dbbb3f        <redacted> + 243 
+    at 116 CoreFoundation                      0x192dbad3b        <redacted> + 839 
+    at 117 CoreFoundation                      0x192e0d283        CFRunLoopRunSpecific + 587 
+    at 118 GraphicsServices                    0x1e00794bf        GSEventRunModal + 163 
+    at 119 UIKitCore                           0x195956673        <redacted> + 815 
+    at 120 UIKitCore                           0x19557ce87        UIApplicationMain + 339 
+    at 121 SwiftUI                             0x197712ef7        <redacted> + 167 
+    at 122 SwiftUI                             0x197712e27        <redacted> + 99 
+    at 123 SwiftUI                             0x197712d0b        $s7SwiftUI3AppPAAE4mainyyFZ + 179 
+    at 124 OpenParty.debug.dylib               0x108c745a3        $s9OpenParty6iOSAppV5$mainyyFZ + 39 
+    at 125 OpenParty.debug.dylib               0x108c7464f        __debug_main_executable_dylib_entry_point + 11 
+    Suppressed: kotlinx.coroutines.internal.DiagnosticCoroutineContextException: [androidx.compose.runtime.BroadcastFrameClock@5754de8, StandaloneCoroutine{Cancelling}@49d8538, FlushCoroutineDispatcher@5c41658]

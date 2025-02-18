@@ -59,7 +59,8 @@ class EmailVerificationViewModel(
                     if (destination == Screen.EmailVerification) {
                         logger.d("User email not verified; staying on the current screen.")
                         _uiState.value = _uiState.value.copy(
-                            errorMessage = "Email hasn't been verified yet. Check your emails for the verification email."
+                            errorMessage = "Email hasn't been verifie" +
+                                    "d yet. Check your emails for the verification email."
                         )
                     } else {
                         logger.d("Navigating to $destination")
