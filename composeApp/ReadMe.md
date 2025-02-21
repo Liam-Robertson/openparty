@@ -1,4 +1,6 @@
 How to build release ios app: 
+- Go to info.plist
+- Search for "CFBundleShortVersionString" and update the version
 - close xcode
 - Go to android studio, open terminal
 - cd iosApp
