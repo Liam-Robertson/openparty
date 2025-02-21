@@ -44,7 +44,6 @@ class EngagementRepositoryImpl(
             upvoteCount += 1
         }
         try {
-            // Use lambda receiver syntax to satisfy expected type
             firestore.runTransaction {
                 update(discussionDocRef, mapOf("upvoteCount" to upvoteCount, "downvoteCount" to downvoteCount))
             }
