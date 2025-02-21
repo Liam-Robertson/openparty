@@ -61,6 +61,19 @@ Notes:
 
 ---------
 
-So above i've given you the location verification feature for my app. It's job is to get location permissions from the user, and verify that the user is in West Lothian. 
+So above i've given you the discussions preview feature for my app and the navigation feature 
+a
+it all works correctly but i want to add functionality
 
-The feature_location_verification works fine for android since I've written all the code and make sure it works, but it doesn't work for ios yet 
+I have given you my Navigation Footer which is currently not in use 
+
+I want to create a settings feature here: 
+package com.openparty.app.features.utils.feature_settings 
+
+The settings feature is going to be very basic for now. It's just going to be a screen with text on it saying "Disclaimer" 
+
+However, I also want to change the navigation footer so that it has the settings screen on it 
+
+The navigation footer should have two segments - one for discussions and one for settings 
+
+the settings one should be represented by a cog, when the user clicks the cog it goes to the settings screen, when the user clicks the discussions icon it goes back to the discussions preview screen 

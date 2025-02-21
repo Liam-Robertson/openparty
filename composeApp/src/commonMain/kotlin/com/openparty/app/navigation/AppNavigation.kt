@@ -1,9 +1,16 @@
 //File: composeApp/src/commonMain/kotlin/com/openparty/app/navigation/AppNavigation.kt
 package com.openparty.app.navigation
 
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
 import androidx.navigation.NavType
-import androidx.navigation.compose.*
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.compose.rememberNavController
+import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.openparty.app.features.engagement.comments.feature_add_comment.presentation.AddCommentScreen
 import com.openparty.app.features.newsfeed.council_meetings.feature_council_meetings_article.presentation.CouncilMeetingArticleScreen
@@ -18,59 +25,73 @@ import com.openparty.app.features.startup.feature_splash.presentation.SplashScre
 import com.openparty.app.features.startup.verification.feature_email_verification.presentation.EmailVerificationScreen
 import com.openparty.app.features.startup.verification.feature_location_verification.presentation.LocationVerificationScreen
 import com.openparty.app.features.startup.verification.feature_manual_verification.presentation.ManualVerificationScreen
+import com.openparty.app.features.utils.feature_settings.presentation.SettingsScreen
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 
 @Composable
 fun AppNavigation() {
     val navController = rememberNavController()
-
-    NavHost(
-        navController = navController,
-        startDestination = Screen.Splash.route
-    ) {
-        composable(Screen.Splash.route) { SplashScreen(navController) }
-        composable(Screen.Login.route) { LoginScreen(navController) }
-        composable(Screen.Register.route) { RegisterScreen(navController) }
-        composable(Screen.EmailVerification.route) { EmailVerificationScreen(navController) }
-        composable(Screen.LocationVerification.route) { LocationVerificationScreen(navController) }
-        composable(Screen.ScreenNameGeneration.route) { ScreenNameGenerationScreen(navController) }
-        composable(Screen.ManualVerification.route) { ManualVerificationScreen() }
-        composable(Screen.DiscussionsPreview.route) { DiscussionsPreviewScreen(navController) }
-        composable(Screen.CouncilMeetingsPreview.route) { CouncilMeetingsPreviewScreen(navController) }
-        composable(Screen.AddDiscussion.route) { AddDiscussionScreen(navController) }
-
-        composable(
-            route = Screen.DiscussionsArticle("").route,
-            arguments = listOf(navArgument("discussionId") { type = NavType.StringType })
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = navBackStackEntry?.destination?.route
+    val bottomBarRoutes = listOf(
+        Screen.DiscussionsPreview.route,
+        Screen.CouncilMeetingsPreview.route,
+        Screen.Settings.route
+    )
+    Scaffold(
+        bottomBar = {
+            if (currentRoute in bottomBarRoutes) {
+                NavigationFooter(navController = navController, currentRoute = currentRoute)
+            }
+        }
+    ) { padding ->
+        NavHost(
+            navController = navController,
+            startDestination = Screen.Splash.route,
+            modifier = Modifier.padding(padding)
         ) {
-            DiscussionArticleScreen(navController)
-        }
-
-        composable(
-            route = Screen.CouncilMeetingsArticle("").route,
-            arguments = listOf(navArgument("councilMeetingId") { type = NavType.StringType })
-        ) { backStackEntry ->
-            val councilMeetingId = backStackEntry.arguments?.getString("councilMeetingId") ?: ""
-            val viewModel = koinViewModel<com.openparty.app.features.newsfeed.council_meetings.feature_council_meetings_article.presentation.CouncilMeetingArticleViewModel> {
-                parametersOf(councilMeetingId)
+            composable(Screen.Splash.route) { SplashScreen(navController) }
+            composable(Screen.Login.route) { LoginScreen(navController) }
+            composable(Screen.Register.route) { RegisterScreen(navController) }
+            composable(Screen.EmailVerification.route) { EmailVerificationScreen(navController) }
+            composable(Screen.LocationVerification.route) { LocationVerificationScreen(navController) }
+            composable(Screen.ScreenNameGeneration.route) { ScreenNameGenerationScreen(navController) }
+            composable(Screen.ManualVerification.route) { ManualVerificationScreen() }
+            composable(Screen.DiscussionsPreview.route) { DiscussionsPreviewScreen(navController) }
+            composable(Screen.CouncilMeetingsPreview.route) { CouncilMeetingsPreviewScreen(navController) }
+            composable(Screen.AddDiscussion.route) { AddDiscussionScreen(navController) }
+            composable(Screen.Settings.route) { SettingsScreen() }
+            composable(
+                route = Screen.DiscussionsArticle("").route,
+                arguments = listOf(navArgument("discussionId") { type = NavType.StringType })
+            ) {
+                DiscussionArticleScreen(navController)
             }
-            CouncilMeetingArticleScreen(navController, viewModel)
-        }
-
-        composable(
-            route = Screen.AddComment("", "").route,
-            arguments = listOf(
-                navArgument("discussionId") { type = NavType.StringType },
-                navArgument("titleText") { type = NavType.StringType }
-            )
-        ) { backStackEntry ->
-            val discussionId = backStackEntry.arguments?.getString("discussionId") ?: ""
-            val titleText = backStackEntry.arguments?.getString("titleText") ?: ""
-            val viewModel = koinViewModel<com.openparty.app.features.engagement.comments.feature_add_comment.presentation.AddCommentViewModel> {
-                parametersOf(discussionId, titleText)
+            composable(
+                route = Screen.CouncilMeetingsArticle("").route,
+                arguments = listOf(navArgument("councilMeetingId") { type = NavType.StringType })
+            ) { backStackEntry ->
+                val councilMeetingId = backStackEntry.arguments?.getString("councilMeetingId") ?: ""
+                val viewModel = koinViewModel<com.openparty.app.features.newsfeed.council_meetings.feature_council_meetings_article.presentation.CouncilMeetingArticleViewModel> {
+                    parametersOf(councilMeetingId)
+                }
+                CouncilMeetingArticleScreen(navController, viewModel)
             }
-            AddCommentScreen(navController, discussionId, titleText, viewModel)
+            composable(
+                route = Screen.AddComment("", "").route,
+                arguments = listOf(
+                    navArgument("discussionId") { type = NavType.StringType },
+                    navArgument("titleText") { type = NavType.StringType }
+                )
+            ) { backStackEntry ->
+                val discussionId = backStackEntry.arguments?.getString("discussionId") ?: ""
+                val titleText = backStackEntry.arguments?.getString("titleText") ?: ""
+                val viewModel = koinViewModel<com.openparty.app.features.engagement.comments.feature_add_comment.presentation.AddCommentViewModel> {
+                    parametersOf(discussionId, titleText)
+                }
+                AddCommentScreen(navController, discussionId, titleText, viewModel)
+            }
         }
     }
 }

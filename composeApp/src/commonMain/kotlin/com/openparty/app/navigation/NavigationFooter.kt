@@ -1,3 +1,4 @@
+//File: composeApp/src/commonMain/kotlin/com/openparty/app/navigation/NavigationFooter.kt
 package com.openparty.app.navigation
 
 import androidx.compose.foundation.background
@@ -5,7 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Chat
-import androidx.compose.material.icons.outlined.Newspaper
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -21,7 +22,7 @@ fun NavigationFooter(
     currentRoute: String?
 ) {
     val discussionsColor = if (currentRoute == Screen.DiscussionsPreview.route) Color.White else Color.Gray
-    val newsfeedColor = if (currentRoute == Screen.CouncilMeetingsPreview.route) Color.White else Color.Gray
+    val settingsColor = if (currentRoute == Screen.Settings.route) Color.White else Color.Gray
 
     Row(
         modifier = Modifier
@@ -53,19 +54,19 @@ fun NavigationFooter(
         Column(
             modifier = Modifier
                 .clickable {
-                    navController.navigate(Screen.CouncilMeetingsPreview.route) {
-                        popUpTo(Screen.CouncilMeetingsPreview.route) { inclusive = true }
+                    navController.navigate(Screen.Settings.route) {
+                        popUpTo(Screen.Settings.route) { inclusive = true }
                     }
                 },
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Icon(
-                imageVector = Icons.Outlined.Newspaper,
+                imageVector = Icons.Outlined.Settings,
                 contentDescription = null,
-                tint = newsfeedColor,
+                tint = settingsColor,
                 modifier = Modifier.size(24.dp)
             )
-            Text("Newsfeed", color = newsfeedColor, fontSize = 12.sp)
+            Text("Settings", color = settingsColor, fontSize = 12.sp)
         }
     }
 }
