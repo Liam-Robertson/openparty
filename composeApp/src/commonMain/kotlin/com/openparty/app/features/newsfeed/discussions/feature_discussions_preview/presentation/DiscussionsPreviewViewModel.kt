@@ -12,6 +12,7 @@ import com.openparty.app.core.shared.presentation.UiEvent
 import com.openparty.app.core.shared.presentation.UiState
 import com.openparty.app.features.newsfeed.discussions.shared.domain.model.Discussion
 import com.openparty.app.features.newsfeed.discussions.feature_discussions_preview.domain.usecase.GetDiscussionsUseCase
+import com.openparty.app.features.startup.feature_authentication.domain.usecase.GetCurrentUserIdUseCase
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -22,7 +23,8 @@ import com.openparty.app.navigation.Screen
 
 class DiscussionsPreviewViewModel(
     private val getDiscussionsUseCase: GetDiscussionsUseCase,
-    private val trackDiscussionSelectedUseCase: TrackDiscussionSelectedUseCase
+    private val trackDiscussionSelectedUseCase: TrackDiscussionSelectedUseCase,
+    private val getCurrentUserIdUseCase: GetCurrentUserIdUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(UiState())
@@ -31,12 +33,32 @@ class DiscussionsPreviewViewModel(
     private val _uiEvent = MutableSharedFlow<UiEvent>()
     val uiEvent: SharedFlow<UiEvent> = _uiEvent
 
-    private var _discussions: kotlinx.coroutines.flow.Flow<PagingData<Discussion>> = kotlinx.coroutines.flow.flow { }
+    private var _discussions: kotlinx.coroutines.flow.Flow<PagingData<Discussion>> =
+        kotlinx.coroutines.flow.flow { }
     val discussions: kotlinx.coroutines.flow.Flow<PagingData<Discussion>>
         get() = _discussions
 
+    private val _currentUserId = MutableStateFlow<String?>(null)
+    val currentUserId: StateFlow<String?> = _currentUserId
+
     init {
+        loadCurrentUserId()
         loadDiscussions()
+    }
+
+    private fun loadCurrentUserId() {
+        viewModelScope.launch {
+            when (val result = getCurrentUserIdUseCase()) {
+                is DomainResult.Success -> {
+                    _currentUserId.value = result.data
+                    logger.i { "Fetched current user id: ${result.data}" }
+                }
+                is DomainResult.Failure -> {
+                    val errorMessage = AppErrorMapper.getUserFriendlyMessage(result.error)
+                    logger.e(result.error) { "Error fetching current user id: $errorMessage" }
+                }
+            }
+        }
     }
 
     private fun loadDiscussions() {

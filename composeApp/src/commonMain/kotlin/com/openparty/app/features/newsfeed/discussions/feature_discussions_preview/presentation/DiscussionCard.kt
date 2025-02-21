@@ -15,9 +15,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.openparty.app.features.newsfeed.discussions.shared.domain.model.Discussion
+import com.openparty.app.features.engagement.engagement_bars.feature_preview_enagement_footer.domain.model.EngagementFooterState
+import com.openparty.app.features.engagement.engagement_bars.feature_preview_enagement_footer.presentation.EngagementFooter
 
 @Composable
-fun DiscussionCard(discussion: Discussion, onClick: () -> Unit) {
+fun DiscussionCard(
+    discussion: Discussion,
+    currentUserId: String,
+    onClick: () -> Unit
+) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -37,6 +43,17 @@ fun DiscussionCard(discussion: Discussion, onClick: () -> Unit) {
                 style = MaterialTheme.typography.bodyMedium,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            EngagementFooter(
+                currentUserId = currentUserId,
+                discussionId = discussion.discussionId,
+                initialState = EngagementFooterState(
+                    upvoteCount = discussion.upvoteCount,
+                    downvoteCount = discussion.downvoteCount,
+                    commentCount = discussion.commentCount,
+                    userVote = null
+                )
             )
         }
     }

@@ -29,6 +29,7 @@ fun DiscussionsPreviewScreen(
     val lazyDiscussions = viewModel.discussions.collectAsLazyPagingItems()
     val uiEvent = viewModel.uiEvent
     val uiState by viewModel.uiState.collectAsState()
+    val currentUserId by viewModel.currentUserId.collectAsState()
 
     LaunchedEffect(uiEvent) {
         uiEvent.collectLatest { event ->
@@ -43,25 +44,28 @@ fun DiscussionsPreviewScreen(
     Box(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize()) {
             Box(modifier = Modifier.weight(1f)) {
-                BaseFeedScreen<Discussion>(
-                    items = lazyDiscussions,
-                    emptyPlaceholder = "No discussions yet..."
-                ) { discussion ->
-                    if (discussion != null) {
-                        DiscussionCard(discussion = discussion) {
-                            viewModel.onDiscussionSelected(discussion.discussionId)
+                if (currentUserId != null) {
+                    BaseFeedScreen<Discussion>(
+                        items = lazyDiscussions,
+                        emptyPlaceholder = "No discussions yet..."
+                    ) { discussion ->
+                        if (discussion != null) {
+                            DiscussionCard(
+                                discussion = discussion,
+                                currentUserId = currentUserId!!  // using the fetched user ID
+                            ) {
+                                viewModel.onDiscussionSelected(discussion.discussionId)
+                            }
                         }
                     }
-                }
-                AddDiscussionButton {
-                    navController.navigate(Screen.AddDiscussion.route)
+                    AddDiscussionButton {
+                        navController.navigate(Screen.AddDiscussion.route)
+                    }
+                } else {
+                    // Optionally, display a loading indicator or placeholder until user ID is available.
                 }
             }
             ErrorText(errorMessage = uiState.errorMessage)
-//            NavigationFooter(
-//                navController = navController,
-//                currentRoute = navController.currentBackStackEntry?.destination?.route
-//            )
         }
     }
 }
