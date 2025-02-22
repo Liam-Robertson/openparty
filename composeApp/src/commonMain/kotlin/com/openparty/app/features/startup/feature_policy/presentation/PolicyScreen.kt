@@ -37,31 +37,43 @@ fun PolicyScreen(
 
     val uiState by viewModel.uiState.collectAsState()
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp),
-        verticalArrangement = Arrangement.SpaceBetween
-    ) {
-        Text(
-            text = "End User License Agreement",
-            style = MaterialTheme.typography.headlineSmall,
-            modifier = Modifier.padding(bottom = 16.dp)
-        )
-        Text(
-            text = policyText,
-            style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.padding(bottom = 16.dp)
-        )
-        if (uiState.errorMessage != null) {
-            ErrorText(errorMessage = uiState.errorMessage)
+    Scaffold(
+        bottomBar = {
+            Button(
+                onClick = { viewModel.acceptPolicy() },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+            ) {
+                Text(text = "Accept")
+            }
         }
-        Button(
-            onClick = { viewModel.acceptPolicy() },
-            modifier = Modifier.padding(top = 16.dp)
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .padding(horizontal = 16.dp)
         ) {
-            Text(text = "Accept")
+            Text(
+                text = "End User License Agreement",
+                style = MaterialTheme.typography.headlineSmall,
+                modifier = Modifier.padding(bottom = 16.dp)
+            )
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .verticalScroll(rememberScrollState())
+            ) {
+                Text(
+                    text = policyText,
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+            }
+            if (uiState.errorMessage != null) {
+                ErrorText(errorMessage = uiState.errorMessage)
+            }
         }
     }
 }
