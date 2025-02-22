@@ -344,168 +344,296 @@ OpenParty/
     └── iosApp.xcodeproj/
 
 ---------
-//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/startup/feature_policy/data/PolicyProvider.kt
-package com.openparty.app.features.startup.feature_policy.data
 
-expect fun loadPolicyText(): String
-
-//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/startup/feature_policy/data/PolicyRepositoryImpl.kt
-package com.openparty.app.features.startup.feature_policy.data
-
-import com.openparty.app.features.startup.feature_policy.domain.repository.PolicyRepository
-
-class PolicyRepositoryImpl : PolicyRepository {
-    override suspend fun acceptPolicy() {
-        // Implement your acceptance logic here (e.g., update local storage or make a network call)
-    }
-}
-
-//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/startup/feature_policy/di/policyModule.kt
-package com.openparty.app.features.startup.feature_policy.di
-
-import com.openparty.app.features.startup.feature_policy.data.PolicyRepositoryImpl
-import com.openparty.app.features.startup.feature_policy.domain.repository.PolicyRepository
-import com.openparty.app.features.startup.feature_policy.domain.usecase.AcceptPolicyUseCase
-import com.openparty.app.features.startup.feature_policy.presentation.PolicyViewModel
-import org.koin.dsl.module
-import org.koin.core.module.dsl.viewModel
-
-val policyModule = module {
-    single<PolicyRepository> { PolicyRepositoryImpl() }
-    single { AcceptPolicyUseCase(get()) }
-    viewModel { PolicyViewModel(get()) }
-}
-//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/startup/feature_policy/domain/repository/PolicyRepository.kt
-package com.openparty.app.features.startup.feature_policy.domain.repository
-
-interface PolicyRepository {
-    suspend fun acceptPolicy()
-}
-//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/startup/feature_policy/domain/usecase/AcceptPolicyUseCase.kt
-package com.openparty.app.features.startup.feature_policy.domain.usecase
+//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/shared/feature_user/domain/usecase/BlockUserUseCase.kt
+package com.openparty.app.features.shared.feature_user.domain.usecase
 
 import com.openparty.app.core.shared.domain.DomainResult
-import com.openparty.app.core.shared.domain.GlobalLogger.logger
 import com.openparty.app.core.shared.domain.error.AppError
-import com.openparty.app.features.startup.feature_policy.domain.repository.PolicyRepository
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import com.openparty.app.core.shared.domain.GlobalLogger.logger
+import com.openparty.app.features.shared.feature_user.domain.repository.UserRepository
 
-class AcceptPolicyUseCase(
-    private val policyRepository: PolicyRepository
+class BlockUserUseCase(
+    private val userRepository: UserRepository
 ) {
-    suspend operator fun invoke(): DomainResult<Unit> {
-        return withContext(Dispatchers.Default) {
-            logger.i { "AcceptPolicyUseCase invoked" }
-            try {
-                policyRepository.acceptPolicy()
-                logger.i { "Policy accepted successfully" }
-                DomainResult.Success(Unit)
-            } catch (e: Exception) {
-                logger.e(e) { "Error occurred while accepting policy: ${e.message}" }
-                DomainResult.Failure(AppError.Policy.AcceptPolicy)
-            }
+    suspend operator fun invoke(currentUserId: String, blockedUserId: String): DomainResult<Unit> {
+        logger.i { "BlockUserUseCase invoked with currentUserId: $currentUserId and blockedUserId: $blockedUserId" }
+        return try {
+            userRepository.blockUser(currentUserId, blockedUserId)
+        } catch (e: Throwable) {
+            logger.e(e) { "Exception in BlockUserUseCase: ${e.message}" }
+            DomainResult.Failure(AppError.User.BlockUser)
         }
     }
 }
-//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/startup/feature_policy/presentation/PolicyScreen.kt
-package com.openparty.app.features.startup.feature_policy.presentation
+//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/newsfeed/discussions/feature_discussions_preview/di/DiscussionsKoinModule.kt
+package com.openparty.app.features.newsfeed.discussions.feature_discussions_preview.di
 
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import com.openparty.app.features.newsfeed.discussions.shared.domain.repository.DiscussionRepository
+import com.openparty.app.features.newsfeed.discussions.shared.data.repository.DiscussionRepositoryImpl
+import com.openparty.app.features.newsfeed.discussions.feature_discussions_preview.domain.usecase.GetDiscussionsUseCase
+import com.openparty.app.features.newsfeed.discussions.feature_discussions_preview.presentation.DiscussionsPreviewViewModel
+import dev.gitlive.firebase.Firebase
+import dev.gitlive.firebase.firestore.firestore
+import org.koin.core.module.dsl.viewModel
+import org.koin.dsl.module
+
+val discussionsKoinModule = module {
+    single<DiscussionRepository> { DiscussionRepositoryImpl(get()) }
+    single { Firebase.firestore }
+    single { GetDiscussionsUseCase(get()) }
+    viewModel { DiscussionsPreviewViewModel(get(), get(), get(), get()) }
+}
+//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/newsfeed/discussions/feature_discussions_preview/domain/usecase/GetDiscussionsUseCase.kt
+package com.openparty.app.features.newsfeed.discussions.feature_discussions_preview.domain.usecase
+
+import androidx.paging.PagingData
+import com.openparty.app.core.shared.domain.DomainResult
+import com.openparty.app.core.shared.domain.error.AppError
+import com.openparty.app.features.newsfeed.discussions.shared.domain.model.Discussion
+import com.openparty.app.features.newsfeed.discussions.shared.domain.repository.DiscussionRepository
+import kotlinx.coroutines.flow.Flow
+import com.openparty.app.core.shared.domain.GlobalLogger.logger
+
+class GetDiscussionsUseCase(
+    private val repository: DiscussionRepository
+) {
+    operator fun invoke(): DomainResult<Flow<PagingData<Discussion>>> {
+        logger.i { "GetDiscussionsUseCase invoked" }
+        return try {
+            logger.i { "Fetching discussions from repository" }
+            val discussionsFlow = repository.getDiscussions()
+            logger.i { "Successfully fetched discussions flow" }
+            DomainResult.Success(discussionsFlow)
+        } catch (e: Exception) {
+            logger.e(e) { "Error occurred while fetching discussions" }
+            DomainResult.Failure(AppError.Discussion.FetchDiscussions)
+        }
+    }
+}
+//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/newsfeed/discussions/feature_discussions_preview/presentation/DiscussionCard.kt
+package com.openparty.app.features.newsfeed.discussions.feature_discussions_preview.presentation
+
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Card
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Block
+import androidx.compose.material.icons.filled.VisibilityOff
+import com.openparty.app.features.engagement.engagement_bars.feature_preview_enagement_footer.presentation.EngagementFooter
+import com.openparty.app.features.engagement.engagement_bars.feature_preview_enagement_footer.domain.model.EngagementFooterState
+import com.openparty.app.features.newsfeed.discussions.shared.domain.model.Discussion
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun DiscussionCard(
+    discussion: Discussion,
+    currentUserId: String,
+    onClick: () -> Unit,
+    onBlockUser: (blockedUserId: String) -> Unit
+) {
+    var showBottomSheet by remember { mutableStateOf(false) }
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(8.dp)
+    ) {
+        Box {
+            Column(
+                modifier = Modifier
+                    .clickable { onClick() }
+                    .padding(16.dp)
+            ) {
+                Text(
+                    text = discussion.title,
+                    style = MaterialTheme.typography.titleLarge,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = discussion.contentText,
+                    style = MaterialTheme.typography.bodyMedium,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                EngagementFooter(
+                    currentUserId = currentUserId,
+                    discussionId = discussion.discussionId,
+                    initialState = EngagementFooterState(
+                        upvoteCount = discussion.upvoteCount,
+                        downvoteCount = discussion.downvoteCount,
+                        commentCount = discussion.commentCount,
+                        userVote = null
+                    )
+                )
+            }
+            IconButton(
+                onClick = { showBottomSheet = true },
+                modifier = Modifier.align(Alignment.TopEnd)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.MoreVert,
+                    contentDescription = "Settings"
+                )
+            }
+        }
+    }
+    if (showBottomSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showBottomSheet = false }
+        ) {
+            ListItem(
+                headlineContent = { Text("Block Account") },
+                leadingContent = {
+                    Icon(
+                        imageVector = Icons.Default.Block,
+                        contentDescription = "Block Account"
+                    )
+                },
+                modifier = Modifier.clickable {
+                    showBottomSheet = false
+                    onBlockUser(discussion.userId)
+                }
+            )
+            ListItem(
+                headlineContent = { Text("Hide Content") },
+                leadingContent = {
+                    Icon(
+                        imageVector = Icons.Default.VisibilityOff,
+                        contentDescription = "Hide Content"
+                    )
+                },
+                modifier = Modifier.clickable { showBottomSheet = false }
+            )
+        }
+    }
+}
+//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/newsfeed/discussions/feature_discussions_preview/presentation/DiscussionsPreviewScreen.kt
+package com.openparty.app.features.newsfeed.discussions.feature_discussions_preview.presentation
+
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
+import org.koin.compose.viewmodel.koinViewModel
 import androidx.navigation.NavHostController
+import app.cash.paging.compose.collectAsLazyPagingItems
 import com.openparty.app.core.shared.presentation.ErrorText
 import com.openparty.app.core.shared.presentation.UiEvent
-import com.openparty.app.features.startup.feature_policy.data.loadPolicyText
+import com.openparty.app.features.newsfeed.discussions.feature_add_discussion.presentation.AddDiscussionButton
+import com.openparty.app.features.newsfeed.shared.presentation.BaseFeedScreen
+import com.openparty.app.navigation.NavigationFooter
+import com.openparty.app.navigation.Screen
+import com.openparty.app.features.newsfeed.discussions.shared.domain.model.Discussion
 import kotlinx.coroutines.flow.collectLatest
-import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
-fun PolicyScreen(
+fun DiscussionsPreviewScreen(
     navController: NavHostController,
-    viewModel: PolicyViewModel = koinViewModel()
+    viewModel: DiscussionsPreviewViewModel = koinViewModel()
 ) {
-    var policyText by remember { mutableStateOf("") }
+    val lazyDiscussions = viewModel.discussions.collectAsLazyPagingItems()
+    val uiEvent = viewModel.uiEvent
+    val uiState by viewModel.uiState.collectAsState()
+    val currentUserId by viewModel.currentUserId.collectAsState()
 
-    LaunchedEffect(Unit) {
-        policyText = loadPolicyText()
-        viewModel.uiEvent.collectLatest { event ->
+    LaunchedEffect(uiEvent) {
+        uiEvent.collectLatest { event ->
             when (event) {
                 is UiEvent.Navigate -> {
-                    navController.navigate(event.destination) {
-                        popUpTo(0) { inclusive = true }
-                    }
+                    navController.navigate(event.destination)
                 }
             }
         }
     }
 
-    val uiState by viewModel.uiState.collectAsState()
-
-    Scaffold(
-        bottomBar = {
-            Button(
-                onClick = { viewModel.acceptPolicy() },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp)
-            ) {
-                Text(text = "Accept")
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            Box(modifier = Modifier.weight(1f)) {
+                if (currentUserId != null) {
+                    BaseFeedScreen<Discussion>(
+                        items = lazyDiscussions,
+                        emptyPlaceholder = "No discussions yet..."
+                    ) { discussion ->
+                        if (discussion != null) {
+                            DiscussionCard(
+                                discussion = discussion,
+                                currentUserId = currentUserId!!,
+                                onClick = { viewModel.onDiscussionSelected(discussion.discussionId) },
+                                onBlockUser = { blockedUserId ->
+                                    viewModel.onBlockUser(blockedUserId)
+                                }
+                            )
+                        }
+                    }
+                    AddDiscussionButton {
+                        navController.navigate(Screen.AddDiscussion.route)
+                    }
+                } else {
+                    // Optionally, display a loading indicator or placeholder until user ID is available.
+                }
             }
-        }
-    ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .padding(horizontal = 16.dp)
-        ) {
-            Text(
-                text = "End User License Agreement",
-                style = MaterialTheme.typography.headlineSmall,
-                modifier = Modifier.padding(bottom = 16.dp)
-            )
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .verticalScroll(rememberScrollState())
-            ) {
-                Text(
-                    text = policyText,
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.padding(bottom = 16.dp)
-                )
-            }
-            if (uiState.errorMessage != null) {
-                ErrorText(errorMessage = uiState.errorMessage)
-            }
+            ErrorText(errorMessage = uiState.errorMessage)
         }
     }
 }
-//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/startup/feature_policy/presentation/PolicyViewModel.kt
-package com.openparty.app.features.startup.feature_policy.presentation
+//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/newsfeed/discussions/feature_discussions_preview/presentation/DiscussionsPreviewViewModel.kt
+package com.openparty.app.features.newsfeed.discussions.feature_discussions_preview.presentation
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.paging.PagingData
+import androidx.paging.cachedIn
+import com.openparty.app.core.analytics.domain.usecase.TrackDiscussionSelectedUseCase
 import com.openparty.app.core.shared.domain.DomainResult
 import com.openparty.app.core.shared.domain.error.AppErrorMapper
 import com.openparty.app.core.shared.presentation.UiEvent
 import com.openparty.app.core.shared.presentation.UiState
-import com.openparty.app.features.startup.feature_policy.domain.usecase.AcceptPolicyUseCase
-import com.openparty.app.core.shared.domain.GlobalLogger.logger
+import com.openparty.app.features.newsfeed.discussions.shared.domain.model.Discussion
+import com.openparty.app.features.newsfeed.discussions.feature_discussions_preview.domain.usecase.GetDiscussionsUseCase
+import com.openparty.app.features.shared.feature_user.domain.usecase.BlockUserUseCase
+import com.openparty.app.features.startup.feature_authentication.domain.usecase.GetCurrentUserIdUseCase
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import com.openparty.app.core.shared.domain.GlobalLogger.logger
+import com.openparty.app.navigation.Screen
 
-class PolicyViewModel(
-    private val acceptPolicyUseCase: AcceptPolicyUseCase
+class DiscussionsPreviewViewModel(
+    private val getDiscussionsUseCase: GetDiscussionsUseCase,
+    private val trackDiscussionSelectedUseCase: TrackDiscussionSelectedUseCase,
+    private val getCurrentUserIdUseCase: GetCurrentUserIdUseCase,
+    private val blockUserUseCase: BlockUserUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(UiState())
@@ -514,320 +642,361 @@ class PolicyViewModel(
     private val _uiEvent = MutableSharedFlow<UiEvent>()
     val uiEvent: SharedFlow<UiEvent> = _uiEvent
 
+    private var _discussions: kotlinx.coroutines.flow.Flow<PagingData<Discussion>> =
+        kotlinx.coroutines.flow.flow { }
+    val discussions: kotlinx.coroutines.flow.Flow<PagingData<Discussion>>
+        get() = _discussions
+
+    private val _currentUserId = MutableStateFlow<String?>(null)
+    val currentUserId: StateFlow<String?> = _currentUserId
+
     init {
-        logger.i { "PolicyViewModel initialized" }
+        loadCurrentUserId()
+        loadDiscussions()
     }
 
-    fun acceptPolicy() {
+    private fun loadCurrentUserId() {
         viewModelScope.launch {
-            logger.i { "Accept policy triggered" }
-            _uiState.value = _uiState.value.copy(isLoading = true)
-            when (val result = acceptPolicyUseCase()) {
+            when (val result = getCurrentUserIdUseCase()) {
                 is DomainResult.Success -> {
-                    logger.i { "Policy accepted, navigating to manual verification" }
-                    _uiState.value = _uiState.value.copy(isLoading = false, errorMessage = null)
-                    _uiEvent.emit(UiEvent.Navigate("manual_verification"))
+                    _currentUserId.value = result.data
+                    logger.i { "Fetched current user id: ${result.data}" }
                 }
                 is DomainResult.Failure -> {
-                    logger.e { "Accept policy failed with error: ${result.error}" }
                     val errorMessage = AppErrorMapper.getUserFriendlyMessage(result.error)
+                    logger.e(result.error) { "Error fetching current user id: $errorMessage" }
+                }
+            }
+        }
+    }
+
+    private fun loadDiscussions() {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true)
+            when (val result = getDiscussionsUseCase()) {
+                is DomainResult.Success -> {
+                    _discussions = result.data.cachedIn(viewModelScope)
+                }
+                is DomainResult.Failure -> {
+                    val errorMessage = AppErrorMapper.getUserFriendlyMessage(result.error)
+                    logger.e(result.error) { "Error loading discussions" }
                     _uiState.value = _uiState.value.copy(isLoading = false, errorMessage = errorMessage)
                 }
             }
         }
     }
-}
-//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/startup/feature_authentication/domain/usecase/DetermineAuthStatesUseCase.kt
-package com.openparty.app.features.startup.feature_authentication.domain.usecase
 
-import dev.gitlive.firebase.auth.FirebaseUser
-import com.openparty.app.core.shared.domain.DomainResult
-import com.openparty.app.core.shared.domain.error.AppError
-import com.openparty.app.features.shared.feature_user.domain.model.User
-import com.openparty.app.features.startup.feature_authentication.domain.model.AuthState
-import com.openparty.app.features.startup.feature_authentication.domain.repository.AuthenticationRepository
-import com.openparty.app.features.shared.feature_user.domain.usecase.GetUserUseCase
-import com.openparty.app.core.shared.domain.GlobalLogger.logger
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.firstOrNull
-import kotlinx.coroutines.withContext
-
-class DetermineAuthStatesUseCase(
-    private val authenticationRepository: AuthenticationRepository,
-    private val getUserUseCase: GetUserUseCase
-) {
-    suspend operator fun invoke(): DomainResult<List<AuthState>> {
-        return try {
-            withContext(Dispatchers.Default) {
-                logger.d { "Invoking DetermineAuthStatesUseCase" }
-                val firebaseUser = getFirebaseUser() ?: return@withContext DomainResult.Success(emptyList())
-                reloadFirebaseUser(firebaseUser)
-                determineAuthStates(firebaseUser)
+    fun onDiscussionSelected(discussionId: String) {
+        viewModelScope.launch {
+            when (val result = trackDiscussionSelectedUseCase(discussionId)) {
+                is DomainResult.Success -> logger.i { "Discussion selected event tracked: $discussionId" }
+                is DomainResult.Failure -> logger.e { "Failed to track discussion selected event for ID: $discussionId" }
             }
-        } catch (e: Exception) {
-            logger.e { "Unexpected error in DetermineAuthStatesUseCase: ${e.message}" }
-            DomainResult.Failure(AppError.Navigation.DetermineAuthStates)
+            _uiEvent.emit(UiEvent.Navigate(Screen.DiscussionsArticle.createRoute(discussionId)))
         }
     }
 
-    private suspend fun determineAuthStates(firebaseUser: FirebaseUser): DomainResult<List<AuthState>> {
-        val states = mutableListOf<AuthState>()
-        val domainUser = getUserDetails(firebaseUser.uid)
-            ?: return DomainResult.Failure(AppError.Navigation.DetermineAuthStates)
-        states.add(AuthState.isLoggedIn)
-        if (!firebaseUser.isEmailVerified) {
-            logger.d { "User is logged in but email is not verified." }
-            return DomainResult.Success(states)
-        }
-        states.add(AuthState.isEmailVerified)
-        if (!domainUser.isLocationVerified) {
-            logger.d { "Location not verified." }
-            return DomainResult.Success(states)
-        }
-        states.add(AuthState.isLocationVerified)
-        if (domainUser.screenName.isBlank()) {
-            logger.d { "Screen name not generated." }
-            return DomainResult.Success(states)
-        }
-        states.add(AuthState.isScreenNameGenerated)
-        if (!domainUser.isPolicyAccepted) {
-            logger.d { "Privacy policy not accepted." }
-            return DomainResult.Success(states)
-        }
-        states.add(AuthState.isPolicyAccepted)
-        if (!domainUser.manuallyVerified) {
-            logger.d { "User not manually verified." }
-            return DomainResult.Success(states)
-        }
-        states.add(AuthState.isManuallyVerified)
-        logger.d { "All checks passed. Determined auth states: $states" }
-        return DomainResult.Success(states)
-    }
-
-    private suspend fun getFirebaseUser(): FirebaseUser? {
-        return try {
-            authenticationRepository.observeAuthState().firstOrNull().also {
-                if (it == null) logger.d { "No Firebase user found." }
+    fun onBlockUser(authorId: String) {
+        viewModelScope.launch {
+            val currentUser = _currentUserId.value
+            if (currentUser == null) {
+                logger.e { "Current user ID is null, cannot block user" }
+                return@launch
             }
-        } catch (e: Exception) {
-            logger.e { "Error observing auth state: ${e.message}" }
-            null
-        }
-    }
-
-    private suspend fun reloadFirebaseUser(firebaseUser: FirebaseUser): Boolean {
-        return try {
-            logger.d { "Reloading Firebase user data" }
-            firebaseUser.reload()
-            true
-        } catch (e: Exception) {
-            logger.e { "Failed to reload Firebase user data: ${e.message}" }
-            false
-        }
-    }
-
-    private suspend fun getUserDetails(userId: String): User? {
-        return try {
-            when (val result = getUserUseCase()) {
+            when (val result = blockUserUseCase(currentUser, authorId)) {
                 is DomainResult.Success -> {
-                    logger.d { "User details fetched successfully for userId: $userId" }
-                    result.data
+                    logger.i { "Successfully blocked user: $authorId" }
+                    // Optionally, you might trigger a refresh of the discussions feed here.
                 }
                 is DomainResult.Failure -> {
-                    logger.e { "Failed to fetch user details for userId: $userId" }
+                    val errorMessage = AppErrorMapper.getUserFriendlyMessage(result.error)
+                    logger.e(result.error) { "Failed to block user: $authorId" }
+                    _uiState.value = _uiState.value.copy(errorMessage = errorMessage)
+                }
+            }
+        }
+    }
+}
+// File: composeApp/src/commonMain/kotlin/com/openparty/app/features/newsfeed/discussions/shared/data/repository/DiscussionRepositoryImpl.kt
+package com.openparty.app.features.newsfeed.discussions.shared.data.repository
+
+import androidx.paging.PagingData
+import com.openparty.app.core.shared.domain.DomainResult
+import com.openparty.app.core.shared.domain.error.AppError
+import com.openparty.app.features.newsfeed.discussions.shared.domain.repository.DiscussionRepository
+import com.openparty.app.features.newsfeed.discussions.shared.domain.model.Discussion
+import com.openparty.app.features.newsfeed.shared.data.datasource.FirebaseNewsfeedDataSource
+import com.openparty.app.features.newsfeed.shared.data.repository.FirestoreRepository
+import kotlinx.coroutines.flow.Flow
+import com.openparty.app.core.shared.domain.GlobalLogger.logger
+import dev.gitlive.firebase.firestore.FirebaseFirestore
+import kotlin.random.Random
+import kotlinx.serialization.serializer
+
+class DiscussionRepositoryImpl(
+    private val firestore: FirebaseFirestore
+) : FirestoreRepository<Discussion>(
+    dataSource = FirebaseNewsfeedDataSource(
+        firestore = firestore,
+        collectionName = "discussions",
+        orderByField = "upvoteCount",
+        transform = { documentSnapshot ->
+            try {
+                logger.i { "Transforming document snapshot to Discussion object: ${documentSnapshot.id}" }
+                val decoded: Discussion? = try {
+                    documentSnapshot.data(Discussion.serializer())
+                } catch (e: Exception) {
                     null
                 }
+                decoded?.copy(discussionId = documentSnapshot.id)
+            } catch (e: Exception) {
+                logger.e(e) { "Error transforming document snapshot to Discussion object: ${documentSnapshot.id}" }
+                null
             }
-        } catch (e: Throwable) {
-            logger.e { "Unexpected error fetching user details for userId: $userId, error: ${e.message}" }
-            null
+        }
+    ),
+    error = AppError.Discussion.General
+), DiscussionRepository {
+
+    override fun getDiscussions(): Flow<PagingData<Discussion>> {
+        logger.i { "Fetching discussions from DiscussionRepositoryImpl" }
+        return getPagedItems()
+    }
+
+    override suspend fun getDiscussionById(discussionId: String): DomainResult<Discussion> {
+        logger.i { "Fetching discussion by ID: $discussionId from DiscussionRepositoryImpl" }
+        return getItemById(discussionId)
+    }
+
+    override suspend fun addDiscussion(discussion: Discussion): DomainResult<Discussion> {
+        logger.i { "addDiscussion invoked for discussion: ${discussion.title}" }
+        return try {
+            val generatedId = Random.nextLong().toString()
+            val document = firestore.collection("discussions").document(generatedId)
+            logger.i { "Generated new document ID: ${document.id} for discussion: ${discussion.title}" }
+            val discussionWithId = discussion.copy(discussionId = document.id)
+            document.set(discussionWithId)
+            logger.i { "Successfully added discussion with ID: ${discussionWithId.discussionId}" }
+            DomainResult.Success(discussionWithId)
+        } catch (e: Exception) {
+            logger.e(e) { "Error adding discussion: ${discussion.title}" }
+            DomainResult.Failure(AppError.Discussion.General)
         }
     }
 }
-//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/startup/feature_authentication/presentation/AuthFlowNavigationMapper.kt
-package com.openparty.app.features.startup.feature_authentication.presentation
+//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/newsfeed/discussions/shared/domain/model/Discussion.kt
+package com.openparty.app.features.newsfeed.discussions.shared.domain.model
 
-import com.openparty.app.features.startup.feature_authentication.domain.model.AuthState
-import com.openparty.app.navigation.Screen
-
-class AuthFlowNavigationMapper {
-
-    fun determineDestination(states: List<AuthState>): Screen {
-        println("Determining navigation destination based on auth states: $states")
-
-        return when {
-            !states.contains(AuthState.isLoggedIn) -> {
-                println("User is not logged in; navigating to Login")
-                Screen.Login
-            }
-            !states.contains(AuthState.isEmailVerified) -> {
-                println("User email is not verified; navigating to EmailVerification")
-                Screen.EmailVerification
-            }
-            !states.contains(AuthState.isLocationVerified) -> {
-                println("User location is not verified; navigating to LocationVerification")
-                Screen.LocationVerification
-            }
-            !states.contains(AuthState.isScreenNameGenerated) -> {
-                println("User screen name is not generated; navigating to ScreenNameGeneration")
-                Screen.ScreenNameGeneration
-            }
-            !states.contains(AuthState.isPolicyAccepted) -> {
-                println("Policy is not accepted; navigating to PolicyScreen")
-                Screen.Policy
-            }
-            !states.contains(AuthState.isManuallyVerified) -> {
-                println("User is not manually verified; navigating to ManualVerification")
-                Screen.ManualVerification
-            }
-            else -> {
-                println("All auth states satisfied; navigating to DiscussionsPreview")
-                Screen.DiscussionsPreview
-            }
-        }
-    }
-}
-//File: composeApp/src/commonMain/kotlin/com/openparty/app/navigation/AppNavigation.kt
-package com.openparty.app.navigation
-
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.ui.Modifier
-import androidx.navigation.NavType
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.currentBackStackEntryAsState
-import androidx.navigation.compose.rememberNavController
-import androidx.navigation.compose.composable
-import androidx.navigation.navArgument
-import com.openparty.app.features.engagement.comments.feature_add_comment.presentation.AddCommentScreen
-import com.openparty.app.features.newsfeed.council_meetings.feature_council_meetings_article.presentation.CouncilMeetingArticleScreen
-import com.openparty.app.features.newsfeed.council_meetings.feature_council_meetings_preview.presentation.CouncilMeetingsPreviewScreen
-import com.openparty.app.features.newsfeed.discussions.feature_add_discussion.presentation.AddDiscussionScreen
-import com.openparty.app.features.newsfeed.discussions.feature_discussions_article.presentation.DiscussionArticleScreen
-import com.openparty.app.features.newsfeed.discussions.feature_discussions_preview.presentation.DiscussionsPreviewScreen
-import com.openparty.app.features.startup.account.feature_login.presentation.LoginScreen
-import com.openparty.app.features.startup.account.feature_register.presentation.RegisterScreen
-import com.openparty.app.features.startup.feature_policy.presentation.PolicyScreen
-import com.openparty.app.features.startup.feature_screen_name_generation.presentation.ScreenNameGenerationScreen
-import com.openparty.app.features.startup.feature_splash.presentation.SplashScreen
-import com.openparty.app.features.startup.verification.feature_email_verification.presentation.EmailVerificationScreen
-import com.openparty.app.features.startup.verification.feature_location_verification.presentation.LocationVerificationScreen
-import com.openparty.app.features.startup.verification.feature_manual_verification.presentation.ManualVerificationScreen
-import com.openparty.app.features.utils.feature_settings.presentation.SettingsScreen
-import org.koin.compose.viewmodel.koinViewModel
-import org.koin.core.parameter.parametersOf
-
-@Composable
-fun AppNavigation() {
-    val navController = rememberNavController()
-    val navBackStackEntry by navController.currentBackStackEntryAsState()
-    val currentRoute = navBackStackEntry?.destination?.route
-    val bottomBarRoutes = listOf(
-        Screen.DiscussionsPreview.route,
-        Screen.CouncilMeetingsPreview.route,
-        Screen.Settings.route
-    )
-    Scaffold(
-        bottomBar = {
-            if (currentRoute in bottomBarRoutes) {
-                NavigationFooter(navController = navController, currentRoute = currentRoute)
-            }
-        }
-    ) { padding ->
-        NavHost(
-            navController = navController,
-            startDestination = Screen.Splash.route,
-            modifier = Modifier.padding(padding)
-        ) {
-            composable(Screen.Splash.route) { SplashScreen(navController) }
-            composable(Screen.Login.route) { LoginScreen(navController) }
-            composable(Screen.Register.route) { RegisterScreen(navController) }
-            composable(Screen.EmailVerification.route) { EmailVerificationScreen(navController) }
-            composable(Screen.LocationVerification.route) { LocationVerificationScreen(navController) }
-            composable(Screen.ScreenNameGeneration.route) { ScreenNameGenerationScreen(navController) }
-            composable(Screen.Policy.route) { PolicyScreen(navController) }
-            composable(Screen.ManualVerification.route) { ManualVerificationScreen() }
-            composable(Screen.DiscussionsPreview.route) { DiscussionsPreviewScreen(navController) }
-            composable(Screen.CouncilMeetingsPreview.route) { CouncilMeetingsPreviewScreen(navController) }
-            composable(Screen.AddDiscussion.route) { AddDiscussionScreen(navController) }
-            composable(Screen.Settings.route) { SettingsScreen() }
-            composable(
-                route = Screen.DiscussionsArticle("").route,
-                arguments = listOf(navArgument("discussionId") { type = NavType.StringType })
-            ) {
-                DiscussionArticleScreen(navController)
-            }
-            composable(
-                route = Screen.CouncilMeetingsArticle("").route,
-                arguments = listOf(navArgument("councilMeetingId") { type = NavType.StringType })
-            ) { backStackEntry ->
-                val councilMeetingId = backStackEntry.arguments?.getString("councilMeetingId") ?: ""
-                val viewModel = koinViewModel<com.openparty.app.features.newsfeed.council_meetings.feature_council_meetings_article.presentation.CouncilMeetingArticleViewModel> {
-                    parametersOf(councilMeetingId)
-                }
-                CouncilMeetingArticleScreen(navController, viewModel)
-            }
-            composable(
-                route = Screen.AddComment("", "").route,
-                arguments = listOf(
-                    navArgument("discussionId") { type = NavType.StringType },
-                    navArgument("titleText") { type = NavType.StringType }
-                )
-            ) { backStackEntry ->
-                val discussionId = backStackEntry.arguments?.getString("discussionId") ?: ""
-                val titleText = backStackEntry.arguments?.getString("titleText") ?: ""
-                val viewModel = koinViewModel<com.openparty.app.features.engagement.comments.feature_add_comment.presentation.AddCommentViewModel> {
-                    parametersOf(discussionId, titleText)
-                }
-                AddCommentScreen(navController, discussionId, titleText, viewModel)
-            }
-        }
-    }
-}
-//File: composeApp/src/commonMain/kotlin/com/openparty/app/navigation/Screen.kt
-package com.openparty.app.navigation
-
+import dev.gitlive.firebase.firestore.Timestamp
 import kotlinx.serialization.Serializable
 
 @Serializable
-sealed class Screen(val route: String) {
+data class Discussion(
+    val discussionId: String = "",
+    val userId: String = "",
+    val title: String = "",
+    val contentText: String = "",
+    val timestamp: Timestamp? = null,
+    val commentCount: Int = 0,
+    val upvoteCount: Int = 0,
+    val downvoteCount: Int = 0
+)
+//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/newsfeed/discussions/shared/data/domain/repository/DiscussionRepository.kt
+package com.openparty.app.features.newsfeed.discussions.shared.domain.repository
 
-    @Serializable object Splash : Screen("splash")
-    @Serializable object Login : Screen("login")
-    @Serializable object Register : Screen("register")
-    @Serializable object EmailVerification : Screen("email_verification")
-    @Serializable object LocationVerification : Screen("location_verification")
-    @Serializable object ScreenNameGeneration : Screen("screen_name_generation")
-    @Serializable object Policy : Screen("policy")
-    @Serializable object ManualVerification : Screen("manual_verification")
-    @Serializable object DiscussionsPreview : Screen("discussions_preview")
-    @Serializable object CouncilMeetingsPreview : Screen("council_meetings_preview")
-    @Serializable object AddDiscussion : Screen("add_discussion")
-    @Serializable object Settings : Screen("settings")
+import androidx.paging.PagingData
+import com.openparty.app.core.shared.domain.DomainResult
+import com.openparty.app.features.newsfeed.discussions.shared.domain.model.Discussion
+import kotlinx.coroutines.flow.Flow
 
-    @Serializable
-    data class DiscussionsArticle(val discussionId: String) : Screen("discussions_article/{discussionId}") {
-        companion object {
-            fun createRoute(discussionId: String): String = "discussions_article/$discussionId"
+interface DiscussionRepository {
+    fun getDiscussions(): Flow<PagingData<Discussion>>
+    suspend fun getDiscussionById(discussionId: String): DomainResult<Discussion>
+    suspend fun addDiscussion(discussion: Discussion): DomainResult<Discussion>
+}
+//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/newsfeed/shared/data/datasource/FirebaseNewsfeedDataSource.kt
+package com.openparty.app.features.newsfeed.shared.data.datasource
+
+import dev.gitlive.firebase.firestore.DocumentSnapshot
+import dev.gitlive.firebase.firestore.FirebaseFirestore
+import dev.gitlive.firebase.firestore.Query
+import dev.gitlive.firebase.firestore.Direction
+import com.openparty.app.core.shared.domain.GlobalLogger.logger
+
+class FirebaseNewsfeedDataSource<T : Any>(
+    private val firestore: FirebaseFirestore,
+    val collectionName: String,
+    private val orderByField: String,
+    val transform: (DocumentSnapshot) -> T?
+) {
+    fun getQuery(startAfter: DocumentSnapshot?, loadSize: Int): Query {
+        val queryDescription = buildString {
+            appendLine("Constructing Firestore query:")
+            appendLine("  Collection: $collectionName")
+            appendLine("  OrderBy: $orderByField (DESC)")
+            appendLine("  Limit: $loadSize")
+            if (startAfter != null) {
+                appendLine("  StartAfter doc ID: ${startAfter.id}")
+            }
+        }
+        logger.d { "getQuery() -> $queryDescription" }
+        return try {
+            val baseQuery = firestore.collection(collectionName)
+                .orderBy(orderByField, Direction.DESCENDING)
+                .limit(loadSize.toLong())
+            if (startAfter != null) {
+                baseQuery.startAfter(startAfter)
+            } else {
+                baseQuery
+            }
+        } catch (e: Exception) {
+            logger.e(e) { "Error creating query for collection: $collectionName" }
+            throw Exception("Failed to create query for collection: $collectionName. Please try again.", e)
         }
     }
 
-    @Serializable
-    data class CouncilMeetingsArticle(val councilMeetingId: String) : Screen("council_meetings_article/{councilMeetingId}") {
-        companion object {
-            fun createRoute(councilMeetingId: String): String = "council_meetings_article/$councilMeetingId"
+    suspend fun getItemById(itemId: String): T? {
+        logger.d { "Fetching item by ID: $itemId from collection: $collectionName" }
+        return try {
+            val snapshot = firestore.collection(collectionName)
+                .document(itemId)
+                .get()
+            logger.d { "Item fetched successfully for ID: $itemId in collection: $collectionName" }
+            transform(snapshot)
+        } catch (e: Exception) {
+            logger.e(e) { "Error fetching item by ID: $itemId from collection: $collectionName" }
+            null
+        }
+    }
+}// File: composeApp/src/commonMain/kotlin/com/openparty/app/features/newsfeed/shared/data/datasource/FirestorePagingSource.kt
+package com.openparty.app.features.newsfeed.shared.data.datasource
+
+import app.cash.paging.PagingSource
+import app.cash.paging.PagingState
+import dev.gitlive.firebase.firestore.DocumentSnapshot
+import com.openparty.app.core.shared.domain.GlobalLogger.logger
+
+class FirestorePagingSource<T : Any>(
+    private val dataSource: FirebaseNewsfeedDataSource<T>
+) : PagingSource<DocumentSnapshot, T>() {
+
+    override suspend fun load(params: LoadParams<DocumentSnapshot>): LoadResult<DocumentSnapshot, T> {
+        val collection = dataSource.collectionName
+        val startAfterId = params.key?.id
+        logger.d { "Loading data from FirestorePagingSource for $collection with loadSize: ${params.loadSize} and startAfter: $startAfterId" }
+        return try {
+            val query = dataSource.getQuery(params.key, params.loadSize)
+            val snapshot = query.get()
+            val items = snapshot.documents.mapNotNull { dataSource.transform(it) }
+            val nextKey = snapshot.documents.lastOrNull()
+            if (items.isEmpty()) {
+                logger.w { "No items loaded for $collection (startAfter = $startAfterId). Possibly an empty collection or no more data." }
+            } else {
+                logger.d { "Successfully loaded ${items.size} items from $collection, next key: ${nextKey?.id}" }
+            }
+            LoadResult.Page(
+                data = items,
+                prevKey = null,
+                nextKey = nextKey
+            )
+        } catch (e: Exception) {
+            logger.e(e) { "Error loading data in FirestorePagingSource for $collection" }
+            LoadResult.Error(e)
         }
     }
 
-    @Serializable
-    data class AddComment(val discussionId: String, val titleText: String) : Screen("add_comment/{discussionId}/{titleText}") {
-        companion object {
-            fun createRoute(discussionId: String, titleText: String): String = "add_comment/$discussionId/$titleText"
+    override fun getRefreshKey(state: PagingState<DocumentSnapshot, T>): DocumentSnapshot? {
+        logger.d { "Getting refresh key in FirestorePagingSource for ${dataSource.collectionName}" }
+        return null
+    }
+}
+// File: composeApp/src/commonMain/kotlin/com/openparty/app/features/newsfeed/shared/data/repository/FirestoreRepository.kt
+package com.openparty.app.features.newsfeed.shared.data.repository
+
+import app.cash.paging.Pager
+import app.cash.paging.PagingConfig
+import app.cash.paging.PagingData
+import com.openparty.app.core.shared.domain.DomainResult
+import com.openparty.app.core.shared.domain.error.AppError
+import com.openparty.app.features.newsfeed.shared.data.datasource.FirestorePagingSource
+import kotlinx.coroutines.flow.Flow
+import com.openparty.app.core.shared.domain.GlobalLogger.logger
+import com.openparty.app.features.newsfeed.shared.data.datasource.FirebaseNewsfeedDataSource
+
+abstract class FirestoreRepository<T : Any>(
+    private val dataSource: FirebaseNewsfeedDataSource<T>,
+    private val error: AppError
+) {
+    fun getPagedItems(): Flow<PagingData<T>> {
+        logger.d { "Fetching paged items from FirestoreRepository for ${dataSource.collectionName}" }
+        return Pager(
+            config = PagingConfig(
+                pageSize = 10,
+                enablePlaceholders = false
+            ),
+            pagingSourceFactory = {
+                logger.d { "Creating FirestorePagingSource for ${dataSource.collectionName}" }
+                FirestorePagingSource(dataSource)
+            }
+        ).flow
+    }
+
+    suspend fun getItemById(itemId: String): DomainResult<T> {
+        logger.d { "Fetching item by ID: $itemId in FirestoreRepository for ${dataSource.collectionName}" }
+        return try {
+            val item = dataSource.getItemById(itemId)
+            if (item != null) {
+                logger.d { "Item found for ID: $itemId in ${dataSource.collectionName}" }
+                DomainResult.Success(item)
+            } else {
+                logger.w { "Item not found for ID: $itemId in ${dataSource.collectionName}" }
+                DomainResult.Failure(error)
+            }
+        } catch (e: Exception) {
+            logger.e(e) { "Error fetching item by ID: $itemId in ${dataSource.collectionName}" }
+            DomainResult.Failure(error)
         }
     }
 }
+// File: composeApp/src/commonMain/kotlin/com/openparty/app/features/newsfeed/shared/presentation/BaseFeedScreen.kt
+package com.openparty.app.features.newsfeed.shared.presentation
+
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import app.cash.paging.compose.LazyPagingItems
+
+@Composable
+fun <T : Any> BaseFeedScreen(
+    items: LazyPagingItems<T>,
+    emptyPlaceholder: String,
+    content: @Composable (item: T?) -> Unit
+) {
+    if (items.itemCount == 0) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(text = emptyPlaceholder)
+        }
+    } else {
+        LazyColumn {
+            items(
+                count = items.itemCount,
+                key = { index -> items[index]?.hashCode() ?: index }
+            ) { index ->
+                val item = items[index]
+                content(item)
+            }
+        }
+    }
+}
+
+
 
 ---------
 
@@ -850,29 +1019,17 @@ Notes:
 
 ---------
 
-I've given you my policy feature 
+i've given you my discussions preview feature above 
 
-This mostly works but i'm having issues 
+i'm working on creating a feature that lets users block other users 
 
-on the policy screen, when the user clicks the "Accept" button, it should update the firebase database so that the user's field  "isPolicyAccepted" is set to true 
+They do this by going to the discussions preview screen, on each discussions card in the top right corner, there is an icon that when clicked opens a menu that says "Block User" 
 
-Then it should use the determineAuthStatesuseCase to go to the next screen. Here's an example: 
-private suspend fun navigateToNextAuthScreen() {
-        when (val result = determineAuthStatesUseCase()) {
-            is DomainResult.Success -> {
-                val destination = authFlowNavigationMapper.determineDestination(result.data)
-                _uiEvent.emit(UiEvent.Navigate(destination.route))
-            }
-            is DomainResult.Failure -> {
-                val errorMessage = AppErrorMapper.getUserFriendlyMessage(result.error)
-                _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    errorMessage = errorMessage
-                )
-            }
-        }
-    }
+This all works fine, but  when the user clicks "Block User", it doesn't  work 
 
-    ---
+It's supposed to persist the user id to the firebase database's blockedUsers field (which works) and then filter the discussions preview screen based on the blockedUsers list 
 
-Right now it jsut seems to always navigate to the manual verification screen without updating the database which is wrong
+Persisting the user id to the blockedUsers database field works correctly, but discussions preview screen is still not being filtered by the blocked users list 
+
+Also on antoher note, in the discussions card, the menu icon is supposed to be pinned to the top right of the discussions card, but instead it is just to tthe right of the header 
+(i.e. the icon icon is supposed to always be on the top right of the discussions card, even when there is no content)
