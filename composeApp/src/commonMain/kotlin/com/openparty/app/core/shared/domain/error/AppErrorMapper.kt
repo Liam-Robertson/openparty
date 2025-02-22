@@ -67,6 +67,9 @@ object AppErrorMapper {
             is AppError.ScreenNameGeneration.GenerateScreenName -> "Failed to generate screen name. Please try again in a while."
             is AppError.ScreenNameGeneration.ScreenNameTaken -> "That screen name is taken. Please choose another."
 
+            // Policy Screen
+            AppError.Policy.AcceptPrivacyPolicy -> "There was a problem while accepting the policy."
+
             // Comments Screen
             AppError.Comments.General -> "Unknown comments error. Please try again in a while."
             AppError.Comments.FetchComments -> "Failed to fetch comments"

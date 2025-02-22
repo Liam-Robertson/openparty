@@ -14,14 +14,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import com.openparty.app.core.shared.presentation.ErrorText
 import com.openparty.app.core.shared.presentation.UiEvent
 import kotlinx.coroutines.flow.collectLatest
 import org.koin.compose.viewmodel.koinViewModel
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 
 @Composable
 fun PrivacyPolicyScreen(
@@ -29,6 +28,7 @@ fun PrivacyPolicyScreen(
     viewModel: PrivacyPolicyViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+
     LaunchedEffect(Unit) {
         viewModel.uiEvent.collectLatest { event ->
             when (event) {
@@ -40,13 +40,13 @@ fun PrivacyPolicyScreen(
             }
         }
     }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp)
-            .verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.SpaceBetween,
-        horizontalAlignment = Alignment.CenterHorizontally
+            .verticalScroll(rememberScrollState())
+            .padding(16.dp),
+        verticalArrangement = Arrangement.SpaceBetween
     ) {
         Text(
             text = "Privacy Policy",
@@ -54,10 +54,8 @@ fun PrivacyPolicyScreen(
             modifier = Modifier.padding(bottom = 16.dp)
         )
         Text(
-            text = "This is the privacy policy of the app. By accepting, you agree to the terms and conditions. " +
-                    "Please read the full policy carefully. Lorem ipsum dolor sit amet, consectetur adipiscing elit. " +
-                    "Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, " +
-                    "quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.",
+            text = "Please review our Privacy Policy. By accepting, you agree to the terms and conditions. " +
+                    "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
             style = MaterialTheme.typography.bodyMedium,
             modifier = Modifier.padding(bottom = 16.dp)
         )

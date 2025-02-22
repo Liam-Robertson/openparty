@@ -288,6 +288,15 @@ class GetCurrentUserIdUseCase(
 - In a DomainResult.Failure, put an error code which relates to that specific use case
 - For example, if the above use case, it's called GetCurrentUserIdUseCase and returns AppError.Authentication.GetUserId
     - i.e. the AppError reflects the use case where the app failed
+- You will probably need to create new AppErrors when you create a new use case since one likely won't exist
+- Remember that only your use cases should be returning DomainResult object, you don't need to do this for every class
+- For example this is wrong: 
+class PrivacyPolicyRepositoryImpl : PrivacyPolicyRepository {
+    override suspend fun acceptPrivacyPolicy(): DomainResult<Unit> {
+        return DomainResult.Success(Unit)
+    }
+}
+- There is no reason to wrap a repository implementation in a DomainResult
 
 --
 

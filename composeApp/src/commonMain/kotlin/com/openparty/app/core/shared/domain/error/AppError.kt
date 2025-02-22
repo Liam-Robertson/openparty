@@ -59,6 +59,10 @@ sealed class AppError : Exception() {
         object ScreenNameTaken : AppError()
     }
 
+    sealed class Policy : AppError() {
+        object AcceptPrivacyPolicy : AppError()
+    }
+
     sealed class Comments : AppError() {
         object General : AppError()
         object FetchComments : AppError()

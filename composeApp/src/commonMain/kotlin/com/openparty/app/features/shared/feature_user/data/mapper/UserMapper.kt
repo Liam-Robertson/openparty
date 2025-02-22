@@ -17,6 +17,7 @@ object UserMapper {
             title = dto.title,
             manuallyVerified = dto.manuallyVerified,
             isLocationVerified = dto.locationVerified,
+            isPolicyAccepted = dto.isPolicyAccepted,
             userId = dto.userId
         )
     }

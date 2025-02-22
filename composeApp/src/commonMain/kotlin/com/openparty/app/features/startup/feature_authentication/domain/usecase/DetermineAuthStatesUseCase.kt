@@ -8,15 +8,14 @@ import com.openparty.app.features.shared.feature_user.domain.model.User
 import com.openparty.app.features.startup.feature_authentication.domain.model.AuthState
 import com.openparty.app.features.startup.feature_authentication.domain.repository.AuthenticationRepository
 import com.openparty.app.features.shared.feature_user.domain.usecase.GetUserUseCase
-import co.touchlab.kermit.Kermit
+import com.openparty.app.core.shared.domain.GlobalLogger.logger
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.withContext
 
 class DetermineAuthStatesUseCase(
     private val authenticationRepository: AuthenticationRepository,
-    private val getUserUseCase: GetUserUseCase,
-    private val logger: Kermit
+    private val getUserUseCase: GetUserUseCase
 ) {
     suspend operator fun invoke(): DomainResult<List<AuthState>> {
         return try {
@@ -52,7 +51,7 @@ class DetermineAuthStatesUseCase(
             return DomainResult.Success(states)
         }
         states.add(AuthState.isScreenNameGenerated)
-        if (!domainUser.privacyPolicyAccepted) {
+        if (!domainUser.isPolicyAccepted) {
             logger.d { "Privacy policy not accepted." }
             return DomainResult.Success(states)
         }

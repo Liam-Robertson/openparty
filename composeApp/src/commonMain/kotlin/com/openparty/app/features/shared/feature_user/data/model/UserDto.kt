@@ -13,7 +13,8 @@ data class UserDto(
     val locationVerified: Boolean = false,
     val otherUserInfo: OtherUserInfo? = null,
     val screenName: String? = null,
-    val title: String? = null
+    val title: String? = null,
+    val isPolicyAccepted: Boolean = false
 )
 
 @Serializable

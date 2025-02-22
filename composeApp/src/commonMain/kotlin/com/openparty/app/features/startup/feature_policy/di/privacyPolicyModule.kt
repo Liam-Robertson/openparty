@@ -1,14 +1,15 @@
 //File: composeApp/src/commonMain/kotlin/com/openparty/app/features/startup/feature_policy/di/privacyPolicyModule.kt
 package com.openparty.app.features.startup.feature_policy.di
 
+import com.openparty.app.features.startup.feature_policy.data.PrivacyPolicyRepositoryImpl
+import com.openparty.app.features.startup.feature_policy.domain.repository.PrivacyPolicyRepository
 import com.openparty.app.features.startup.feature_policy.domain.usecase.AcceptPrivacyPolicyUseCase
 import com.openparty.app.features.startup.feature_policy.presentation.PrivacyPolicyViewModel
-import org.koin.core.module.Module
 import org.koin.dsl.module
-import co.touchlab.kermit.Kermit
+import org.koin.core.module.dsl.viewModel
 
-val privacyPolicyModule: Module = module {
-    single { Kermit() }
-    single { AcceptPrivacyPolicyUseCase(get(), get()) }
-    single { PrivacyPolicyViewModel(get(), get()) }
+val privacyPolicyModule = module {
+    single<PrivacyPolicyRepository> { PrivacyPolicyRepositoryImpl() }
+    single { AcceptPrivacyPolicyUseCase(get()) }
+    viewModel { PrivacyPolicyViewModel(get()) }
 }
