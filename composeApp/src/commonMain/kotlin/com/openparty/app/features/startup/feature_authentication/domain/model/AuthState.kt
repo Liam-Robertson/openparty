@@ -6,5 +6,6 @@ sealed class AuthState(val name: String) {
     object isEmailVerified : AuthState("isEmailVerified")
     object isLocationVerified : AuthState("isLocationVerified")
     object isScreenNameGenerated : AuthState("isScreenNameGenerated")
+    object isPolicyAccepted : AuthState("isPolicyAccepted")
     object isManuallyVerified : AuthState("isManuallyVerified")
 }

@@ -7,7 +7,8 @@ data class User(
     val accountType: AccountType,
     val title: String?,
     val manuallyVerified: Boolean,
-    val isLocationVerified: Boolean
+    val isLocationVerified: Boolean,
+    val isPolicyAccepted: Boolean
 )
 
 enum class AccountType {

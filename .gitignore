@@ -15,7 +15,7 @@ captures
 !*.xcodeproj/xcshareddata/
 !*.xcodeproj/project.xcworkspace/
 !*.xcworkspace/contents.xcworkspacedata
-**/xcshareddata/WorkspaceSettings.xcsettings
+**/xcshareddata/WorkspaceSettings.xcsettingsFa1rytadsa asdff
 composeApp/src/notes/misc/app store.txt
 keystore.properties
 openParty.keystore

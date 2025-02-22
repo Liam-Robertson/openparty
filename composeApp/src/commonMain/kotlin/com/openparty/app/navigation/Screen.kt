@@ -12,6 +12,7 @@ sealed class Screen(val route: String) {
     @Serializable object EmailVerification : Screen("email_verification")
     @Serializable object LocationVerification : Screen("location_verification")
     @Serializable object ScreenNameGeneration : Screen("screen_name_generation")
+    @Serializable object Policy : Screen("policy")
     @Serializable object ManualVerification : Screen("manual_verification")
     @Serializable object DiscussionsPreview : Screen("discussions_preview")
     @Serializable object CouncilMeetingsPreview : Screen("council_meetings_preview")

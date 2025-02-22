@@ -26,6 +26,10 @@ class AuthFlowNavigationMapper {
                 println("User screen name is not generated; navigating to ScreenNameGeneration")
                 Screen.ScreenNameGeneration
             }
+            !states.contains(AuthState.isPolicyAccepted) -> {
+                println("Policy is not accepted; navigating to PolicyScreen")
+                Screen.Policy
+            }
             !states.contains(AuthState.isManuallyVerified) -> {
                 println("User is not manually verified; navigating to ManualVerification")
                 Screen.ManualVerification

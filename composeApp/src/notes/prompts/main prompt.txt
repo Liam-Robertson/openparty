@@ -57,6 +57,164 @@ object AppErrorMapper {
             is AppError.Authentication.UserAlreadyExists -> "Cannot create a user that already exists."
 ..........
 
+- Also on a side note, i'm using compose multiplatform with the koin compose library. This is an unusual library but it's important that any code you give me uses it
+- I'm going to give you code from my splash feature below as an example of using koin compose library 
+
+package com.openparty.app.features.startup.feature_splash.di
+
+import com.openparty.app.features.startup.feature_splash.presentation.SplashViewModel
+import org.koin.core.module.dsl.viewModel
+import org.koin.core.module.Module
+import org.koin.dsl.module
+
+val splashModule: Module = module {
+    viewModel {
+        SplashViewModel(
+            determineAuthStatesUseCase = get(),
+            authFlowNavigationMapper = get()
+        )
+    }
+}
+package com.openparty.app.features.startup.feature_splash.presentation
+
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.navigation.NavHostController
+import com.openparty.app.core.shared.presentation.ErrorText
+import com.openparty.app.core.shared.presentation.UiEvent
+import kotlinx.coroutines.flow.collectLatest
+import org.koin.compose.viewmodel.koinViewModel
+
+@Composable
+fun SplashScreen(
+    navController: NavHostController,
+    viewModel: SplashViewModel = koinViewModel()
+) {
+    val uiState by viewModel.uiState.collectAsState()
+
+    LaunchedEffect(Unit) {
+        viewModel.uiEvent.collectLatest { event ->
+            when (event) {
+                is UiEvent.Navigate -> {
+                    navController.navigate(event.destination) {
+                        popUpTo(0) { inclusive = true }
+                    }
+                }
+            }
+        }
+    }
+
+    if (uiState.errorMessage != null) {
+        ErrorText(errorMessage = uiState.errorMessage)
+    }
+}
+//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/startup/feature_splash/presentation/SplashViewModel.kt
+package com.openparty.app.features.startup.feature_splash.presentation
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.openparty.app.core.shared.domain.DomainResult
+import com.openparty.app.core.shared.domain.error.AppErrorMapper
+import com.openparty.app.core.shared.presentation.UiEvent
+import com.openparty.app.core.shared.presentation.UiState
+import com.openparty.app.features.startup.feature_authentication.domain.usecase.DetermineAuthStatesUseCase
+import com.openparty.app.features.startup.feature_authentication.presentation.AuthFlowNavigationMapper
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
+
+class SplashViewModel(
+    private val determineAuthStatesUseCase: DetermineAuthStatesUseCase,
+    private val authFlowNavigationMapper: AuthFlowNavigationMapper
+) : ViewModel() {
+
+    private val _uiState = MutableStateFlow(UiState())
+    val uiState: StateFlow<UiState> = _uiState
+
+    private val _uiEvent = MutableSharedFlow<UiEvent>()
+    val uiEvent: SharedFlow<UiEvent> = _uiEvent
+
+    init {
+        viewModelScope.launch {
+            navigateToNextAuthScreen()
+        }
+    }
+
+    private suspend fun navigateToNextAuthScreen() {
+        _uiState.value = _uiState.value.copy(isLoading = true)
+        when (val authStatesResult = determineAuthStatesUseCase()) {
+            is DomainResult.Success -> {
+                val destination = authFlowNavigationMapper.determineDestination(authStatesResult.data)
+                _uiState.value = _uiState.value.copy(isLoading = false, errorMessage = null)
+                _uiEvent.emit(UiEvent.Navigate(destination.route))
+            }
+            is DomainResult.Failure -> {
+                val errorMessage = AppErrorMapper.getUserFriendlyMessage(authStatesResult.error)
+                _uiState.value = _uiState.value.copy(isLoading = false, errorMessage = errorMessage)
+            }
+        }
+    }
+}
+
+- So notice that the SplashScreen uses this import: 
+    - import org.koin.compose.viewmodel.koinViewModel
+- And the SplashModule uses this: 
+    - import org.koin.core.module.dsl.viewModel
+- and it looks like this: 
+viewModel {
+        SplashViewModel(
+            determineAuthStatesUseCase = get(),
+            authFlowNavigationMapper = get()
+        )
+    }
+- Make sure that whenever you are injecting view models using koin, it's done using koin compose and it's done using the same method as the splash view model
+- Also notice how the splash viewmodel handles errors: 
+when (val authStatesResult = determineAuthStatesUseCase()) {
+            is DomainResult.Success -> {
+                val destination = authFlowNavigationMapper.determineDestination(authStatesResult.data)
+                _uiState.value = _uiState.value.copy(isLoading = false, errorMessage = null)
+                _uiEvent.emit(UiEvent.Navigate(destination.route))
+            }
+            is DomainResult.Failure -> {
+                val errorMessage = AppErrorMapper.getUserFriendlyMessage(authStatesResult.error)
+                _uiState.value = _uiState.value.copy(isLoading = false, errorMessage = errorMessage)
+            }
+        }
+- It handles them in a when statement
+- If it's a success it handles the success
+- If it's a failure, it unwraps the DomainResult Failure message
+- It uses AppErrorMapper.getUserFriendlyMessage to map the error code to a friendly message for hte user 
+- Then it uses this: 
+    - _uiState.value = _uiState.value.copy(isLoading = false, errorMessage = errorMessage)
+- To send an event to the SplashScreen to trigger the ErrorText in the SplashScreen: 
+if (uiState.errorMessage != null) {
+        ErrorText(errorMessage = uiState.errorMessage)
+    }
+- Make sure that whenever you are handling use cases in view models, you do it using the above pattern 
+- All use cases will return a DomainResult, if it's a failure you map it to a user friendly message and send an event about it to the user 
+- Also notice that navigation is done using this in the SplashScreen:
+LaunchedEffect(Unit) {
+        viewModel.uiEvent.collectLatest { event ->
+            when (event) {
+                is UiEvent.Navigate -> {
+                    navController.navigate(event.destination) {
+                        popUpTo(0) { inclusive = true }
+                    }
+                }
+            }
+        }
+    }
+- This is standard across my app. Whenever you do navigation, it should be handled in the screen
+- All navigation based logic should be done in places like the view model or use cases, then the view model emits a navigation event for the screen to handle 
+- This is standard across my app, so whenever you are doing navigation you should follow this pattern
+- Also notice that my SplashViewModel doesn't contain any business logic
+    - Instead it has use cases that handle all business logic and it injects them 
+    - This again is standard across my app, all business logic is handled in use cases
+    - Whenever you want to do business logic, it should be in use cases (unless it's logic that is tightly tied to the user interface)
 --
 
 OpenParty/
@@ -104,379 +262,76 @@ OpenParty/
 
 ---------
 
-//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/engagement/engagement_bars/feature_preview_enagement_footer/data/EngagementRepositoryImpl.kt
-package com.openparty.app.features.engagement.engagement_bars.feature_preview_enagement_footer.data
+package com.openparty.app.features.startup.feature_splash.di
 
-import com.openparty.app.features.engagement.engagement_bars.feature_preview_enagement_footer.domain.model.EngagementFooterState
-import com.openparty.app.features.engagement.engagement_bars.feature_preview_enagement_footer.domain.model.VoteType
-import com.openparty.app.features.engagement.engagement_bars.feature_preview_enagement_footer.domain.repository.EngagementRepository
-import dev.gitlive.firebase.firestore.FirebaseFirestore
-import kotlinx.datetime.Clock
-import kotlin.random.Random
-
-class EngagementRepositoryImpl(
-    private val firestore: FirebaseFirestore
-) : EngagementRepository {
-    override suspend fun updateVote(
-        discussionId: String,
-        currentUserId: String,
-        currentState: EngagementFooterState,
-        newVote: VoteType?
-    ): EngagementFooterState {
-        val voteDocId = "${discussionId}_$currentUserId"
-        val votesCollection = firestore.collection("discussion_votes")
-        val discussionsCollection = firestore.collection("discussions")
-        val discussionDocRef = discussionsCollection.document(discussionId)
-        var upvoteCount = currentState.upvoteCount
-        var downvoteCount = currentState.downvoteCount
-        val oldVote = currentState.userVote
-
-        if (oldVote == VoteType.UPVOTE && (newVote == null || newVote == VoteType.DOWNVOTE)) {
-            upvoteCount = (upvoteCount - 1).coerceAtLeast(0)
-        }
-        if (oldVote == VoteType.DOWNVOTE && (newVote == null || newVote == VoteType.UPVOTE)) {
-            downvoteCount = (downvoteCount - 1).coerceAtLeast(0)
-        }
-        if (oldVote == null && newVote == VoteType.UPVOTE) {
-            upvoteCount += 1
-        }
-        if (oldVote == null && newVote == VoteType.DOWNVOTE) {
-            downvoteCount += 1
-        }
-        if (oldVote == VoteType.UPVOTE && newVote == VoteType.DOWNVOTE) {
-            downvoteCount += 1
-        }
-        if (oldVote == VoteType.DOWNVOTE && newVote == VoteType.UPVOTE) {
-            upvoteCount += 1
-        }
-        try {
-            // Use lambda receiver syntax to satisfy expected type
-            firestore.runTransaction {
-                update(discussionDocRef, mapOf("upvoteCount" to upvoteCount, "downvoteCount" to downvoteCount))
-            }
-            if (newVote == null) {
-                votesCollection.document(voteDocId).delete()
-            } else {
-                val voteData = mapOf(
-                    "discussionId" to discussionId,
-                    "userId" to currentUserId,
-                    "type" to newVote.name.lowercase(),
-                    "timestamp" to Clock.System.now().toEpochMilliseconds(),
-                    "voteId" to Random.nextLong().toString()
-                )
-                votesCollection.document(voteDocId).set(voteData)
-            }
-        } catch (e: Exception) {
-            throw e
-        }
-        return currentState.copy(
-            upvoteCount = upvoteCount,
-            downvoteCount = downvoteCount,
-            userVote = newVote
-        )
-    }
-}
-//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/engagement/engagement_bars/feature_preview_enagement_footer/di/EngagementFooterKoinModule.kt
-package com.openparty.app.features.engagement.engagement_bars.feature_preview_enagement_footer.di
-
-import com.openparty.app.features.engagement.engagement_bars.feature_preview_enagement_footer.data.EngagementRepositoryImpl
-import com.openparty.app.features.engagement.engagement_bars.feature_preview_enagement_footer.domain.usecase.ToggleVoteUseCase
-import com.openparty.app.features.engagement.engagement_bars.feature_preview_enagement_footer.domain.repository.EngagementRepository
-import dev.gitlive.firebase.Firebase
-import dev.gitlive.firebase.firestore.FirebaseFirestore
-import dev.gitlive.firebase.firestore.firestore
+import com.openparty.app.features.startup.feature_splash.presentation.SplashViewModel
+import org.koin.core.module.dsl.viewModel
+import org.koin.core.module.Module
 import org.koin.dsl.module
 
-val engagementFooterKoinModule = module {
-    single<FirebaseFirestore> { Firebase.firestore }
-    single<EngagementRepository> { EngagementRepositoryImpl(get()) }
-    single { ToggleVoteUseCase(get()) }
-    factory { (discussionId: String, initialState: com.openparty.app.features.engagement.engagement_bars.feature_preview_enagement_footer.domain.model.EngagementFooterState) ->
-        com.openparty.app.features.engagement.engagement_bars.feature_preview_enagement_footer.presentation.EngagementFooterViewModel(get(), discussionId, initialState)
-    }
-}
-//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/engagement/engagement_bars/feature_preview_enagement_footer/domain/model/EngagementFooterState.kt
-package com.openparty.app.features.engagement.engagement_bars.feature_preview_enagement_footer.domain.model
-
-data class EngagementFooterState(
-    val upvoteCount: Int,
-    val downvoteCount: Int,
-    val commentCount: Int,
-    val userVote: VoteType?
-)//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/engagement/engagement_bars/feature_preview_enagement_footer/domain/model/VoteType.kt
-package com.openparty.app.features.engagement.engagement_bars.feature_preview_enagement_footer.domain.model
-
-enum class VoteType {
-    UPVOTE,
-    DOWNVOTE
-}
-//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/engagement/engagement_bars/feature_preview_enagement_footer/domain/repository/EngagementRepository.kt
-package com.openparty.app.features.engagement.engagement_bars.feature_preview_enagement_footer.domain.repository
-
-import com.openparty.app.features.engagement.engagement_bars.feature_preview_enagement_footer.domain.model.EngagementFooterState
-import com.openparty.app.features.engagement.engagement_bars.feature_preview_enagement_footer.domain.model.VoteType
-
-interface EngagementRepository {
-    suspend fun updateVote(
-        discussionId: String,
-        currentUserId: String,
-        currentState: EngagementFooterState,
-        newVote: VoteType?
-    ): EngagementFooterState
-}
-//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/engagement/engagement_bars/feature_preview_enagement_footer/domain/usecase/ToggleVoteUseCase.kt
-package com.openparty.app.features.engagement.engagement_bars.feature_preview_enagement_footer.domain.usecase
-
-import com.openparty.app.core.shared.domain.DomainResult
-import com.openparty.app.core.shared.domain.GlobalLogger.logger
-import com.openparty.app.core.shared.domain.error.AppError
-import com.openparty.app.features.engagement.engagement_bars.feature_preview_enagement_footer.domain.model.EngagementFooterState
-import com.openparty.app.features.engagement.engagement_bars.feature_preview_enagement_footer.domain.model.VoteType
-import com.openparty.app.features.engagement.engagement_bars.feature_preview_enagement_footer.domain.repository.EngagementRepository
-
-class ToggleVoteUseCase(
-    private val repository: EngagementRepository
-) {
-    suspend operator fun invoke(
-        discussionId: String,
-        currentUserId: String,
-        currentState: EngagementFooterState,
-        voteType: VoteType
-    ): DomainResult<EngagementFooterState> {
-        logger.i { "ToggleVoteUseCase invoked for discussion $discussionId with voteType $voteType" }
-        val newVote = if (currentState.userVote == voteType) null else voteType
-        return try {
-            val updatedState = repository.updateVote(discussionId, currentUserId, currentState, newVote)
-            logger.i { "Vote updated successfully for discussion $discussionId" }
-            DomainResult.Success(updatedState)
-        } catch (e: Exception) {
-            logger.e(e) { "Error updating vote for discussion $discussionId" }
-            DomainResult.Failure(AppError.Discussion.General)
-        }
-    }
-}
-//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/engagement/engagement_bars/feature_preview_enagement_footer/presentation/EngagementFooter.kt
-package com.openparty.app.features.engagement.engagement_bars.feature_preview_enagement_footer.presentation
-
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.width
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowDownward
-import androidx.compose.material.icons.filled.ArrowUpward
-import androidx.compose.material.icons.outlined.ArrowDownward
-import androidx.compose.material.icons.outlined.ArrowUpward
-import androidx.compose.material.icons.outlined.Chat
-import androidx.compose.material3.Icon
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
-import com.openparty.app.features.engagement.engagement_bars.feature_preview_enagement_footer.domain.model.EngagementFooterState
-import com.openparty.app.features.engagement.engagement_bars.feature_preview_enagement_footer.domain.model.VoteType
-import org.koin.compose.viewmodel.koinViewModel
-import org.koin.core.parameter.parametersOf
-
-@Composable
-fun EngagementFooter(
-    currentUserId: String,
-    discussionId: String,
-    initialState: EngagementFooterState,
-    viewModel: EngagementFooterViewModel =
-        koinViewModel { parametersOf(discussionId, initialState) }
-) {
-    val state = viewModel.state.collectAsState().value
-    Row {
-        if (state.userVote != VoteType.UPVOTE) {
-            Icon(
-                imageVector = Icons.Outlined.ArrowUpward,
-                contentDescription = "Upvote",
-                modifier = Modifier.clickable { viewModel.onUpvoteClicked(currentUserId) }
-            )
-        } else {
-            Icon(
-                imageVector = Icons.Filled.ArrowUpward,
-                contentDescription = "Upvoted",
-                modifier = Modifier.clickable { viewModel.onUpvoteClicked(currentUserId) }
-            )
-        }
-        Text(text = state.upvoteCount.toString())
-        Spacer(modifier = Modifier.width(16.dp))
-        if (state.userVote != VoteType.DOWNVOTE) {
-            Icon(
-                imageVector = Icons.Outlined.ArrowDownward,
-                contentDescription = "Downvote",
-                modifier = Modifier.clickable { viewModel.onDownvoteClicked(currentUserId) }
-            )
-        } else {
-            Icon(
-                imageVector = Icons.Filled.ArrowDownward,
-                contentDescription = "Downvoted",
-                modifier = Modifier.clickable { viewModel.onDownvoteClicked(currentUserId) }
-            )
-        }
-        Text(text = state.downvoteCount.toString())
-        Spacer(modifier = Modifier.width(16.dp))
-        Icon(
-            imageVector = Icons.Outlined.Chat,
-            contentDescription = "Comments"
+val splashModule: Module = module {
+    viewModel {
+        SplashViewModel(
+            determineAuthStatesUseCase = get(),
+            authFlowNavigationMapper = get()
         )
-        Text(text = state.commentCount.toString())
     }
 }
-//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/engagement/engagement_bars/feature_preview_enagement_footer/presentation/EngagementFooterViewModel.kt
-package com.openparty.app.features.engagement.engagement_bars.feature_preview_enagement_footer.presentation
+package com.openparty.app.features.startup.feature_splash.presentation
 
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
-import com.openparty.app.core.shared.domain.DomainResult
-import com.openparty.app.core.shared.domain.GlobalLogger.logger
-import com.openparty.app.core.shared.domain.error.AppErrorMapper
-import com.openparty.app.features.engagement.engagement_bars.feature_preview_enagement_footer.domain.model.EngagementFooterState
-import com.openparty.app.features.engagement.engagement_bars.feature_preview_enagement_footer.domain.model.VoteType
-import com.openparty.app.features.engagement.engagement_bars.feature_preview_enagement_footer.domain.usecase.ToggleVoteUseCase
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.launch
-
-class EngagementFooterViewModel(
-    private val toggleVoteUseCase: ToggleVoteUseCase,
-    private val discussionId: String,
-    initialState: EngagementFooterState
-) : ViewModel() {
-    private val _state = MutableStateFlow(initialState)
-    val state: StateFlow<EngagementFooterState> = _state
-
-    fun onUpvoteClicked(currentUserId: String) {
-        viewModelScope.launch {
-            when (val result = toggleVoteUseCase(discussionId, currentUserId, _state.value, VoteType.UPVOTE)) {
-                is DomainResult.Success -> {
-                    _state.value = result.data
-                }
-                is DomainResult.Failure -> {
-                    val errorMessage = AppErrorMapper.getUserFriendlyMessage(result.error)
-                    logger.e(result.error) { "Error updating upvote: $errorMessage" }
-                    // Optionally, update UI state with error feedback
-                }
-            }
-        }
-    }
-
-    fun onDownvoteClicked(currentUserId: String) {
-        viewModelScope.launch {
-            when (val result = toggleVoteUseCase(discussionId, currentUserId, _state.value, VoteType.DOWNVOTE)) {
-                is DomainResult.Success -> {
-                    _state.value = result.data
-                }
-                is DomainResult.Failure -> {
-                    val errorMessage = AppErrorMapper.getUserFriendlyMessage(result.error)
-                    logger.e(result.error) { "Error updating downvote: $errorMessage" }
-                    // Optionally, update UI state with error feedback
-                }
-            }
-        }
-    }
-}
-//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/newsfeed/discussions/feature_discussions_preview/presentation/DiscussionsPreviewScreen.kt
-package com.openparty.app.features.newsfeed.discussions.feature_discussions_preview.presentation
-
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Modifier
-import org.koin.compose.viewmodel.koinViewModel
 import androidx.navigation.NavHostController
-import app.cash.paging.compose.collectAsLazyPagingItems
 import com.openparty.app.core.shared.presentation.ErrorText
 import com.openparty.app.core.shared.presentation.UiEvent
-import com.openparty.app.features.newsfeed.discussions.feature_add_discussion.presentation.AddDiscussionButton
-import com.openparty.app.features.newsfeed.shared.presentation.BaseFeedScreen
-import com.openparty.app.navigation.NavigationFooter
-import com.openparty.app.navigation.Screen
-import com.openparty.app.features.newsfeed.discussions.shared.domain.model.Discussion
 import kotlinx.coroutines.flow.collectLatest
+import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
-fun DiscussionsPreviewScreen(
+fun SplashScreen(
     navController: NavHostController,
-    viewModel: DiscussionsPreviewViewModel = koinViewModel()
+    viewModel: SplashViewModel = koinViewModel()
 ) {
-    val lazyDiscussions = viewModel.discussions.collectAsLazyPagingItems()
-    val uiEvent = viewModel.uiEvent
     val uiState by viewModel.uiState.collectAsState()
-    val currentUserId by viewModel.currentUserId.collectAsState()
 
-    LaunchedEffect(uiEvent) {
-        uiEvent.collectLatest { event ->
+    LaunchedEffect(Unit) {
+        viewModel.uiEvent.collectLatest { event ->
             when (event) {
                 is UiEvent.Navigate -> {
-                    navController.navigate(event.destination)
+                    navController.navigate(event.destination) {
+                        popUpTo(0) { inclusive = true }
+                    }
                 }
             }
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        Column(modifier = Modifier.fillMaxSize()) {
-            Box(modifier = Modifier.weight(1f)) {
-                if (currentUserId != null) {
-                    BaseFeedScreen<Discussion>(
-                        items = lazyDiscussions,
-                        emptyPlaceholder = "No discussions yet..."
-                    ) { discussion ->
-                        if (discussion != null) {
-                            DiscussionCard(
-                                discussion = discussion,
-                                currentUserId = currentUserId!!  // using the fetched user ID
-                            ) {
-                                viewModel.onDiscussionSelected(discussion.discussionId)
-                            }
-                        }
-                    }
-                    AddDiscussionButton {
-                        navController.navigate(Screen.AddDiscussion.route)
-                    }
-                } else {
-                    // Optionally, display a loading indicator or placeholder until user ID is available.
-                }
-            }
-            ErrorText(errorMessage = uiState.errorMessage)
-        }
+    if (uiState.errorMessage != null) {
+        ErrorText(errorMessage = uiState.errorMessage)
     }
 }
-//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/newsfeed/discussions/feature_discussions_preview/presentation/DiscussionsPreviewViewModel.kt
-package com.openparty.app.features.newsfeed.discussions.feature_discussions_preview.presentation
+//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/startup/feature_splash/presentation/SplashViewModel.kt
+package com.openparty.app.features.startup.feature_splash.presentation
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.paging.PagingData
-import androidx.paging.cachedIn
-import com.openparty.app.core.analytics.domain.usecase.TrackDiscussionSelectedUseCase
 import com.openparty.app.core.shared.domain.DomainResult
 import com.openparty.app.core.shared.domain.error.AppErrorMapper
 import com.openparty.app.core.shared.presentation.UiEvent
 import com.openparty.app.core.shared.presentation.UiState
-import com.openparty.app.features.newsfeed.discussions.shared.domain.model.Discussion
-import com.openparty.app.features.newsfeed.discussions.feature_discussions_preview.domain.usecase.GetDiscussionsUseCase
-import com.openparty.app.features.startup.feature_authentication.domain.usecase.GetCurrentUserIdUseCase
+import com.openparty.app.features.startup.feature_authentication.domain.usecase.DetermineAuthStatesUseCase
+import com.openparty.app.features.startup.feature_authentication.presentation.AuthFlowNavigationMapper
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
-import com.openparty.app.core.shared.domain.GlobalLogger.logger
-import com.openparty.app.navigation.Screen
 
-class DiscussionsPreviewViewModel(
-    private val getDiscussionsUseCase: GetDiscussionsUseCase,
-    private val trackDiscussionSelectedUseCase: TrackDiscussionSelectedUseCase,
-    private val getCurrentUserIdUseCase: GetCurrentUserIdUseCase
+class SplashViewModel(
+    private val determineAuthStatesUseCase: DetermineAuthStatesUseCase,
+    private val authFlowNavigationMapper: AuthFlowNavigationMapper
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(UiState())
@@ -485,137 +340,310 @@ class DiscussionsPreviewViewModel(
     private val _uiEvent = MutableSharedFlow<UiEvent>()
     val uiEvent: SharedFlow<UiEvent> = _uiEvent
 
-    private var _discussions: kotlinx.coroutines.flow.Flow<PagingData<Discussion>> =
-        kotlinx.coroutines.flow.flow { }
-    val discussions: kotlinx.coroutines.flow.Flow<PagingData<Discussion>>
-        get() = _discussions
-
-    private val _currentUserId = MutableStateFlow<String?>(null)
-    val currentUserId: StateFlow<String?> = _currentUserId
-
     init {
-        loadCurrentUserId()
-        loadDiscussions()
-    }
-
-    private fun loadCurrentUserId() {
         viewModelScope.launch {
-            when (val result = getCurrentUserIdUseCase()) {
-                is DomainResult.Success -> {
-                    _currentUserId.value = result.data
-                    logger.i { "Fetched current user id: ${result.data}" }
-                }
-                is DomainResult.Failure -> {
-                    val errorMessage = AppErrorMapper.getUserFriendlyMessage(result.error)
-                    logger.e(result.error) { "Error fetching current user id: $errorMessage" }
-                }
-            }
+            navigateToNextAuthScreen()
         }
     }
 
-    private fun loadDiscussions() {
-        viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true)
-            when (val result = getDiscussionsUseCase()) {
-                is DomainResult.Success -> {
-                    _discussions = result.data.cachedIn(viewModelScope)
-                }
-                is DomainResult.Failure -> {
-                    val errorMessage = AppErrorMapper.getUserFriendlyMessage(result.error)
-                    logger.e(result.error) { "Error loading discussions" }
-                    _uiState.value = _uiState.value.copy(isLoading = false, errorMessage = errorMessage)
-                }
+    private suspend fun navigateToNextAuthScreen() {
+        _uiState.value = _uiState.value.copy(isLoading = true)
+        when (val authStatesResult = determineAuthStatesUseCase()) {
+            is DomainResult.Success -> {
+                val destination = authFlowNavigationMapper.determineDestination(authStatesResult.data)
+                _uiState.value = _uiState.value.copy(isLoading = false, errorMessage = null)
+                _uiEvent.emit(UiEvent.Navigate(destination.route))
             }
-        }
-    }
-
-    fun onDiscussionSelected(discussionId: String) {
-        viewModelScope.launch {
-            when (val result = trackDiscussionSelectedUseCase(discussionId)) {
-                is DomainResult.Success -> logger.i { "Discussion selected event tracked: $discussionId" }
-                is DomainResult.Failure -> logger.e { "Failed to track discussion selected event for ID: $discussionId" }
+            is DomainResult.Failure -> {
+                val errorMessage = AppErrorMapper.getUserFriendlyMessage(authStatesResult.error)
+                _uiState.value = _uiState.value.copy(isLoading = false, errorMessage = errorMessage)
             }
-            _uiEvent.emit(UiEvent.Navigate(Screen.DiscussionsArticle.createRoute(discussionId)))
         }
     }
 }
-//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/newsfeed/discussions/feature_discussions_preview/presentation/DiscussionCard.kt
-package com.openparty.app.features.newsfeed.discussions.feature_discussions_preview.presentation
+//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/startup/feature_authentication/presentation/AuthFlowNavigationMapper.kt
+package com.openparty.app.features.startup.feature_authentication.presentation
 
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.fillMaxWidth
+import com.openparty.app.features.startup.feature_authentication.domain.model.AuthState
+import com.openparty.app.navigation.Screen
+
+class AuthFlowNavigationMapper {
+
+    fun determineDestination(states: List<AuthState>): Screen {
+        println("Determining navigation destination based on auth states: $states")
+
+        return when {
+            !states.contains(AuthState.isLoggedIn) -> {
+                println("User is not logged in; navigating to Login")
+                Screen.Login
+            }
+            !states.contains(AuthState.isEmailVerified) -> {
+                println("User email is not verified; navigating to EmailVerification")
+                Screen.EmailVerification
+            }
+            !states.contains(AuthState.isLocationVerified) -> {
+                println("User location is not verified; navigating to LocationVerification")
+                Screen.LocationVerification
+            }
+            !states.contains(AuthState.isScreenNameGenerated) -> {
+                println("User screen name is not generated; navigating to ScreenNameGeneration")
+                Screen.ScreenNameGeneration
+            }
+            !states.contains(AuthState.isManuallyVerified) -> {
+                println("User is not manually verified; navigating to ManualVerification")
+                Screen.ManualVerification
+            }
+            else -> {
+                println("All auth states satisfied; navigating to DiscussionsPreview")
+                Screen.DiscussionsPreview
+            }
+        }
+    }
+}
+//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/startup/feature_authentication/domain/usecase/DetermineAuthStatesUseCase.kt
+package com.openparty.app.features.startup.feature_authentication.domain.usecase
+
+import dev.gitlive.firebase.auth.FirebaseUser
+import com.openparty.app.core.shared.domain.DomainResult
+import com.openparty.app.core.shared.domain.error.AppError
+import com.openparty.app.features.shared.feature_user.domain.model.User
+import com.openparty.app.features.startup.feature_authentication.domain.model.AuthState
+import com.openparty.app.features.startup.feature_authentication.domain.repository.AuthenticationRepository
+import com.openparty.app.features.shared.feature_user.domain.usecase.GetUserUseCase
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.withContext
+
+class DetermineAuthStatesUseCase(
+    private val authenticationRepository: AuthenticationRepository,
+    private val getUserUseCase: GetUserUseCase
+) {
+    suspend operator fun invoke(): DomainResult<List<AuthState>> {
+        return try {
+            withContext(Dispatchers.Default) {
+                println("Invoking DetermineAuthStatesUseCase")
+                val firebaseUser = getFirebaseUser() ?: return@withContext DomainResult.Success(emptyList())
+                reloadFirebaseUser(firebaseUser)
+                determineAuthStates(firebaseUser)
+            }
+        } catch (e: Exception) {
+            println("Unexpected error in DetermineAuthStatesUseCase: ${e.message}")
+            DomainResult.Failure(AppError.Navigation.DetermineAuthStates)
+        }
+    }
+
+    private suspend fun determineAuthStates(firebaseUser: FirebaseUser): DomainResult<List<AuthState>> {
+        val states = mutableListOf<AuthState>()
+
+        // If user is not logged in, return failure
+        val domainUser = getUserDetails(firebaseUser.uid) ?: return DomainResult.Failure(AppError.Navigation.DetermineAuthStates)
+
+        states.add(AuthState.isLoggedIn)
+        if (!firebaseUser.isEmailVerified) {
+            println("User is logged in but email is not verified.")
+            return DomainResult.Success(states)
+        }
+        states.add(AuthState.isEmailVerified)
+
+        if (!domainUser.isLocationVerified) {
+            println("Location not verified.")
+            return DomainResult.Success(states)
+        }
+        states.add(AuthState.isLocationVerified)
+
+        if (domainUser.screenName.isBlank()) {
+            println("Screen name not generated.")
+            return DomainResult.Success(states)
+        }
+        states.add(AuthState.isScreenNameGenerated)
+
+        if (!domainUser.manuallyVerified) {
+            println("User not manually verified.")
+            return DomainResult.Success(states)
+        }
+        states.add(AuthState.isManuallyVerified)
+
+        println("All checks passed. Determined auth states: $states")
+        return DomainResult.Success(states)
+    }
+
+    private suspend fun getFirebaseUser(): FirebaseUser? {
+        return try {
+            authenticationRepository.observeAuthState().firstOrNull().also {
+                if (it == null) println("No Firebase user found.")
+            }
+        } catch (e: Exception) {
+            println("Error observing auth state: ${e.message}")
+            null
+        }
+    }
+
+    private suspend fun reloadFirebaseUser(firebaseUser: FirebaseUser): Boolean {
+        return try {
+            println("Reloading Firebase user data")
+            firebaseUser.reload()
+            true
+        } catch (e: Exception) {
+            println("Failed to reload Firebase user data: ${e.message}")
+            false
+        }
+    }
+
+    private suspend fun getUserDetails(userId: String): User? {
+        return try {
+            when (val result = getUserUseCase()) {
+                is DomainResult.Success -> {
+                    println("User details fetched successfully for userId: $userId")
+                    result.data
+                }
+                is DomainResult.Failure -> {
+                    println("Failed to fetch user details for userId: $userId")
+                    null
+                }
+            }
+        } catch (e: Throwable) {
+            println("Unexpected error fetching user details for userId: $userId, error: ${e.message}")
+            null
+        }
+    }
+}
+//File: composeApp/src/commonMain/kotlin/com/openparty/app/navigation/AppNavigation.kt
+package com.openparty.app.navigation
+
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Card
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
+import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
-import com.openparty.app.features.newsfeed.discussions.shared.domain.model.Discussion
-import com.openparty.app.features.engagement.engagement_bars.feature_preview_enagement_footer.domain.model.EngagementFooterState
-import com.openparty.app.features.engagement.engagement_bars.feature_preview_enagement_footer.presentation.EngagementFooter
+import androidx.navigation.NavType
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.compose.rememberNavController
+import androidx.navigation.compose.composable
+import androidx.navigation.navArgument
+import com.openparty.app.features.engagement.comments.feature_add_comment.presentation.AddCommentScreen
+import com.openparty.app.features.newsfeed.council_meetings.feature_council_meetings_article.presentation.CouncilMeetingArticleScreen
+import com.openparty.app.features.newsfeed.council_meetings.feature_council_meetings_preview.presentation.CouncilMeetingsPreviewScreen
+import com.openparty.app.features.newsfeed.discussions.feature_add_discussion.presentation.AddDiscussionScreen
+import com.openparty.app.features.newsfeed.discussions.feature_discussions_article.presentation.DiscussionArticleScreen
+import com.openparty.app.features.newsfeed.discussions.feature_discussions_preview.presentation.DiscussionsPreviewScreen
+import com.openparty.app.features.startup.account.feature_login.presentation.LoginScreen
+import com.openparty.app.features.startup.account.feature_register.presentation.RegisterScreen
+import com.openparty.app.features.startup.feature_screen_name_generation.presentation.ScreenNameGenerationScreen
+import com.openparty.app.features.startup.feature_splash.presentation.SplashScreen
+import com.openparty.app.features.startup.verification.feature_email_verification.presentation.EmailVerificationScreen
+import com.openparty.app.features.startup.verification.feature_location_verification.presentation.LocationVerificationScreen
+import com.openparty.app.features.startup.verification.feature_manual_verification.presentation.ManualVerificationScreen
+import com.openparty.app.features.utils.feature_settings.presentation.SettingsScreen
+import org.koin.compose.viewmodel.koinViewModel
+import org.koin.core.parameter.parametersOf
 
 @Composable
-fun DiscussionCard(
-    discussion: Discussion,
-    currentUserId: String,
-    onClick: () -> Unit
-) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(8.dp)
-            .clickable { onClick() }
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = discussion.title,
-                style = MaterialTheme.typography.titleLarge,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = discussion.contentText,
-                style = MaterialTheme.typography.bodyMedium,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            EngagementFooter(
-                currentUserId = currentUserId,
-                discussionId = discussion.discussionId,
-                initialState = EngagementFooterState(
-                    upvoteCount = discussion.upvoteCount,
-                    downvoteCount = discussion.downvoteCount,
-                    commentCount = discussion.commentCount,
-                    userVote = null
+fun AppNavigation() {
+    val navController = rememberNavController()
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = navBackStackEntry?.destination?.route
+    val bottomBarRoutes = listOf(
+        Screen.DiscussionsPreview.route,
+        Screen.CouncilMeetingsPreview.route,
+        Screen.Settings.route
+    )
+    Scaffold(
+        bottomBar = {
+            if (currentRoute in bottomBarRoutes) {
+                NavigationFooter(navController = navController, currentRoute = currentRoute)
+            }
+        }
+    ) { padding ->
+        NavHost(
+            navController = navController,
+            startDestination = Screen.Splash.route,
+            modifier = Modifier.padding(padding)
+        ) {
+            composable(Screen.Splash.route) { SplashScreen(navController) }
+            composable(Screen.Login.route) { LoginScreen(navController) }
+            composable(Screen.Register.route) { RegisterScreen(navController) }
+            composable(Screen.EmailVerification.route) { EmailVerificationScreen(navController) }
+            composable(Screen.LocationVerification.route) { LocationVerificationScreen(navController) }
+            composable(Screen.ScreenNameGeneration.route) { ScreenNameGenerationScreen(navController) }
+            composable(Screen.ManualVerification.route) { ManualVerificationScreen() }
+            composable(Screen.DiscussionsPreview.route) { DiscussionsPreviewScreen(navController) }
+            composable(Screen.CouncilMeetingsPreview.route) { CouncilMeetingsPreviewScreen(navController) }
+            composable(Screen.AddDiscussion.route) { AddDiscussionScreen(navController) }
+            composable(Screen.Settings.route) { SettingsScreen() }
+            composable(
+                route = Screen.DiscussionsArticle("").route,
+                arguments = listOf(navArgument("discussionId") { type = NavType.StringType })
+            ) {
+                DiscussionArticleScreen(navController)
+            }
+            composable(
+                route = Screen.CouncilMeetingsArticle("").route,
+                arguments = listOf(navArgument("councilMeetingId") { type = NavType.StringType })
+            ) { backStackEntry ->
+                val councilMeetingId = backStackEntry.arguments?.getString("councilMeetingId") ?: ""
+                val viewModel = koinViewModel<com.openparty.app.features.newsfeed.council_meetings.feature_council_meetings_article.presentation.CouncilMeetingArticleViewModel> {
+                    parametersOf(councilMeetingId)
+                }
+                CouncilMeetingArticleScreen(navController, viewModel)
+            }
+            composable(
+                route = Screen.AddComment("", "").route,
+                arguments = listOf(
+                    navArgument("discussionId") { type = NavType.StringType },
+                    navArgument("titleText") { type = NavType.StringType }
                 )
-            )
+            ) { backStackEntry ->
+                val discussionId = backStackEntry.arguments?.getString("discussionId") ?: ""
+                val titleText = backStackEntry.arguments?.getString("titleText") ?: ""
+                val viewModel = koinViewModel<com.openparty.app.features.engagement.comments.feature_add_comment.presentation.AddCommentViewModel> {
+                    parametersOf(discussionId, titleText)
+                }
+                AddCommentScreen(navController, discussionId, titleText, viewModel)
+            }
         }
     }
 }
-//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/newsfeed/discussions/feature_discussions_preview/di/DiscussionsKoinModule.kt
-package com.openparty.app.features.newsfeed.discussions.feature_discussions_preview.di
+//File: composeApp/src/commonMain/kotlin/com/openparty/app/navigation/Screen.kt
+package com.openparty.app.navigation
 
-import com.openparty.app.features.newsfeed.discussions.shared.domain.repository.DiscussionRepository
-import com.openparty.app.features.newsfeed.discussions.shared.data.repository.DiscussionRepositoryImpl
-import com.openparty.app.features.newsfeed.discussions.feature_discussions_preview.domain.usecase.GetDiscussionsUseCase
-import com.openparty.app.features.newsfeed.discussions.feature_discussions_preview.presentation.DiscussionsPreviewViewModel
-import dev.gitlive.firebase.Firebase
-import dev.gitlive.firebase.firestore.firestore
-import org.koin.core.module.dsl.viewModel
-import org.koin.dsl.module
+import kotlinx.serialization.Serializable
 
-val discussionsKoinModule = module {
-    single<DiscussionRepository> { DiscussionRepositoryImpl(get()) }
-    single { Firebase.firestore }
-    single { GetDiscussionsUseCase(get()) }
-    viewModel { DiscussionsPreviewViewModel(get(), get(), get()) }
+@Serializable
+sealed class Screen(val route: String) {
+
+    @Serializable object Splash : Screen("splash")
+    @Serializable object Login : Screen("login")
+    @Serializable object Register : Screen("register")
+    @Serializable object EmailVerification : Screen("email_verification")
+    @Serializable object LocationVerification : Screen("location_verification")
+    @Serializable object ScreenNameGeneration : Screen("screen_name_generation")
+    @Serializable object ManualVerification : Screen("manual_verification")
+    @Serializable object DiscussionsPreview : Screen("discussions_preview")
+    @Serializable object CouncilMeetingsPreview : Screen("council_meetings_preview")
+    @Serializable object AddDiscussion : Screen("add_discussion")
+    @Serializable object Settings : Screen("settings")
+
+    @Serializable
+    data class DiscussionsArticle(val discussionId: String) : Screen("discussions_article/{discussionId}") {
+        companion object {
+            fun createRoute(discussionId: String): String = "discussions_article/$discussionId"
+        }
+    }
+
+    @Serializable
+    data class CouncilMeetingsArticle(val councilMeetingId: String) : Screen("council_meetings_article/{councilMeetingId}") {
+        companion object {
+            fun createRoute(councilMeetingId: String): String = "council_meetings_article/$councilMeetingId"
+        }
+    }
+
+    @Serializable
+    data class AddComment(val discussionId: String, val titleText: String) : Screen("add_comment/{discussionId}/{titleText}") {
+        companion object {
+            fun createRoute(discussionId: String, titleText: String): String = "add_comment/$discussionId/$titleText"
+        }
+    }
 }
 
 
@@ -640,18 +668,18 @@ Notes:
 
 ---------
 
-I've given you my feature_preview_engagement_footer code above 
+I want to add a functionality which changes how the user sets up an account
 
-The point of this footer is that it's an engagement bar that is attached to every discussion card 
+Right now, there are a bunch of verification steps for setting up an account but there is no step for setting up a privacy policy 
 
-in the firebase database, each discussion card has a number of upvotes, downvotes, comments etc 
+Right now, if the user has verified their location, created their screen name they are taken to the manual verification screen 
 
-The engagement footer lets the user add upvotes and downvotes to a given discussion card 
+I want to change this so that, if the user has verified their location and created their screen name, they are taken to the policy screen. 
 
-however this isn't working right now 
+Users are only taken to the manual verification screen if the policy screen has been completed. 
 
-instead of the discussion footer working for a specific card, every card has the same engagemetn footer, attached to the same discussion 
+The policy screen should be a normal policy screen like any other app, and it is considered completed once hte user has accepted the agreement 
 
-so if you upvote one discussion, it upvotes all of them. 
+I'm not sure what the policy screen should look like, but i just want it to be pretty standard, so the same as other apps. 
 
-why is this happening? What's the flaw in the design? 
+Resesarch what policy screens look like for other apps, then create a standard policy screen for me and update the navigation flow to meet the above criteria. 
