@@ -68,7 +68,7 @@ object AppErrorMapper {
             is AppError.ScreenNameGeneration.ScreenNameTaken -> "That screen name is taken. Please choose another."
 
             // Policy Screen
-            AppError.Policy.AcceptPrivacyPolicy -> "There was a problem while accepting the policy."
+            AppError.Policy.AcceptPolicy -> "There was a problem while accepting the policy."
 
             // Comments Screen
             AppError.Comments.General -> "Unknown comments error. Please try again in a while."

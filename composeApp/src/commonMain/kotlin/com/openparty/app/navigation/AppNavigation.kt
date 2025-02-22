@@ -20,12 +20,12 @@ import com.openparty.app.features.newsfeed.discussions.feature_discussions_artic
 import com.openparty.app.features.newsfeed.discussions.feature_discussions_preview.presentation.DiscussionsPreviewScreen
 import com.openparty.app.features.startup.account.feature_login.presentation.LoginScreen
 import com.openparty.app.features.startup.account.feature_register.presentation.RegisterScreen
+import com.openparty.app.features.startup.feature_policy.presentation.PolicyScreen
 import com.openparty.app.features.startup.feature_screen_name_generation.presentation.ScreenNameGenerationScreen
 import com.openparty.app.features.startup.feature_splash.presentation.SplashScreen
 import com.openparty.app.features.startup.verification.feature_email_verification.presentation.EmailVerificationScreen
 import com.openparty.app.features.startup.verification.feature_location_verification.presentation.LocationVerificationScreen
 import com.openparty.app.features.startup.verification.feature_manual_verification.presentation.ManualVerificationScreen
-import com.openparty.app.features.startup.feature_policy.presentation.PrivacyPolicyScreen
 import com.openparty.app.features.utils.feature_settings.presentation.SettingsScreen
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
@@ -58,7 +58,7 @@ fun AppNavigation() {
             composable(Screen.EmailVerification.route) { EmailVerificationScreen(navController) }
             composable(Screen.LocationVerification.route) { LocationVerificationScreen(navController) }
             composable(Screen.ScreenNameGeneration.route) { ScreenNameGenerationScreen(navController) }
-            composable(Screen.Policy.route) { PrivacyPolicyScreen(navController) }
+            composable(Screen.Policy.route) { PolicyScreen(navController) }
             composable(Screen.ManualVerification.route) { ManualVerificationScreen() }
             composable(Screen.DiscussionsPreview.route) { DiscussionsPreviewScreen(navController) }
             composable(Screen.CouncilMeetingsPreview.route) { CouncilMeetingsPreviewScreen(navController) }
