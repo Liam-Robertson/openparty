@@ -1,4 +1,4 @@
-//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/startup/feature_policy/presentation/PrivacyPolicyScreen.kt
+//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/startup/feature_policy/presentation/PolicyProvider.kt
 package com.openparty.app.features.startup.feature_policy.presentation
 
 import androidx.compose.foundation.layout.Arrangement
@@ -25,7 +25,7 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun PrivacyPolicyScreen(
     navController: NavHostController,
-    viewModel: PrivacyPolicyViewModel = koinViewModel()
+    viewModel: PolicyViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
 

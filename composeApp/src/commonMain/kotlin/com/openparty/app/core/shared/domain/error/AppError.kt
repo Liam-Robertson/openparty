@@ -60,7 +60,7 @@ sealed class AppError : Exception() {
     }
 
     sealed class Policy : AppError() {
-        object AcceptPrivacyPolicy : AppError()
+        object AcceptPolicy : AppError()
     }
 
     sealed class Comments : AppError() {

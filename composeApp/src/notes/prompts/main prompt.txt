@@ -345,23 +345,77 @@ OpenParty/
 
 ---------
 
-package com.openparty.app.features.startup.feature_splash.di
+//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/startup/feature_policy/data/PrivacyPolicyRepositoryImpl.kt
+package com.openparty.app.features.startup.feature_policy.data
 
-import com.openparty.app.features.startup.feature_splash.presentation.SplashViewModel
-import org.koin.core.module.dsl.viewModel
-import org.koin.core.module.Module
-import org.koin.dsl.module
+import com.openparty.app.features.startup.feature_policy.domain.repository.PrivacyPolicyRepository
 
-val splashModule: Module = module {
-    viewModel {
-        SplashViewModel(
-            determineAuthStatesUseCase = get(),
-            authFlowNavigationMapper = get()
-        )
+class PrivacyPolicyRepositoryImpl : PrivacyPolicyRepository {
+    override suspend fun acceptPrivacyPolicy() {
+        // Implement your acceptance logic here (e.g., update local storage or make a network call)
     }
 }
-package com.openparty.app.features.startup.feature_splash.presentation
+//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/startup/feature_policy/di/privacyPolicyModule.kt
+package com.openparty.app.features.startup.feature_policy.di
 
+import com.openparty.app.features.startup.feature_policy.data.PrivacyPolicyRepositoryImpl
+import com.openparty.app.features.startup.feature_policy.domain.repository.PrivacyPolicyRepository
+import com.openparty.app.features.startup.feature_policy.domain.usecase.AcceptPrivacyPolicyUseCase
+import com.openparty.app.features.startup.feature_policy.presentation.PrivacyPolicyViewModel
+import org.koin.dsl.module
+import org.koin.core.module.dsl.viewModel
+
+val privacyPolicyModule = module {
+    single<PrivacyPolicyRepository> { PrivacyPolicyRepositoryImpl() }
+    single { AcceptPrivacyPolicyUseCase(get()) }
+    viewModel { PrivacyPolicyViewModel(get()) }
+}
+
+//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/startup/feature_policy/domain/repository/PrivacyPolicyRepository.kt
+package com.openparty.app.features.startup.feature_policy.domain.repository
+
+interface PrivacyPolicyRepository {
+    suspend fun acceptPrivacyPolicy()
+}
+//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/startup/feature_policy/domain/usecase/AcceptPrivacyPolicyUseCase.kt
+package com.openparty.app.features.startup.feature_policy.domain.usecase
+
+import com.openparty.app.core.shared.domain.DomainResult
+import com.openparty.app.core.shared.domain.GlobalLogger.logger
+import com.openparty.app.core.shared.domain.error.AppError
+import com.openparty.app.features.startup.feature_policy.domain.repository.PrivacyPolicyRepository
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+
+class AcceptPrivacyPolicyUseCase(
+    private val privacyPolicyRepository: PrivacyPolicyRepository
+) {
+    suspend operator fun invoke(): DomainResult<Unit> {
+        return withContext(Dispatchers.Default) {
+            logger.i { "AcceptPrivacyPolicyUseCase invoked" }
+            try {
+                privacyPolicyRepository.acceptPrivacyPolicy()
+                logger.i { "Privacy policy accepted successfully" }
+                DomainResult.Success(Unit)
+            } catch (e: Exception) {
+                logger.e(e) { "Error occurred while accepting privacy policy: ${e.message}" }
+                DomainResult.Failure(AppError.Policy.AcceptPrivacyPolicy)
+            }
+        }
+    }
+}
+//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/startup/feature_policy/presentation/PrivacyPolicyScreen.kt
+package com.openparty.app.features.startup.feature_policy.presentation
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -371,11 +425,13 @@ import com.openparty.app.core.shared.presentation.ErrorText
 import com.openparty.app.core.shared.presentation.UiEvent
 import kotlinx.coroutines.flow.collectLatest
 import org.koin.compose.viewmodel.koinViewModel
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 
 @Composable
-fun SplashScreen(
+fun PrivacyPolicyScreen(
     navController: NavHostController,
-    viewModel: SplashViewModel = koinViewModel()
+    viewModel: PrivacyPolicyViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
@@ -391,12 +447,37 @@ fun SplashScreen(
         }
     }
 
-    if (uiState.errorMessage != null) {
-        ErrorText(errorMessage = uiState.errorMessage)
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(16.dp),
+        verticalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(
+            text = "Privacy Policy",
+            style = MaterialTheme.typography.headlineSmall,
+            modifier = Modifier.padding(bottom = 16.dp)
+        )
+        Text(
+            text = "Please review our Privacy Policy. By accepting, you agree to the terms and conditions. " +
+                    "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.padding(bottom = 16.dp)
+        )
+        if (uiState.errorMessage != null) {
+            ErrorText(errorMessage = uiState.errorMessage)
+        }
+        Button(
+            onClick = { viewModel.acceptPolicy() },
+            modifier = Modifier.padding(top = 16.dp)
+        ) {
+            Text(text = "Accept")
+        }
     }
 }
-//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/startup/feature_splash/presentation/SplashViewModel.kt
-package com.openparty.app.features.startup.feature_splash.presentation
+//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/startup/feature_policy/presentation/PrivacyPolicyViewModel.kt
+package com.openparty.app.features.startup.feature_policy.presentation
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -404,17 +485,16 @@ import com.openparty.app.core.shared.domain.DomainResult
 import com.openparty.app.core.shared.domain.error.AppErrorMapper
 import com.openparty.app.core.shared.presentation.UiEvent
 import com.openparty.app.core.shared.presentation.UiState
-import com.openparty.app.features.startup.feature_authentication.domain.usecase.DetermineAuthStatesUseCase
-import com.openparty.app.features.startup.feature_authentication.presentation.AuthFlowNavigationMapper
+import com.openparty.app.features.startup.feature_policy.domain.usecase.AcceptPrivacyPolicyUseCase
+import com.openparty.app.core.shared.domain.GlobalLogger.logger
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
-class SplashViewModel(
-    private val determineAuthStatesUseCase: DetermineAuthStatesUseCase,
-    private val authFlowNavigationMapper: AuthFlowNavigationMapper
+class PrivacyPolicyViewModel(
+    private val acceptPrivacyPolicyUseCase: AcceptPrivacyPolicyUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(UiState())
@@ -424,311 +504,28 @@ class SplashViewModel(
     val uiEvent: SharedFlow<UiEvent> = _uiEvent
 
     init {
+        logger.i { "PrivacyPolicyViewModel initialized" }
+    }
+
+    fun acceptPolicy() {
         viewModelScope.launch {
-            navigateToNextAuthScreen()
-        }
-    }
-
-    private suspend fun navigateToNextAuthScreen() {
-        _uiState.value = _uiState.value.copy(isLoading = true)
-        when (val authStatesResult = determineAuthStatesUseCase()) {
-            is DomainResult.Success -> {
-                val destination = authFlowNavigationMapper.determineDestination(authStatesResult.data)
-                _uiState.value = _uiState.value.copy(isLoading = false, errorMessage = null)
-                _uiEvent.emit(UiEvent.Navigate(destination.route))
-            }
-            is DomainResult.Failure -> {
-                val errorMessage = AppErrorMapper.getUserFriendlyMessage(authStatesResult.error)
-                _uiState.value = _uiState.value.copy(isLoading = false, errorMessage = errorMessage)
-            }
-        }
-    }
-}
-//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/startup/feature_authentication/presentation/AuthFlowNavigationMapper.kt
-package com.openparty.app.features.startup.feature_authentication.presentation
-
-import com.openparty.app.features.startup.feature_authentication.domain.model.AuthState
-import com.openparty.app.navigation.Screen
-
-class AuthFlowNavigationMapper {
-
-    fun determineDestination(states: List<AuthState>): Screen {
-        println("Determining navigation destination based on auth states: $states")
-
-        return when {
-            !states.contains(AuthState.isLoggedIn) -> {
-                println("User is not logged in; navigating to Login")
-                Screen.Login
-            }
-            !states.contains(AuthState.isEmailVerified) -> {
-                println("User email is not verified; navigating to EmailVerification")
-                Screen.EmailVerification
-            }
-            !states.contains(AuthState.isLocationVerified) -> {
-                println("User location is not verified; navigating to LocationVerification")
-                Screen.LocationVerification
-            }
-            !states.contains(AuthState.isScreenNameGenerated) -> {
-                println("User screen name is not generated; navigating to ScreenNameGeneration")
-                Screen.ScreenNameGeneration
-            }
-            !states.contains(AuthState.isManuallyVerified) -> {
-                println("User is not manually verified; navigating to ManualVerification")
-                Screen.ManualVerification
-            }
-            else -> {
-                println("All auth states satisfied; navigating to DiscussionsPreview")
-                Screen.DiscussionsPreview
-            }
-        }
-    }
-}
-//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/startup/feature_authentication/domain/usecase/DetermineAuthStatesUseCase.kt
-package com.openparty.app.features.startup.feature_authentication.domain.usecase
-
-import dev.gitlive.firebase.auth.FirebaseUser
-import com.openparty.app.core.shared.domain.DomainResult
-import com.openparty.app.core.shared.domain.error.AppError
-import com.openparty.app.features.shared.feature_user.domain.model.User
-import com.openparty.app.features.startup.feature_authentication.domain.model.AuthState
-import com.openparty.app.features.startup.feature_authentication.domain.repository.AuthenticationRepository
-import com.openparty.app.features.shared.feature_user.domain.usecase.GetUserUseCase
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.firstOrNull
-import kotlinx.coroutines.withContext
-
-class DetermineAuthStatesUseCase(
-    private val authenticationRepository: AuthenticationRepository,
-    private val getUserUseCase: GetUserUseCase
-) {
-    suspend operator fun invoke(): DomainResult<List<AuthState>> {
-        return try {
-            withContext(Dispatchers.Default) {
-                println("Invoking DetermineAuthStatesUseCase")
-                val firebaseUser = getFirebaseUser() ?: return@withContext DomainResult.Success(emptyList())
-                reloadFirebaseUser(firebaseUser)
-                determineAuthStates(firebaseUser)
-            }
-        } catch (e: Exception) {
-            println("Unexpected error in DetermineAuthStatesUseCase: ${e.message}")
-            DomainResult.Failure(AppError.Navigation.DetermineAuthStates)
-        }
-    }
-
-    private suspend fun determineAuthStates(firebaseUser: FirebaseUser): DomainResult<List<AuthState>> {
-        val states = mutableListOf<AuthState>()
-
-        // If user is not logged in, return failure
-        val domainUser = getUserDetails(firebaseUser.uid) ?: return DomainResult.Failure(AppError.Navigation.DetermineAuthStates)
-
-        states.add(AuthState.isLoggedIn)
-        if (!firebaseUser.isEmailVerified) {
-            println("User is logged in but email is not verified.")
-            return DomainResult.Success(states)
-        }
-        states.add(AuthState.isEmailVerified)
-
-        if (!domainUser.isLocationVerified) {
-            println("Location not verified.")
-            return DomainResult.Success(states)
-        }
-        states.add(AuthState.isLocationVerified)
-
-        if (domainUser.screenName.isBlank()) {
-            println("Screen name not generated.")
-            return DomainResult.Success(states)
-        }
-        states.add(AuthState.isScreenNameGenerated)
-
-        if (!domainUser.manuallyVerified) {
-            println("User not manually verified.")
-            return DomainResult.Success(states)
-        }
-        states.add(AuthState.isManuallyVerified)
-
-        println("All checks passed. Determined auth states: $states")
-        return DomainResult.Success(states)
-    }
-
-    private suspend fun getFirebaseUser(): FirebaseUser? {
-        return try {
-            authenticationRepository.observeAuthState().firstOrNull().also {
-                if (it == null) println("No Firebase user found.")
-            }
-        } catch (e: Exception) {
-            println("Error observing auth state: ${e.message}")
-            null
-        }
-    }
-
-    private suspend fun reloadFirebaseUser(firebaseUser: FirebaseUser): Boolean {
-        return try {
-            println("Reloading Firebase user data")
-            firebaseUser.reload()
-            true
-        } catch (e: Exception) {
-            println("Failed to reload Firebase user data: ${e.message}")
-            false
-        }
-    }
-
-    private suspend fun getUserDetails(userId: String): User? {
-        return try {
-            when (val result = getUserUseCase()) {
+            logger.i { "Accept policy triggered" }
+            _uiState.value = _uiState.value.copy(isLoading = true)
+            when (val result = acceptPrivacyPolicyUseCase()) {
                 is DomainResult.Success -> {
-                    println("User details fetched successfully for userId: $userId")
-                    result.data
+                    logger.i { "Privacy policy accepted, navigating to manual verification" }
+                    _uiState.value = _uiState.value.copy(isLoading = false, errorMessage = null)
+                    _uiEvent.emit(UiEvent.Navigate("manual_verification"))
                 }
                 is DomainResult.Failure -> {
-                    println("Failed to fetch user details for userId: $userId")
-                    null
+                    logger.e { "Accept policy failed with error: ${result.error}" }
+                    val errorMessage = AppErrorMapper.getUserFriendlyMessage(result.error)
+                    _uiState.value = _uiState.value.copy(isLoading = false, errorMessage = errorMessage)
                 }
-            }
-        } catch (e: Throwable) {
-            println("Unexpected error fetching user details for userId: $userId, error: ${e.message}")
-            null
-        }
-    }
-}
-//File: composeApp/src/commonMain/kotlin/com/openparty/app/navigation/AppNavigation.kt
-package com.openparty.app.navigation
-
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.ui.Modifier
-import androidx.navigation.NavType
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.currentBackStackEntryAsState
-import androidx.navigation.compose.rememberNavController
-import androidx.navigation.compose.composable
-import androidx.navigation.navArgument
-import com.openparty.app.features.engagement.comments.feature_add_comment.presentation.AddCommentScreen
-import com.openparty.app.features.newsfeed.council_meetings.feature_council_meetings_article.presentation.CouncilMeetingArticleScreen
-import com.openparty.app.features.newsfeed.council_meetings.feature_council_meetings_preview.presentation.CouncilMeetingsPreviewScreen
-import com.openparty.app.features.newsfeed.discussions.feature_add_discussion.presentation.AddDiscussionScreen
-import com.openparty.app.features.newsfeed.discussions.feature_discussions_article.presentation.DiscussionArticleScreen
-import com.openparty.app.features.newsfeed.discussions.feature_discussions_preview.presentation.DiscussionsPreviewScreen
-import com.openparty.app.features.startup.account.feature_login.presentation.LoginScreen
-import com.openparty.app.features.startup.account.feature_register.presentation.RegisterScreen
-import com.openparty.app.features.startup.feature_screen_name_generation.presentation.ScreenNameGenerationScreen
-import com.openparty.app.features.startup.feature_splash.presentation.SplashScreen
-import com.openparty.app.features.startup.verification.feature_email_verification.presentation.EmailVerificationScreen
-import com.openparty.app.features.startup.verification.feature_location_verification.presentation.LocationVerificationScreen
-import com.openparty.app.features.startup.verification.feature_manual_verification.presentation.ManualVerificationScreen
-import com.openparty.app.features.utils.feature_settings.presentation.SettingsScreen
-import org.koin.compose.viewmodel.koinViewModel
-import org.koin.core.parameter.parametersOf
-
-@Composable
-fun AppNavigation() {
-    val navController = rememberNavController()
-    val navBackStackEntry by navController.currentBackStackEntryAsState()
-    val currentRoute = navBackStackEntry?.destination?.route
-    val bottomBarRoutes = listOf(
-        Screen.DiscussionsPreview.route,
-        Screen.CouncilMeetingsPreview.route,
-        Screen.Settings.route
-    )
-    Scaffold(
-        bottomBar = {
-            if (currentRoute in bottomBarRoutes) {
-                NavigationFooter(navController = navController, currentRoute = currentRoute)
-            }
-        }
-    ) { padding ->
-        NavHost(
-            navController = navController,
-            startDestination = Screen.Splash.route,
-            modifier = Modifier.padding(padding)
-        ) {
-            composable(Screen.Splash.route) { SplashScreen(navController) }
-            composable(Screen.Login.route) { LoginScreen(navController) }
-            composable(Screen.Register.route) { RegisterScreen(navController) }
-            composable(Screen.EmailVerification.route) { EmailVerificationScreen(navController) }
-            composable(Screen.LocationVerification.route) { LocationVerificationScreen(navController) }
-            composable(Screen.ScreenNameGeneration.route) { ScreenNameGenerationScreen(navController) }
-            composable(Screen.ManualVerification.route) { ManualVerificationScreen() }
-            composable(Screen.DiscussionsPreview.route) { DiscussionsPreviewScreen(navController) }
-            composable(Screen.CouncilMeetingsPreview.route) { CouncilMeetingsPreviewScreen(navController) }
-            composable(Screen.AddDiscussion.route) { AddDiscussionScreen(navController) }
-            composable(Screen.Settings.route) { SettingsScreen() }
-            composable(
-                route = Screen.DiscussionsArticle("").route,
-                arguments = listOf(navArgument("discussionId") { type = NavType.StringType })
-            ) {
-                DiscussionArticleScreen(navController)
-            }
-            composable(
-                route = Screen.CouncilMeetingsArticle("").route,
-                arguments = listOf(navArgument("councilMeetingId") { type = NavType.StringType })
-            ) { backStackEntry ->
-                val councilMeetingId = backStackEntry.arguments?.getString("councilMeetingId") ?: ""
-                val viewModel = koinViewModel<com.openparty.app.features.newsfeed.council_meetings.feature_council_meetings_article.presentation.CouncilMeetingArticleViewModel> {
-                    parametersOf(councilMeetingId)
-                }
-                CouncilMeetingArticleScreen(navController, viewModel)
-            }
-            composable(
-                route = Screen.AddComment("", "").route,
-                arguments = listOf(
-                    navArgument("discussionId") { type = NavType.StringType },
-                    navArgument("titleText") { type = NavType.StringType }
-                )
-            ) { backStackEntry ->
-                val discussionId = backStackEntry.arguments?.getString("discussionId") ?: ""
-                val titleText = backStackEntry.arguments?.getString("titleText") ?: ""
-                val viewModel = koinViewModel<com.openparty.app.features.engagement.comments.feature_add_comment.presentation.AddCommentViewModel> {
-                    parametersOf(discussionId, titleText)
-                }
-                AddCommentScreen(navController, discussionId, titleText, viewModel)
             }
         }
     }
 }
-//File: composeApp/src/commonMain/kotlin/com/openparty/app/navigation/Screen.kt
-package com.openparty.app.navigation
-
-import kotlinx.serialization.Serializable
-
-@Serializable
-sealed class Screen(val route: String) {
-
-    @Serializable object Splash : Screen("splash")
-    @Serializable object Login : Screen("login")
-    @Serializable object Register : Screen("register")
-    @Serializable object EmailVerification : Screen("email_verification")
-    @Serializable object LocationVerification : Screen("location_verification")
-    @Serializable object ScreenNameGeneration : Screen("screen_name_generation")
-    @Serializable object ManualVerification : Screen("manual_verification")
-    @Serializable object DiscussionsPreview : Screen("discussions_preview")
-    @Serializable object CouncilMeetingsPreview : Screen("council_meetings_preview")
-    @Serializable object AddDiscussion : Screen("add_discussion")
-    @Serializable object Settings : Screen("settings")
-
-    @Serializable
-    data class DiscussionsArticle(val discussionId: String) : Screen("discussions_article/{discussionId}") {
-        companion object {
-            fun createRoute(discussionId: String): String = "discussions_article/$discussionId"
-        }
-    }
-
-    @Serializable
-    data class CouncilMeetingsArticle(val councilMeetingId: String) : Screen("council_meetings_article/{councilMeetingId}") {
-        companion object {
-            fun createRoute(councilMeetingId: String): String = "council_meetings_article/$councilMeetingId"
-        }
-    }
-
-    @Serializable
-    data class AddComment(val discussionId: String, val titleText: String) : Screen("add_comment/{discussionId}/{titleText}") {
-        companion object {
-            fun createRoute(discussionId: String, titleText: String): String = "add_comment/$discussionId/$titleText"
-        }
-    }
-}
-
 
 ---------
 
@@ -751,18 +548,9 @@ Notes:
 
 ---------
 
-I want to add a functionality which changes how the user sets up an account
+I've given you the code for my policy feature 
 
-Right now, there are a bunch of verification steps for setting up an account but there is no step for setting up a privacy policy 
+right now it stores the policy text in the policy screen like thsi: 
+text = "Please review our Privacy Policy. By accepting, you agree to t
 
-Right now, if the user has verified their location, created their screen name they are taken to the manual verification screen 
-
-I want to change this so that, if the user has verified their location and created their screen name, they are taken to the policy screen. 
-
-Users are only taken to the manual verification screen if the policy screen has been completed. 
-
-The policy screen should be a normal policy screen like any other app, and it is considered completed once hte user has accepted the agreement 
-
-I'm not sure what the policy screen should look like, but i just want it to be pretty standard, so the same as other apps. 
-
-Resesarch what policy screens look like for other apps, then create a standard policy screen for me and update the navigation flow to meet the above criteria. 
+change this so that the text is stored in a file
