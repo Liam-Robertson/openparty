@@ -23,12 +23,14 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import com.openparty.app.core.shared.domain.GlobalLogger.logger
 import com.openparty.app.navigation.Screen
+import com.openparty.app.features.utils.feature_hide_posts.domain.usecase.HideDiscussionUseCase
 
 class DiscussionsPreviewViewModel(
     private val getDiscussionsUseCase: GetDiscussionsUseCase,
     private val trackDiscussionSelectedUseCase: TrackDiscussionSelectedUseCase,
     private val blockUserUseCase: BlockUserUseCase,
-    private val getUserUseCase: GetUserUseCase
+    private val getUserUseCase: GetUserUseCase,
+    private val hideDiscussionUseCase: HideDiscussionUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(UiState())
@@ -41,12 +43,12 @@ class DiscussionsPreviewViewModel(
     val currentUserId: StateFlow<String?> = _currentUserId
 
     private val _blockedUsers = MutableStateFlow<List<String>>(emptyList())
-    val blockedUsers: StateFlow<List<String>> = _blockedUsers
+    private val _hiddenDiscussions = MutableStateFlow<List<String>>(emptyList())
 
     private val _rawDiscussions = MutableStateFlow<PagingData<Discussion>>(PagingData.empty())
-    val discussions = combine(_rawDiscussions, _blockedUsers) { pagingData, blockedUsers ->
+    val discussions = combine(_rawDiscussions, _blockedUsers, _hiddenDiscussions) { pagingData, blockedUsers, hiddenDiscussions ->
         pagingData.filter { discussion ->
-            !blockedUsers.contains(discussion.userId)
+            !blockedUsers.contains(discussion.userId) && !hiddenDiscussions.contains(discussion.discussionId)
         }
     }
 
@@ -62,7 +64,8 @@ class DiscussionsPreviewViewModel(
                     val user = result.data
                     _currentUserId.value = user.userId
                     _blockedUsers.value = user.blockedUsers
-                    logger.i { "Loaded user: ${user.userId} with blocked users: ${user.blockedUsers}" }
+                    _hiddenDiscussions.value = user.hiddenDiscussions
+                    logger.i { "Loaded user: ${user.userId} with blocked users: ${user.blockedUsers} and hidden discussions: ${user.hiddenDiscussions}" }
                 }
                 is DomainResult.Failure -> {
                     val errorMessage = AppErrorMapper.getUserFriendlyMessage(result.error)
@@ -117,6 +120,33 @@ class DiscussionsPreviewViewModel(
                     val errorMessage = AppErrorMapper.getUserFriendlyMessage(result.error)
                     logger.e(result.error) { "Failed to block user: $authorId" }
                     _uiState.value = _uiState.value.copy(errorMessage = errorMessage)
+                }
+            }
+        }
+    }
+
+    fun onHideDiscussion(discussionId: String) {
+        viewModelScope.launch {
+            val currentUser = _currentUserId.value
+            if (currentUser == null) {
+                logger.e { "Current user ID is null, cannot hide discussion" }
+                return@launch
+            }
+            // Optimistically update the UI: add the discussionId to the hiddenDiscussions state.
+            val updatedHidden = _hiddenDiscussions.value.toMutableList().apply { add(discussionId) }
+            _hiddenDiscussions.value = updatedHidden
+
+            // Persist the hidden discussion update to the backend.
+            when (val result = hideDiscussionUseCase(currentUser, discussionId)) {
+                is DomainResult.Success -> {
+                    logger.i { "Persisted hidden discussion $discussionId for user $currentUser" }
+                }
+                is DomainResult.Failure -> {
+                    logger.e(result.error) { "Failed to persist hidden discussion $discussionId for user $currentUser" }
+                    // Revert the optimistic update if persistence fails.
+                    updatedHidden.remove(discussionId)
+                    _hiddenDiscussions.value = updatedHidden
+                    _uiState.value = _uiState.value.copy(errorMessage = AppErrorMapper.getUserFriendlyMessage(result.error))
                 }
             }
         }

@@ -75,4 +75,16 @@ class UserRepositoryImpl(
             DomainResult.Failure(AppError.User.BlockUser)
         }
     }
+
+    override suspend fun hideDiscussion(userId: String, discussionId: String): DomainResult<Unit> {
+        println("hideDiscussion called with userId: $userId, discussionId: $discussionId")
+        return try {
+            userDataSource.hideDiscussion(userId, discussionId)
+            println("Successfully hid discussion with discussionId: $discussionId for user: $userId")
+            DomainResult.Success(Unit)
+        } catch (e: Exception) {
+            println("Error hiding discussion with userId: $userId, discussionId: $discussionId, exception: ${e.message}")
+            DomainResult.Failure(AppError.User.HideDiscussion)
+        }
+    }
 }

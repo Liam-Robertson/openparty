@@ -42,7 +42,8 @@ fun DiscussionCard(
     discussion: Discussion,
     currentUserId: String,
     onClick: () -> Unit,
-    onBlockUser: (blockedUserId: String) -> Unit
+    onBlockUser: (blockedUserId: String) -> Unit,
+    onHideDiscussion: (discussionId: String) -> Unit
 ) {
     var showBottomSheet by remember { mutableStateOf(false) }
     var showReportMenu by remember { mutableStateOf(false) }
@@ -120,6 +121,7 @@ fun DiscussionCard(
                 },
                 modifier = Modifier.clickable {
                     showBottomSheet = false
+                    onHideDiscussion(discussion.discussionId)
                 }
             )
             ListItem(

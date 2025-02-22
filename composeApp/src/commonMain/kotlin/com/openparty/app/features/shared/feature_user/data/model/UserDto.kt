@@ -15,7 +15,8 @@ data class UserDto(
     val screenName: String? = null,
     val title: String? = null,
     val isPolicyAccepted: Boolean = false,
-    val blockedUsers: List<String> = emptyList()
+    val blockedUsers: List<String> = emptyList(),
+    val hiddenDiscussions: List<String> = emptyList()
 )
 
 @Serializable

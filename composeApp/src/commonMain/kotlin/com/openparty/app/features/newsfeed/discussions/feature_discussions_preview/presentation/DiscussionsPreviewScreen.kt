@@ -16,7 +16,6 @@ import com.openparty.app.core.shared.presentation.ErrorText
 import com.openparty.app.core.shared.presentation.UiEvent
 import com.openparty.app.features.newsfeed.discussions.feature_add_discussion.presentation.AddDiscussionButton
 import com.openparty.app.features.newsfeed.shared.presentation.BaseFeedScreen
-import com.openparty.app.navigation.NavigationFooter
 import com.openparty.app.navigation.Screen
 import com.openparty.app.features.newsfeed.discussions.shared.domain.model.Discussion
 import kotlinx.coroutines.flow.collectLatest
@@ -56,6 +55,9 @@ fun DiscussionsPreviewScreen(
                                 onClick = { viewModel.onDiscussionSelected(discussion.discussionId) },
                                 onBlockUser = { blockedUserId ->
                                     viewModel.onBlockUser(blockedUserId)
+                                },
+                                onHideDiscussion = { discussionId ->
+                                    viewModel.onHideDiscussion(discussionId)
                                 }
                             )
                         }
@@ -63,8 +65,6 @@ fun DiscussionsPreviewScreen(
                     AddDiscussionButton {
                         navController.navigate(Screen.AddDiscussion.route)
                     }
-                } else {
-                    // Optionally, display a loading indicator or placeholder until user ID is available.
                 }
             }
             ErrorText(errorMessage = uiState.errorMessage)

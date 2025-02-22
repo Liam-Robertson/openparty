@@ -9,4 +9,5 @@ interface UserDataSource {
     suspend fun updateUser(userId: String, request: Any)
     suspend fun addUser(userId: String, user: UserDto)
     suspend fun blockUser(userId: String, blockedUserId: String)
+    suspend fun hideDiscussion(userId: String, discussionId: String)
 }

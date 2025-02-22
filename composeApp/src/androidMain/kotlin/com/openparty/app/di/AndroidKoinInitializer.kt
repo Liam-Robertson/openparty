@@ -22,6 +22,7 @@ import com.openparty.app.features.startup.feature_screen_name_generation.di.scre
 import com.openparty.app.features.startup.feature_splash.di.splashModule
 import com.openparty.app.features.startup.verification.feature_email_verification.di.emailVerificationModule
 import com.openparty.app.features.startup.verification.feature_location_verification.di.locationVerificationModule
+import com.openparty.app.features.utils.feature_hide_posts.di.hidePostsModule
 import com.openparty.app.features.utils.feature_report.di.reportModule
 import com.openparty.app.main.di.mainModule
 import org.koin.android.ext.koin.androidContext
@@ -63,5 +64,6 @@ object AndroidKoinInitializer {
         engagementFooterKoinModule,
         policyModule,
         reportModule,
+        hidePostsModule,
     )
 }

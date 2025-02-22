@@ -20,7 +20,8 @@ object UserMapper {
             isLocationVerified = dto.locationVerified,
             isPolicyAccepted = dto.isPolicyAccepted,
             userId = dto.userId,
-            blockedUsers = dto.blockedUsers
+            blockedUsers = dto.blockedUsers,
+            hiddenDiscussions = dto.hiddenDiscussions
         )
     }
 }

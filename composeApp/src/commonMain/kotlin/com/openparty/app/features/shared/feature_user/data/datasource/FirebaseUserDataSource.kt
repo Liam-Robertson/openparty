@@ -111,4 +111,16 @@ class FirebaseUserDataSource(
             throw RuntimeException("Failed to block user for userId: $userId", e)
         }
     }
+
+    override suspend fun hideDiscussion(userId: String, discussionId: String) {
+        logger.d { "Hiding discussion: $discussionId for user: $userId" }
+        try {
+            firestore.collection("users").document(userId)
+                .update("hiddenDiscussions" to FieldValue.arrayUnion(discussionId))
+            logger.d { "Successfully hid discussion: $discussionId for user: $userId" }
+        } catch (e: Exception) {
+            logger.e(e) { "Error hiding discussion: $discussionId for user: $userId" }
+            throw RuntimeException("Failed to hide discussion for user: $userId", e)
+        }
+    }
 }
