@@ -234,6 +234,61 @@ LaunchedEffect(Unit) {
     - It uses my global logger using kermit
     - Then it just implements that logging 
     - Use logging in the code you give me whwere appropriate, but always use the kermit global logger in the same way the SplashViewModel does
+
+.............
+
+- Also on another note, i want my use cases to be set up a specific way so i'll give you an example of that
+
+//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/startup/feature_authentication/domain/usecase/GetCurrentUserIdUseCase.kt
+package com.openparty.app.features.startup.feature_authentication.domain.usecase
+
+import com.openparty.app.core.shared.domain.DomainResult
+import com.openparty.app.core.shared.domain.error.AppError
+import com.openparty.app.core.shared.domain.GlobalLogger.logger
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+
+class GetCurrentUserIdUseCase(
+    private val getFirebaseUserUseCase: GetFirebaseUserUseCase
+) {
+    suspend operator fun invoke(): DomainResult<String> {
+        return withContext(Dispatchers.Default) {
+            logger.i { "GetCurrentUserIdUseCase invoked" }
+            try {
+                logger.i { "Fetching current user" }
+                when (val userResult = getFirebaseUserUseCase()) {
+                    is DomainResult.Success -> {
+                        logger.i { "User fetched successfully: UID=${userResult.data.uid}" }
+                        DomainResult.Success(userResult.data.uid)
+                    }
+                    is DomainResult.Failure -> {
+                        logger.e { "Failed to fetch user: ${userResult.error}" }
+                        DomainResult.Failure(AppError.Authentication.GetUserId)
+                    }
+                }
+            } catch (e: Throwable) {
+                logger.e(e) { "Unexpected error while fetching user ID: ${e.message}" }
+                DomainResult.Failure(AppError.Authentication.GetUserId)
+            }
+        }
+    }
+}
+
+- So whenever there is a success, the use case wraps the success in a DomainResult and returns the relevant data
+- It also has a catch statement 
+- It uses kermit logging with the global logger as before
+- Whenever there is a catch or a fail case, it returns the same AppError wrapped in a DomainResult.Failure
+- The reason is because the point of the AppErrors is to create user friendly messages in the user interface 
+- All the actual debugging is done by developers using log statements, the AppErrors are just to create user messages
+- For that reason, the only thing the AppErrors represent is a simple Error about where the app failed 
+- For example, if i have this -  AppError.Authentication.GetUserId
+    - I know that can be mapped to a user friendly message about getting the user id such as "Failed to find the user. Try again later."
+- Whenever you have use cases, it should follow the above pattern 
+- Use logging, a catch statement, wrap every result in a DomainResult, have it be a DomainResult.Success for success and DomainResult.Failure for anything else
+- In a DomainResult.Failure, put an error code which relates to that specific use case
+- For example, if the above use case, it's called GetCurrentUserIdUseCase and returns AppError.Authentication.GetUserId
+    - i.e. the AppError reflects the use case where the app failed
+
 --
 
 OpenParty/
