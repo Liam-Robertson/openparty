@@ -81,7 +81,7 @@ fun AppNavigation() {
                 CouncilMeetingArticleScreen(navController, viewModel)
             }
             composable(
-                route = Screen.AddComment("").route,
+                route = Screen.AddComment("", "").route,
                 arguments = listOf(
                     navArgument("discussionId") { type = NavType.StringType },
                     navArgument("titleText") { type = NavType.StringType }
