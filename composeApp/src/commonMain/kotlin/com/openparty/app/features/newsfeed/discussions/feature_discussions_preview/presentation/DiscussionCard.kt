@@ -30,9 +30,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material.icons.filled.Flag
 import com.openparty.app.features.engagement.engagement_bars.feature_preview_enagement_footer.presentation.EngagementFooter
 import com.openparty.app.features.engagement.engagement_bars.feature_preview_enagement_footer.domain.model.EngagementFooterState
 import com.openparty.app.features.newsfeed.discussions.shared.domain.model.Discussion
+import com.openparty.app.features.utils.feature_report.presentation.ReportMenu
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -43,6 +45,7 @@ fun DiscussionCard(
     onBlockUser: (blockedUserId: String) -> Unit
 ) {
     var showBottomSheet by remember { mutableStateOf(false) }
+    var showReportMenu by remember { mutableStateOf(false) }
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -115,8 +118,30 @@ fun DiscussionCard(
                         contentDescription = "Hide Content"
                     )
                 },
-                modifier = Modifier.clickable { showBottomSheet = false }
+                modifier = Modifier.clickable {
+                    showBottomSheet = false
+                }
+            )
+            ListItem(
+                headlineContent = { Text("Report") },
+                leadingContent = {
+                    Icon(
+                        imageVector = Icons.Default.Flag,
+                        contentDescription = "Report"
+                    )
+                },
+                modifier = Modifier.clickable {
+                    showBottomSheet = false
+                    showReportMenu = true
+                }
             )
         }
+    }
+    if (showReportMenu) {
+        ReportMenu(
+            discussionId = discussion.discussionId,
+            reporterUserId = currentUserId,
+            onDismiss = { showReportMenu = false }
+        )
     }
 }

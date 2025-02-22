@@ -37,6 +37,9 @@ object AppErrorMapper {
             is AppError.Permissions.General -> "Unknown permissions error."
             is AppError.Permissions.RefusedLocationPermissions -> "You have not granted location permissions."
 
+            // Report
+            is AppError.Report.SubmitReport -> "Failed to submit report. Try again later."
+
             // Metrics
             AppError.Analytics.IdentifyUser -> "Metrics event failed - Identify user."
             AppError.Analytics.TrackAppOpen -> "Metrics event failed - opening app."

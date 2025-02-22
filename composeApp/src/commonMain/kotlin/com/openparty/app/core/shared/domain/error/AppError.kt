@@ -21,6 +21,10 @@ sealed class AppError : Exception() {
         object RefusedLocationPermissions : AppError()
     }
 
+    sealed class Report : AppError() {
+        object SubmitReport : AppError()
+    }
+
     sealed class User : AppError() {
         object General : AppError()
         object UpdateUserUseCase : AppError()

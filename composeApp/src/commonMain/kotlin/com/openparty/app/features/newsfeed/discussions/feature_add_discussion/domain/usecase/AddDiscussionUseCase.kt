@@ -12,8 +12,9 @@ class AddDiscussionUseCase(
 ) {
     suspend operator fun invoke(discussion: Discussion): DomainResult<Discussion> {
         logger.i { "AddDiscussionUseCase invoked with discussion: ${discussion.title}" }
+        val discussionWithReportCount = discussion.copy(reportCount = 0)
         return try {
-            when (val result = discussionRepository.addDiscussion(discussion)) {
+            when (val result = discussionRepository.addDiscussion(discussionWithReportCount)) {
                 is DomainResult.Success -> {
                     logger.i { "Successfully added discussion: ${discussion.title}" }
                     DomainResult.Success(result.data)

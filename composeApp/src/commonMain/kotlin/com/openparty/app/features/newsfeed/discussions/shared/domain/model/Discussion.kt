@@ -13,5 +13,6 @@ data class Discussion(
     val timestamp: Timestamp? = null,
     val commentCount: Int = 0,
     val upvoteCount: Int = 0,
-    val downvoteCount: Int = 0
+    val downvoteCount: Int = 0,
+    val reportCount: Int = 0
 )
