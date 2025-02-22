@@ -7,6 +7,7 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class Discussion(
     val discussionId: String = "",
+    val userId: String = "",
     val title: String = "",
     val contentText: String = "",
     val timestamp: Timestamp? = null,

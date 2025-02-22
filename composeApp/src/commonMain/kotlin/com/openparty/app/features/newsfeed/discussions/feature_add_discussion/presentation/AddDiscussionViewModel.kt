@@ -12,6 +12,7 @@ import com.openparty.app.core.shared.presentation.UiEvent
 import com.openparty.app.features.newsfeed.discussions.feature_add_discussion.domain.usecase.AddDiscussionUseCase
 import com.openparty.app.features.newsfeed.discussions.feature_add_discussion.presentation.components.AddDiscussionUiState
 import com.openparty.app.features.newsfeed.discussions.shared.domain.model.Discussion
+import com.openparty.app.features.startup.feature_authentication.domain.usecase.GetCurrentUserIdUseCase
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -22,7 +23,8 @@ import com.openparty.app.navigation.Screen
 
 class AddDiscussionViewModel(
     private val addDiscussionUseCase: AddDiscussionUseCase,
-    private val trackDiscussionPostedUseCase: TrackDiscussionPostedUseCase
+    private val trackDiscussionPostedUseCase: TrackDiscussionPostedUseCase,
+    private val getCurrentUserIdUseCase: GetCurrentUserIdUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AddDiscussionUiState())
@@ -30,6 +32,27 @@ class AddDiscussionViewModel(
 
     private val _uiEvent = MutableSharedFlow<UiEvent>()
     val uiEvent: SharedFlow<UiEvent> = _uiEvent
+
+    private val _currentUserId = MutableStateFlow<String?>(null)
+
+    init {
+        loadCurrentUserId()
+    }
+
+    private fun loadCurrentUserId() {
+        viewModelScope.launch {
+            when (val result = getCurrentUserIdUseCase()) {
+                is DomainResult.Success -> {
+                    _currentUserId.value = result.data
+                    logger.i { "Fetched current user id: ${result.data}" }
+                }
+                is DomainResult.Failure -> {
+                    val errorMessage = AppErrorMapper.getUserFriendlyMessage(result.error)
+                    logger.e(result.error) { "Error fetching current user id: $errorMessage" }
+                }
+            }
+        }
+    }
 
     fun onTitleTextChanged(newText: TextFieldValue) {
         updateUiState(title = newText)
@@ -56,6 +79,7 @@ class AddDiscussionViewModel(
     private fun createDiscussionFromState(state: AddDiscussionUiState): Discussion {
         return Discussion(
             discussionId = "",
+            userId = _currentUserId.value ?: "",
             title = state.title.text,
             contentText = state.contentText.text,
             timestamp = Timestamp.now(),
@@ -73,7 +97,6 @@ class AddDiscussionViewModel(
                     val addedDiscussion = result.data
                     val discussionId = addedDiscussion.discussionId
                     val title = addedDiscussion.title
-
                     trackDiscussionPosted(discussionId, title)
                     emitUiEvent(UiEvent.Navigate(Screen.DiscussionsPreview.route))
                     resetUiState()

@@ -12,6 +12,7 @@ import com.openparty.app.core.shared.presentation.UiEvent
 import com.openparty.app.core.shared.presentation.UiState
 import com.openparty.app.features.newsfeed.discussions.shared.domain.model.Discussion
 import com.openparty.app.features.newsfeed.discussions.feature_discussions_preview.domain.usecase.GetDiscussionsUseCase
+import com.openparty.app.features.shared.feature_user.domain.usecase.BlockUserUseCase
 import com.openparty.app.features.startup.feature_authentication.domain.usecase.GetCurrentUserIdUseCase
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -24,7 +25,8 @@ import com.openparty.app.navigation.Screen
 class DiscussionsPreviewViewModel(
     private val getDiscussionsUseCase: GetDiscussionsUseCase,
     private val trackDiscussionSelectedUseCase: TrackDiscussionSelectedUseCase,
-    private val getCurrentUserIdUseCase: GetCurrentUserIdUseCase
+    private val getCurrentUserIdUseCase: GetCurrentUserIdUseCase,
+    private val blockUserUseCase: BlockUserUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(UiState())
@@ -84,6 +86,27 @@ class DiscussionsPreviewViewModel(
                 is DomainResult.Failure -> logger.e { "Failed to track discussion selected event for ID: $discussionId" }
             }
             _uiEvent.emit(UiEvent.Navigate(Screen.DiscussionsArticle.createRoute(discussionId)))
+        }
+    }
+
+    fun onBlockUser(authorId: String) {
+        viewModelScope.launch {
+            val currentUser = _currentUserId.value
+            if (currentUser == null) {
+                logger.e { "Current user ID is null, cannot block user" }
+                return@launch
+            }
+            when (val result = blockUserUseCase(currentUser, authorId)) {
+                is DomainResult.Success -> {
+                    logger.i { "Successfully blocked user: $authorId" }
+                    // Optionally, you might trigger a refresh of the discussions feed here.
+                }
+                is DomainResult.Failure -> {
+                    val errorMessage = AppErrorMapper.getUserFriendlyMessage(result.error)
+                    logger.e(result.error) { "Failed to block user: $authorId" }
+                    _uiState.value = _uiState.value.copy(errorMessage = errorMessage)
+                }
+            }
         }
     }
 }

@@ -52,10 +52,12 @@ fun DiscussionsPreviewScreen(
                         if (discussion != null) {
                             DiscussionCard(
                                 discussion = discussion,
-                                currentUserId = currentUserId!!  // using the fetched user ID
-                            ) {
-                                viewModel.onDiscussionSelected(discussion.discussionId)
-                            }
+                                currentUserId = currentUserId!!,
+                                onClick = { viewModel.onDiscussionSelected(discussion.discussionId) },
+                                onBlockUser = { blockedUserId ->
+                                    viewModel.onBlockUser(blockedUserId)
+                                }
+                            )
                         }
                     }
                     AddDiscussionButton {

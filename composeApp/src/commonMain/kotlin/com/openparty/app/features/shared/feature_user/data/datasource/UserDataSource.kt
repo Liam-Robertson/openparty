@@ -8,4 +8,5 @@ interface UserDataSource {
     suspend fun isScreenNameTaken(name: String): Boolean
     suspend fun updateUser(userId: String, request: Any)
     suspend fun addUser(userId: String, user: UserDto)
+    suspend fun blockUser(userId: String, blockedUserId: String)
 }

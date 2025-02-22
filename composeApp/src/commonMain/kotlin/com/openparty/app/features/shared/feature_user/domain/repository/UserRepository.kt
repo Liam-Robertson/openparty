@@ -10,4 +10,5 @@ interface UserRepository {
     suspend fun isScreenNameTaken(name: String): DomainResult<Boolean>
     suspend fun updateUser(userId: String, request: Any): DomainResult<Unit>
     suspend fun addUser(userId: String, user: UserDto): DomainResult<Unit>
+    suspend fun blockUser(currentUserId: String, blockedUserId: String): DomainResult<Unit>
 }

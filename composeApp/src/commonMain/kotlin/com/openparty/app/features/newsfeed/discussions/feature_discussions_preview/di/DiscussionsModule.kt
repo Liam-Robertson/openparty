@@ -14,5 +14,5 @@ val discussionsKoinModule = module {
     single<DiscussionRepository> { DiscussionRepositoryImpl(get()) }
     single { Firebase.firestore }
     single { GetDiscussionsUseCase(get()) }
-    viewModel { DiscussionsPreviewViewModel(get(), get(), get()) }
+    viewModel { DiscussionsPreviewViewModel(get(), get(), get(), get()) }
 }

@@ -6,7 +6,6 @@ import com.openparty.app.core.shared.domain.error.AppError
 import com.openparty.app.features.shared.feature_user.data.datasource.UserDataSource
 import com.openparty.app.features.shared.feature_user.data.mapper.UserMapper
 import com.openparty.app.features.shared.feature_user.data.model.UserDto
-import com.openparty.app.features.shared.feature_user.domain.model.UpdateUserRequest
 import com.openparty.app.features.shared.feature_user.domain.model.User
 import com.openparty.app.features.shared.feature_user.domain.repository.UserRepository
 
@@ -40,7 +39,7 @@ class UserRepositoryImpl(
     override suspend fun updateUser(userId: String, request: Any): DomainResult<Unit> {
         println("updateUser called with userId: $userId, request: $request")
         return try {
-            if (request is UpdateUserRequest) {
+            if (request is com.openparty.app.features.shared.feature_user.domain.model.UpdateUserRequest) {
                 userDataSource.updateUser(userId, request)
                 println("Successfully updated user with userId: $userId")
             } else {
@@ -49,7 +48,7 @@ class UserRepositoryImpl(
             DomainResult.Success(Unit)
         } catch (e: Exception) {
             println("Error updating user with userId: $userId, exception: ${e.message}")
-            DomainResult.Failure(AppError.User.General)
+            DomainResult.Failure(AppError.User.UpdateUserUseCase)
         }
     }
 
@@ -62,6 +61,18 @@ class UserRepositoryImpl(
         } catch (e: Exception) {
             println("Error adding user with userId: $userId, exception: ${e.message}")
             DomainResult.Failure(AppError.User.General)
+        }
+    }
+
+    override suspend fun blockUser(currentUserId: String, blockedUserId: String): DomainResult<Unit> {
+        println("blockUser called with currentUserId: $currentUserId, blockedUserId: $blockedUserId")
+        return try {
+            userDataSource.blockUser(currentUserId, blockedUserId)
+            println("Successfully blocked user: $blockedUserId for user: $currentUserId")
+            DomainResult.Success(Unit)
+        } catch (e: Exception) {
+            println("Error blocking user with currentUserId: $currentUserId, blockedUserId: $blockedUserId, exception: ${e.message}")
+            DomainResult.Failure(AppError.User.BlockUser)
         }
     }
 }

@@ -38,7 +38,8 @@ import com.openparty.app.features.newsfeed.discussions.shared.domain.model.Discu
 fun DiscussionCard(
     discussion: Discussion,
     currentUserId: String,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onBlockUser: (blockedUserId: String) -> Unit
 ) {
     var showBottomSheet by remember { mutableStateOf(false) }
     Card(
@@ -100,7 +101,10 @@ fun DiscussionCard(
                         contentDescription = "Block Account"
                     )
                 },
-                modifier = Modifier.clickable { showBottomSheet = false }
+                modifier = Modifier.clickable {
+                    showBottomSheet = false
+                    onBlockUser(discussion.userId)
+                }
             )
             ListItem(
                 headlineContent = { Text("Hide Content") },

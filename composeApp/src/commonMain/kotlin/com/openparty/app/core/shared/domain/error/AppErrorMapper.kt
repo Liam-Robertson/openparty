@@ -48,6 +48,7 @@ object AppErrorMapper {
             // User
             is AppError.User.General -> "Unknown user error."
             is AppError.User.UpdateUserUseCase -> "Failed to update user. Please try again in a while."
+            is AppError.User.BlockUser -> "Failed to block user. Please try again in a while."
 
             // Register Screen
             is AppError.Register.General -> "Unknown register error."

@@ -8,5 +8,5 @@ import com.openparty.app.features.newsfeed.discussions.feature_add_discussion.pr
 
 val addDiscussionModule = module {
     single { AddDiscussionUseCase(get()) }
-    viewModel { AddDiscussionViewModel(get(), get()) }
+    viewModel { AddDiscussionViewModel(get(), get(), get()) }
 }

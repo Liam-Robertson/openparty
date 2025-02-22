@@ -1,4 +1,4 @@
-// File: composeApp/src/commonMain/kotlin/com/openparty/app/features/shared/feature_user/data/datasource/FirebaseUserDataSource.kt
+//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/shared/feature_user/data/datasource/FirebaseUserDataSource.kt
 package com.openparty.app.features.shared.feature_user.data.datasource
 
 import com.openparty.app.core.shared.domain.GlobalLogger.logger
@@ -97,6 +97,18 @@ class FirebaseUserDataSource(
         } catch (e: Exception) {
             logger.e(e) { "Error adding user: $userId" }
             throw RuntimeException("Failed to add user for userId: $userId", e)
+        }
+    }
+
+    override suspend fun blockUser(userId: String, blockedUserId: String) {
+        logger.d { "Blocking user: $blockedUserId for user: $userId" }
+        try {
+            firestore.collection("users").document(userId)
+                .update("blockedUsers" to FieldValue.arrayUnion(blockedUserId))
+            logger.d { "Successfully blocked user: $blockedUserId for user: $userId" }
+        } catch (e: Exception) {
+            logger.e(e) { "Error blocking user: $blockedUserId for user: $userId" }
+            throw RuntimeException("Failed to block user for userId: $userId", e)
         }
     }
 }
