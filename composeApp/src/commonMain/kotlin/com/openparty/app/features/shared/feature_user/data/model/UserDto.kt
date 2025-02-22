@@ -1,4 +1,4 @@
-// File: composeApp/src/commonMain/kotlin/com/openparty/app/features/shared/feature_user/data/model/UserDto.kt
+//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/shared/feature_user/data/model/UserDto.kt
 package com.openparty.app.features.shared.feature_user.data.model
 
 import kotlinx.serialization.Serializable
@@ -14,7 +14,8 @@ data class UserDto(
     val otherUserInfo: OtherUserInfo? = null,
     val screenName: String? = null,
     val title: String? = null,
-    val isPolicyAccepted: Boolean = false
+    val isPolicyAccepted: Boolean = false,
+    val blockedUsers: List<String> = emptyList()
 )
 
 @Serializable

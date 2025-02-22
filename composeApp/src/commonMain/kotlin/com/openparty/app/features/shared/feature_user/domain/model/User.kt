@@ -8,7 +8,8 @@ data class User(
     val title: String?,
     val manuallyVerified: Boolean,
     val isLocationVerified: Boolean,
-    val isPolicyAccepted: Boolean
+    val isPolicyAccepted: Boolean,
+    val blockedUsers: List<String> // NEW: blockedUsers field
 )
 
 enum class AccountType {

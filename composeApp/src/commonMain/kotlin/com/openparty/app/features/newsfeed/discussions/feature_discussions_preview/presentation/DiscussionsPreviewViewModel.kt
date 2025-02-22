@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
+import androidx.paging.filter  // Import the PagingData filter extension
 import com.openparty.app.core.analytics.domain.usecase.TrackDiscussionSelectedUseCase
 import com.openparty.app.core.shared.domain.DomainResult
 import com.openparty.app.core.shared.domain.error.AppErrorMapper
@@ -13,11 +14,12 @@ import com.openparty.app.core.shared.presentation.UiState
 import com.openparty.app.features.newsfeed.discussions.shared.domain.model.Discussion
 import com.openparty.app.features.newsfeed.discussions.feature_discussions_preview.domain.usecase.GetDiscussionsUseCase
 import com.openparty.app.features.shared.feature_user.domain.usecase.BlockUserUseCase
-import com.openparty.app.features.startup.feature_authentication.domain.usecase.GetCurrentUserIdUseCase
+import com.openparty.app.features.shared.feature_user.domain.usecase.GetUserUseCase
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import com.openparty.app.core.shared.domain.GlobalLogger.logger
 import com.openparty.app.navigation.Screen
@@ -25,8 +27,8 @@ import com.openparty.app.navigation.Screen
 class DiscussionsPreviewViewModel(
     private val getDiscussionsUseCase: GetDiscussionsUseCase,
     private val trackDiscussionSelectedUseCase: TrackDiscussionSelectedUseCase,
-    private val getCurrentUserIdUseCase: GetCurrentUserIdUseCase,
-    private val blockUserUseCase: BlockUserUseCase
+    private val blockUserUseCase: BlockUserUseCase,
+    private val getUserUseCase: GetUserUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(UiState())
@@ -43,21 +45,26 @@ class DiscussionsPreviewViewModel(
     private val _currentUserId = MutableStateFlow<String?>(null)
     val currentUserId: StateFlow<String?> = _currentUserId
 
+    private val _blockedUsers = MutableStateFlow<List<String>>(emptyList())
+    val blockedUsers: StateFlow<List<String>> = _blockedUsers
+
     init {
-        loadCurrentUserId()
+        loadUser()
         loadDiscussions()
     }
 
-    private fun loadCurrentUserId() {
+    private fun loadUser() {
         viewModelScope.launch {
-            when (val result = getCurrentUserIdUseCase()) {
+            when (val result = getUserUseCase()) {
                 is DomainResult.Success -> {
-                    _currentUserId.value = result.data
-                    logger.i { "Fetched current user id: ${result.data}" }
+                    val user = result.data
+                    _currentUserId.value = user.userId
+                    _blockedUsers.value = user.blockedUsers
+                    logger.i { "Loaded user: ${user.userId} with blocked users: ${user.blockedUsers}" }
                 }
                 is DomainResult.Failure -> {
                     val errorMessage = AppErrorMapper.getUserFriendlyMessage(result.error)
-                    logger.e(result.error) { "Error fetching current user id: $errorMessage" }
+                    logger.e(result.error) { "Error loading user: $errorMessage" }
                 }
             }
         }
@@ -68,7 +75,14 @@ class DiscussionsPreviewViewModel(
             _uiState.value = _uiState.value.copy(isLoading = true)
             when (val result = getDiscussionsUseCase()) {
                 is DomainResult.Success -> {
-                    _discussions = result.data.cachedIn(viewModelScope)
+                    _discussions = result.data
+                        .cachedIn(viewModelScope)
+                        .map { pagingData ->
+                            pagingData.filter { discussion ->
+                                !_blockedUsers.value.contains(discussion.userId)
+                            }
+                        }
+                    _uiState.value = _uiState.value.copy(isLoading = false, errorMessage = null)
                 }
                 is DomainResult.Failure -> {
                     val errorMessage = AppErrorMapper.getUserFriendlyMessage(result.error)
@@ -99,7 +113,7 @@ class DiscussionsPreviewViewModel(
             when (val result = blockUserUseCase(currentUser, authorId)) {
                 is DomainResult.Success -> {
                     logger.i { "Successfully blocked user: $authorId" }
-                    // Optionally, you might trigger a refresh of the discussions feed here.
+                    loadUser() // Reload user to update blocked users list
                 }
                 is DomainResult.Failure -> {
                     val errorMessage = AppErrorMapper.getUserFriendlyMessage(result.error)

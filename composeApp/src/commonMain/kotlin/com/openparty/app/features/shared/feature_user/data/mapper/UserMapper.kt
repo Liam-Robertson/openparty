@@ -1,3 +1,4 @@
+//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/shared/feature_user/data/mapper/UserMapper.kt
 package com.openparty.app.features.shared.feature_user.data.mapper
 
 import com.openparty.app.features.shared.feature_user.data.model.UserDto
@@ -18,7 +19,8 @@ object UserMapper {
             manuallyVerified = dto.manuallyVerified,
             isLocationVerified = dto.locationVerified,
             isPolicyAccepted = dto.isPolicyAccepted,
-            userId = dto.userId
+            userId = dto.userId,
+            blockedUsers = dto.blockedUsers
         )
     }
 }
