@@ -17,8 +17,7 @@ val authenticationModule: Module = module {
     }
     single<AuthenticationRepository> {
         AuthenticationRepositoryImpl(
-            authDataSource = get(),
-            secureStorage = get()
+            authDataSource = get()
         )
     }
     single {

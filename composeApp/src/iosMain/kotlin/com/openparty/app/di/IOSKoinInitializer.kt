@@ -1,4 +1,4 @@
-// File: composeApp/src/iosMain/kotlin/com/openparty/app/di/IOSKoinInitializer.kt
+//File: composeApp/src/iosMain/kotlin/com/openparty/app/di/IOSKoinInitializer.kt
 package com.openparty.app.di
 
 import com.openparty.app.core.analytics.di.analyticsModule
@@ -21,14 +21,25 @@ import com.openparty.app.features.startup.verification.feature_location_verifica
 import com.openparty.app.features.utils.feature_hide_posts.di.hidePostsModule
 import com.openparty.app.features.utils.feature_report.di.reportModule
 import com.openparty.app.features.utils.settings.feature_settings.di.settingsModule
+import com.openparty.app.core.storage.clearAllKeychainData
+import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import org.koin.core.context.startKoin
 
 object IOSKoinInitializer {
     fun initializeKoin() {
+        // First, initialize Firebase.
+
+        // Optionally, delay clearing the keychain until after Firebase is fully initialized.
+        MainScope().launch {
+            delay(1000) // delay half a second; adjust as needed
+            clearAllKeychainData()
+        }
+
         startKoin {
             modules(
                 listOf(
-                    iosModule,
                     permissionModule,
                     userModule,
                     loginModule,

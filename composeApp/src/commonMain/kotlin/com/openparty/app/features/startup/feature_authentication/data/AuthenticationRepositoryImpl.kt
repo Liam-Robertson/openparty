@@ -3,7 +3,6 @@ package com.openparty.app.features.startup.feature_authentication.data
 
 import com.openparty.app.core.shared.domain.DomainResult
 import com.openparty.app.core.shared.domain.error.AppError
-import com.openparty.app.core.storage.SecureStorage
 import com.openparty.app.features.startup.feature_authentication.data.datasource.AuthDataSource
 import com.openparty.app.features.startup.feature_authentication.domain.repository.AuthenticationRepository
 import dev.gitlive.firebase.auth.FirebaseUser
@@ -11,8 +10,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
 class AuthenticationRepositoryImpl(
-    private val authDataSource: AuthDataSource,
-    private val secureStorage: SecureStorage
+    private val authDataSource: AuthDataSource
 ) : AuthenticationRepository {
 
     override suspend fun login(email: String, password: String): DomainResult<Unit> {
@@ -23,8 +21,7 @@ class AuthenticationRepositoryImpl(
             val tokenResult = authDataSource.getToken(forceRefresh = true)
             tokenResult.onSuccess { token ->
                 if (token != null) {
-                    secureStorage.saveToken(token)
-                    println("Token saved successfully for userId: ${user.uid}")
+                    println("Token retrieved successfully for userId: ${user.uid}")
                 } else {
                     println("Token is null for userId: ${user.uid}")
                     throw AppError.Authentication.General
@@ -51,8 +48,7 @@ class AuthenticationRepositoryImpl(
             val tokenResult = authDataSource.getToken(forceRefresh = true)
             tokenResult.onSuccess { token ->
                 if (token != null) {
-                    secureStorage.saveToken(token)
-                    println("Token saved successfully for userId: ${user.uid}")
+                    println("Token retrieved successfully for userId: ${user.uid}")
                 } else {
                     println("Token is null for userId: ${user.uid}")
                     throw AppError.Authentication.General
@@ -89,13 +85,12 @@ class AuthenticationRepositoryImpl(
     }
 
     override fun observeAuthState(): Flow<FirebaseUser?> {
-        return authDataSource.authStateFlow()
-            .map { result ->
-                result.getOrElse {
-                    println("Error observing auth state: ${it.message}")
-                    null
-                }
+        return authDataSource.authStateFlow().map { result ->
+            result.getOrElse {
+                println("Error observing auth state: ${it.message}")
+                null
             }
+        }
     }
 
     override suspend fun logout(): DomainResult<Unit> {
@@ -103,8 +98,7 @@ class AuthenticationRepositoryImpl(
         return try {
             val signOutResult = authDataSource.signOut()
             signOutResult.onSuccess {
-                secureStorage.clearToken()
-                println("User logged out and token cleared successfully")
+                println("User logged out successfully")
             }.onFailure { error ->
                 println("Error during sign-out process: ${error.message}")
                 throw AppError.Authentication.General
@@ -140,8 +134,7 @@ class AuthenticationRepositoryImpl(
             tokenResult.fold(
                 onSuccess = { token ->
                     if (token != null) {
-                        secureStorage.saveToken(token)
-                        println("Access token refreshed and saved successfully for userId: ${user.uid}")
+                        println("Access token refreshed successfully for userId: ${user.uid}")
                         DomainResult.Success(token)
                     } else {
                         println("Token is null for userId: ${user.uid}")

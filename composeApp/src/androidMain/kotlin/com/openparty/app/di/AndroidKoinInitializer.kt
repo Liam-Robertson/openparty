@@ -41,7 +41,6 @@ object AndroidKoinInitializer {
     }
 
     private fun androidModules() = listOf(
-        androidModule,
         mainModule
     )
 
