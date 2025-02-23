@@ -26,7 +26,8 @@ import com.openparty.app.features.startup.feature_splash.presentation.SplashScre
 import com.openparty.app.features.startup.verification.feature_email_verification.presentation.EmailVerificationScreen
 import com.openparty.app.features.startup.verification.feature_location_verification.presentation.LocationVerificationScreen
 import com.openparty.app.features.startup.verification.feature_manual_verification.presentation.ManualVerificationScreen
-import com.openparty.app.features.utils.feature_settings.presentation.SettingsScreen
+import com.openparty.app.features.utils.settings.feature_disclaimer.presentation.DisclaimerScreen
+import com.openparty.app.features.utils.settings.feature_settings.presentation.SettingsScreen
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 
@@ -63,7 +64,8 @@ fun AppNavigation() {
             composable(Screen.DiscussionsPreview.route) { DiscussionsPreviewScreen(navController) }
             composable(Screen.CouncilMeetingsPreview.route) { CouncilMeetingsPreviewScreen(navController) }
             composable(Screen.AddDiscussion.route) { AddDiscussionScreen(navController) }
-            composable(Screen.Settings.route) { SettingsScreen() }
+            composable(Screen.Settings.route) { SettingsScreen(navController) }
+            composable("disclaimer") { DisclaimerScreen() }
             composable(
                 route = Screen.DiscussionsArticle("").route,
                 arguments = listOf(navArgument("discussionId") { type = NavType.StringType })

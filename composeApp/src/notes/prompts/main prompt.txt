@@ -345,270 +345,1357 @@ OpenParty/
 
 ---------
 
-//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/shared/feature_user/data/datasource/FirebaseUserDataSource.kt
-package com.openparty.app.features.shared.feature_user.data.datasource
+//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/utils/settings/feature_settings/presentation/SettingsScreen.kt
+package com.openparty.app.features.utils.settings.feature_settings.presentation
 
-import com.openparty.app.core.shared.domain.GlobalLogger.logger
-import com.openparty.app.features.shared.feature_user.data.model.UserDto
-import com.openparty.app.features.shared.feature_user.domain.model.UpdateUserRequest
-import dev.gitlive.firebase.Firebase
-import dev.gitlive.firebase.firestore.FirebaseFirestore
-import dev.gitlive.firebase.firestore.FieldValue
-import dev.gitlive.firebase.firestore.firestore
-import dev.gitlive.firebase.firestore.where
-import org.koin.core.component.KoinComponent
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 
-class FirebaseUserDataSource(
-    private val firestore: FirebaseFirestore = Firebase.firestore
-) : UserDataSource, KoinComponent {
-
-    override suspend fun fetchUser(userId: String): UserDto {
-        logger.d { "Fetching user with userId: $userId" }
-        return try {
-            val snapshot = firestore.collection("users").document(userId).get()
-            val userDto = snapshot.data(UserDto.serializer())
-            if (userDto == null) {
-                logger.e { "User not found or data is null for userId: $userId" }
-                throw IllegalStateException("User data is null or could not be mapped for userId: $userId")
-            }
-            userDto
-        } catch (e: IllegalStateException) {
-            logger.e(e) { "Error while fetching user: $userId" }
-            throw e
-        } catch (e: Exception) {
-            logger.e(e) { "Unexpected error occurred while fetching user: $userId" }
-            throw RuntimeException("Failed to fetch user for userId: $userId", e)
-        }
-    }
-
-    override suspend fun isScreenNameTaken(name: String): Boolean {
-        logger.d { "Checking if screen name is taken: $name" }
-        return try {
-            val snapshot = firestore.collection("users")
-                .where("screenName", "==", name)
-                .get()
-            snapshot.documents.isNotEmpty()
-        } catch (e: Exception) {
-            logger.e(e) { "Error checking if screen name is taken: $name" }
-            throw RuntimeException("Failed to check if screen name is taken: $name", e)
-        }
-    }
-
-    override suspend fun updateUser(userId: String, request: Any) {
-        logger.d { "Updating user with userId: $userId" }
-        try {
-            if (request is UpdateUserRequest) {
-                val updates = mutableMapOf<String, Any>()
-                request.location?.let { updates["location"] = it }
-                request.locationVerified?.let { updates["locationVerified"] = it }
-                request.screenName?.let { updates["screenName"] = it }
-                if (updates.isNotEmpty()) {
-                    firestore.collection("users").document(userId).update(updates)
-                    logger.d { "Successfully updated user document for userId: $userId" }
-                } else {
-                    logger.d { "No document updates to apply for userId: $userId" }
-                }
-                request.locationCoordinates?.let { coordinates ->
-                    val parts = coordinates.split(",")
-                    if (parts.size == 2) {
-                        val lat = parts[0].toDoubleOrNull() ?: 0.0
-                        val lon = parts[1].toDoubleOrNull() ?: 0.0
-                        val historyData = mapOf(
-                            "latitude" to lat,
-                            "longitude" to lon,
-                            "timestamp" to FieldValue.serverTimestamp
-                        )
-                        firestore.collection("users").document(userId)
-                            .collection("locationHistory")
-                            .add(historyData)
-                        logger.d { "Successfully added location history for userId: $userId" }
-                    } else {
-                        logger.e { "Invalid locationCoordinates format for userId: $userId" }
-                    }
-                }
-            } else {
-                logger.e { "Invalid update request type for userId: $userId" }
-                throw IllegalArgumentException("Invalid update request type for userId: $userId")
-            }
-        } catch (e: Exception) {
-            logger.e(e) { "Error updating user: $userId" }
-            throw RuntimeException("Failed to update user for userId: $userId", e)
-        }
-    }
-
-    override suspend fun addUser(userId: String, user: UserDto) {
-        logger.d { "Adding new user with userId: $userId" }
-        try {
-            firestore.collection("users").document(userId).set(user)
-            logger.d { "Successfully added user with userId: $userId" }
-        } catch (e: Exception) {
-            logger.e(e) { "Error adding user: $userId" }
-            throw RuntimeException("Failed to add user for userId: $userId", e)
-        }
-    }
-
-    override suspend fun blockUser(userId: String, blockedUserId: String) {
-        logger.d { "Blocking user: $blockedUserId for user: $userId" }
-        try {
-            firestore.collection("users").document(userId)
-                .update("blockedUsers" to FieldValue.arrayUnion(blockedUserId))
-            logger.d { "Successfully blocked user: $blockedUserId for user: $userId" }
-        } catch (e: Exception) {
-            logger.e(e) { "Error blocking user: $blockedUserId for user: $userId" }
-            throw RuntimeException("Failed to block user for userId: $userId", e)
-        }
-    }
-}
-//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/shared/feature_user/data/datasource/FirebaseUserDataSource.kt
-package com.openparty.app.features.shared.feature_user.data.datasource
-
-import com.openparty.app.core.shared.domain.GlobalLogger.logger
-import com.openparty.app.features.shared.feature_user.data.model.UserDto
-import com.openparty.app.features.shared.feature_user.domain.model.UpdateUserRequest
-import dev.gitlive.firebase.Firebase
-import dev.gitlive.firebase.firestore.FirebaseFirestore
-import dev.gitlive.firebase.firestore.FieldValue
-import dev.gitlive.firebase.firestore.firestore
-import dev.gitlive.firebase.firestore.where
-import org.koin.core.component.KoinComponent
-
-class FirebaseUserDataSource(
-    private val firestore: FirebaseFirestore = Firebase.firestore
-) : UserDataSource, KoinComponent {
-
-    override suspend fun fetchUser(userId: String): UserDto {
-        logger.d { "Fetching user with userId: $userId" }
-        return try {
-            val snapshot = firestore.collection("users").document(userId).get()
-            val userDto = snapshot.data(UserDto.serializer())
-            if (userDto == null) {
-                logger.e { "User not found or data is null for userId: $userId" }
-                throw IllegalStateException("User data is null or could not be mapped for userId: $userId")
-            }
-            userDto
-        } catch (e: IllegalStateException) {
-            logger.e(e) { "Error while fetching user: $userId" }
-            throw e
-        } catch (e: Exception) {
-            logger.e(e) { "Unexpected error occurred while fetching user: $userId" }
-            throw RuntimeException("Failed to fetch user for userId: $userId", e)
-        }
-    }
-
-    override suspend fun isScreenNameTaken(name: String): Boolean {
-        logger.d { "Checking if screen name is taken: $name" }
-        return try {
-            val snapshot = firestore.collection("users")
-                .where("screenName", "==", name)
-                .get()
-            snapshot.documents.isNotEmpty()
-        } catch (e: Exception) {
-            logger.e(e) { "Error checking if screen name is taken: $name" }
-            throw RuntimeException("Failed to check if screen name is taken: $name", e)
-        }
-    }
-
-    override suspend fun updateUser(userId: String, request: Any) {
-        logger.d { "Updating user with userId: $userId" }
-        try {
-            if (request is UpdateUserRequest) {
-                val updates = mutableMapOf<String, Any>()
-                request.location?.let { updates["location"] = it }
-                request.locationVerified?.let { updates["locationVerified"] = it }
-                request.screenName?.let { updates["screenName"] = it }
-                if (updates.isNotEmpty()) {
-                    firestore.collection("users").document(userId).update(updates)
-                    logger.d { "Successfully updated user document for userId: $userId" }
-                } else {
-                    logger.d { "No document updates to apply for userId: $userId" }
-                }
-                request.locationCoordinates?.let { coordinates ->
-                    val parts = coordinates.split(",")
-                    if (parts.size == 2) {
-                        val lat = parts[0].toDoubleOrNull() ?: 0.0
-                        val lon = parts[1].toDoubleOrNull() ?: 0.0
-                        val historyData = mapOf(
-                            "latitude" to lat,
-                            "longitude" to lon,
-                            "timestamp" to FieldValue.serverTimestamp
-                        )
-                        firestore.collection("users").document(userId)
-                            .collection("locationHistory")
-                            .add(historyData)
-                        logger.d { "Successfully added location history for userId: $userId" }
-                    } else {
-                        logger.e { "Invalid locationCoordinates format for userId: $userId" }
-                    }
-                }
-            } else {
-                logger.e { "Invalid update request type for userId: $userId" }
-                throw IllegalArgumentException("Invalid update request type for userId: $userId")
-            }
-        } catch (e: Exception) {
-            logger.e(e) { "Error updating user: $userId" }
-            throw RuntimeException("Failed to update user for userId: $userId", e)
-        }
-    }
-
-    override suspend fun addUser(userId: String, user: UserDto) {
-        logger.d { "Adding new user with userId: $userId" }
-        try {
-            firestore.collection("users").document(userId).set(user)
-            logger.d { "Successfully added user with userId: $userId" }
-        } catch (e: Exception) {
-            logger.e(e) { "Error adding user: $userId" }
-            throw RuntimeException("Failed to add user for userId: $userId", e)
-        }
-    }
-
-    override suspend fun blockUser(userId: String, blockedUserId: String) {
-        logger.d { "Blocking user: $blockedUserId for user: $userId" }
-        try {
-            firestore.collection("users").document(userId)
-                .update("blockedUsers" to FieldValue.arrayUnion(blockedUserId))
-            logger.d { "Successfully blocked user: $blockedUserId for user: $userId" }
-        } catch (e: Exception) {
-            logger.e(e) { "Error blocking user: $blockedUserId for user: $userId" }
-            throw RuntimeException("Failed to block user for userId: $userId", e)
-        }
-    }
-}
-//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/shared/feature_user/data/datasource/UserDataSource.kt
-package com.openparty.app.features.shared.feature_user.data.datasource
-
-import com.openparty.app.features.shared.feature_user.data.model.UserDto
-
-interface UserDataSource {
-    suspend fun fetchUser(userId: String): UserDto
-    suspend fun isScreenNameTaken(name: String): Boolean
-    suspend fun updateUser(userId: String, request: Any)
-    suspend fun addUser(userId: String, user: UserDto)
-    suspend fun blockUser(userId: String, blockedUserId: String)
-}
-//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/shared/feature_user/data/mapper/UserMapper.kt
-package com.openparty.app.features.shared.feature_user.data.mapper
-
-import com.openparty.app.features.shared.feature_user.data.model.UserDto
-import com.openparty.app.features.shared.feature_user.domain.model.AccountType
-import com.openparty.app.features.shared.feature_user.domain.model.User
-
-object UserMapper {
-    fun map(dto: UserDto): User {
-        val accountType = when (dto.accountType) {
-            "admin" -> AccountType.ADMIN
-            "representative" -> AccountType.REPRESENTATIVE
-            else -> AccountType.CONSTITUENT
-        }
-        return User(
-            screenName = dto.screenName.orEmpty(),
-            accountType = accountType,
-            title = dto.title,
-            manuallyVerified = dto.manuallyVerified,
-            isLocationVerified = dto.locationVerified,
-            isPolicyAccepted = dto.isPolicyAccepted,
-            userId = dto.userId,
-            blockedUsers = dto.blockedUsers
+@Composable
+fun SettingsScreen() {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = "Disclaimer\n\n" +
+                    "This app is not affiliated with, endorsed by, or representative of any government entity. " +
+                    "Any government-related content displayed in this app is uploaded by users. " +
+                    "The app is a social media platform that allows user-generated content, and its inclusion of " +
+                    "government-related information is solely from users. " +
+                    "Use of this app does not establish any government affiliation or authorization.",
+            style = MaterialTheme.typography.bodyLarge
         )
+    }
+}
+
+package com.openparty.app.features.startup.account.feature_login.di
+
+import com.openparty.app.features.startup.account.feature_login.domain.usecase.PerformLoginUseCase
+import com.openparty.app.features.startup.account.shared.domain.usecase.ValidateCredentialsUseCase
+import com.openparty.app.features.startup.account.feature_login.presentation.LoginViewModel
+import org.koin.core.module.Module
+import org.koin.dsl.module
+import org.koin.core.module.dsl.viewModel
+
+val loginModule: Module = module {
+    single {
+        ValidateCredentialsUseCase()
+    }
+
+    single {
+        PerformLoginUseCase(
+            validateCredentialsUseCase = get(),
+            signInUseCase = get()
+        )
+    }
+
+    viewModel {
+        LoginViewModel(
+            performLoginUseCase = get(),
+            determineAuthStatesUseCase = get(),
+            authFlowNavigationMapper = get()
+        )
+    }
+}
+
+package com.openparty.app.features.startup.account.feature_login.domain.usecase
+
+import com.openparty.app.core.shared.domain.DomainResult
+import com.openparty.app.features.startup.account.shared.domain.usecase.ValidateCredentialsUseCase
+import com.openparty.app.features.startup.feature_authentication.domain.usecase.SignInUseCase
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
+import kotlinx.coroutines.withContext
+
+class PerformLoginUseCase(
+    private val validateCredentialsUseCase: ValidateCredentialsUseCase,
+    private val signInUseCase: SignInUseCase
+) {
+    suspend operator fun invoke(email: String, password: String): DomainResult<Unit> {
+        println("PerformLoginUseCase invoked with email: $email")
+        return withContext(Dispatchers.IO) {
+            println("Validating credentials")
+            when (val validationResult = validateCredentialsUseCase(email, password)) {
+                is DomainResult.Failure -> {
+                    println("Validation failed: ${validationResult.error}")
+                    return@withContext validationResult
+                }
+                is DomainResult.Success -> {
+                    println("Validation successful for email: $email")
+                }
+            }
+            println("Attempting to sign in")
+            when (val signInResult = signInUseCase(email, password)) {
+                is DomainResult.Success -> {
+                    println("Sign in successful for email: $email")
+                    DomainResult.Success(Unit)
+                }
+                is DomainResult.Failure -> {
+                    println("Sign in failed: ${signInResult.error}")
+                    signInResult
+                }
+            }
+        }
+    }
+}
+package com.openparty.app.features.startup.account.feature_login.presentation
+
+import androidx.compose.runtime.Composable
+import androidx.navigation.NavHostController
+import com.openparty.app.features.startup.account.shared.presentation.AccountScreen
+import org.koin.compose.viewmodel.koinViewModel
+
+@Composable
+fun LoginScreen(
+    navController: NavHostController,
+    viewModel: LoginViewModel = koinViewModel()
+) {
+    AccountScreen(
+        viewModel = viewModel,
+        title = "Login",
+        actionText = "Login",
+        footerText = "Don't have an account? Register",
+        onActionClick = { viewModel.onLoginButtonClick() },
+        onFooterClick = { viewModel.onTextFooterClick() },
+        uiEvent = viewModel.uiEvent,
+        navController = navController
+    )
+}
+package com.openparty.app.features.startup.account.feature_login.presentation
+
+import androidx.lifecycle.viewModelScope
+import com.openparty.app.core.shared.domain.DomainResult
+import com.openparty.app.core.shared.domain.error.AppErrorMapper
+import com.openparty.app.core.shared.presentation.UiEvent
+import com.openparty.app.features.startup.account.feature_login.domain.usecase.PerformLoginUseCase
+import com.openparty.app.features.startup.account.shared.presentation.AccountViewModel
+import com.openparty.app.features.startup.account.shared.presentation.model.AccountUiStateUpdate
+import com.openparty.app.features.startup.feature_authentication.domain.usecase.DetermineAuthStatesUseCase
+import com.openparty.app.features.startup.feature_authentication.presentation.AuthFlowNavigationMapper
+import com.openparty.app.navigation.Screen
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.launch
+
+class LoginViewModel(
+    private val performLoginUseCase: PerformLoginUseCase,
+    private val determineAuthStatesUseCase: DetermineAuthStatesUseCase,
+    private val authFlowNavigationMapper: AuthFlowNavigationMapper
+) : AccountViewModel() {
+    private val _uiEvent = MutableSharedFlow<UiEvent>()
+    val uiEvent: SharedFlow<UiEvent> = _uiEvent
+    fun onLoginButtonClick() {
+        viewModelScope.launch {
+            updateState(AccountUiStateUpdate.UpdateLoading(true))
+            val currentState = accountUiState.value
+            when (val loginResult = performLoginUseCase(currentState.email, currentState.password)) {
+                is DomainResult.Success -> {
+                    when (val authStatesResult = determineAuthStatesUseCase()) {
+                        is DomainResult.Success -> {
+                            val destination = authFlowNavigationMapper.determineDestination(authStatesResult.data)
+                            _uiEvent.emit(UiEvent.Navigate(destination.route))
+                        }
+                        is DomainResult.Failure -> {
+                            val errorMessage = AppErrorMapper.getUserFriendlyMessage(authStatesResult.error)
+                            updateState(AccountUiStateUpdate.UpdateError(errorMessage))
+                        }
+                    }
+                }
+                is DomainResult.Failure -> {
+                    val errorMessage = AppErrorMapper.getUserFriendlyMessage(loginResult.error)
+                    updateState(AccountUiStateUpdate.UpdateError(errorMessage))
+                }
+            }
+            updateState(AccountUiStateUpdate.UpdateLoading(false))
+        }
+    }
+    fun onTextFooterClick() {
+        viewModelScope.launch {
+            _uiEvent.emit(UiEvent.Navigate(Screen.Register.route))
+        }
+    }
+    fun clearError() {
+        updateState(AccountUiStateUpdate.UpdateError(null))
+    }
+}
+package com.openparty.app.features.startup.account.feature_register.di
+
+import com.openparty.app.features.startup.account.feature_register.domain.usecase.PerformRegisterUseCase
+import com.openparty.app.features.startup.account.feature_register.presentation.RegisterViewModel
+import com.openparty.app.features.startup.account.shared.domain.usecase.ValidateCredentialsUseCase
+import org.koin.core.module.dsl.viewModel
+import org.koin.core.module.Module
+import org.koin.dsl.module
+
+val registerModule: Module = module {
+    single { ValidateCredentialsUseCase() }
+    single {
+        PerformRegisterUseCase(
+            validateCredentialsUseCase = get(),
+            registerUseCase = get(),
+            determineAuthStatesUseCase = get()
+        )
+    }
+    viewModel {
+        RegisterViewModel(
+            performRegisterUseCase = get(),
+            determineAuthStatesUseCase = get(),
+            authFlowNavigationMapper = get()
+        )
+    }
+}
+package com.openparty.app.features.startup.account.feature_register.domain.usecase
+
+import com.openparty.app.core.shared.domain.DomainResult
+import com.openparty.app.core.shared.domain.error.AppError
+import com.openparty.app.features.startup.account.shared.domain.usecase.ValidateCredentialsUseCase
+import com.openparty.app.features.startup.feature_authentication.domain.usecase.DetermineAuthStatesUseCase
+import com.openparty.app.features.startup.feature_authentication.domain.usecase.RegisterUseCase
+
+class PerformRegisterUseCase(
+    private val validateCredentialsUseCase: ValidateCredentialsUseCase,
+    private val registerUseCase: RegisterUseCase,
+    private val determineAuthStatesUseCase: DetermineAuthStatesUseCase
+) {
+    suspend operator fun invoke(email: String, password: String): DomainResult<Unit> {
+        return try {
+            println("Starting PerformRegisterUseCase with email: $email")
+            when (val validateResult = validateCredentialsUseCase(email, password)) {
+                is DomainResult.Failure -> {
+                    println("Validation failed: $validateResult")
+                    return validateResult
+                }
+                is DomainResult.Success -> {
+                    println("Validation succeeded")
+                }
+            }
+            when (val registerResult = registerUseCase(email, password)) {
+                is DomainResult.Failure -> {
+                    println("Registration failed: $registerResult")
+                    return registerResult
+                }
+                is DomainResult.Success -> {
+                    println("Registration succeeded")
+                    when (val authStatesResult = determineAuthStatesUseCase()) {
+                        is DomainResult.Failure -> {
+                            println("DetermineAuthStatesUseCase failed: $authStatesResult")
+                            return authStatesResult
+                        }
+                        is DomainResult.Success -> {
+                            println("DetermineAuthStatesUseCase succeeded: ${authStatesResult.data}")
+                        }
+                    }
+                }
+            }
+            println("PerformRegisterUseCase completed successfully")
+            DomainResult.Success(Unit)
+        } catch (e: Exception) {
+            println("Unexpected error in PerformRegisterUseCase: $e")
+            DomainResult.Failure(AppError.Authentication.Register)
+        }
+    }
+}package com.openparty.app.features.startup.account.feature_register.presentation
+
+import androidx.compose.runtime.Composable
+import org.koin.compose.viewmodel.koinViewModel
+import androidx.navigation.NavHostController
+import com.openparty.app.features.startup.account.shared.presentation.AccountScreen
+
+@Composable
+fun RegisterScreen(
+    navController: NavHostController,
+    viewModel: RegisterViewModel = koinViewModel()
+) {
+    AccountScreen(
+        viewModel = viewModel,
+        title = "Create Your Account",
+        actionText = "Register",
+        footerText = "Already have an account? Login",
+        onActionClick = { viewModel.onRegisterButtonClick() },
+        onFooterClick = { viewModel.onTextFooterClick() },
+        uiEvent = viewModel.uiEvent,
+        navController = navController
+    )
+}
+package com.openparty.app.features.startup.account.feature_register.presentation
+
+import androidx.lifecycle.viewModelScope
+import com.openparty.app.core.shared.domain.DomainResult
+import com.openparty.app.core.shared.domain.error.AppErrorMapper
+import com.openparty.app.core.shared.presentation.UiEvent
+import com.openparty.app.features.startup.account.feature_register.domain.usecase.PerformRegisterUseCase
+import com.openparty.app.features.startup.account.shared.presentation.AccountViewModel
+import com.openparty.app.features.startup.account.shared.presentation.model.AccountUiStateUpdate
+import com.openparty.app.features.startup.feature_authentication.domain.usecase.DetermineAuthStatesUseCase
+import com.openparty.app.features.startup.feature_authentication.presentation.AuthFlowNavigationMapper
+import com.openparty.app.navigation.Screen
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.launch
+
+class RegisterViewModel(
+    private val performRegisterUseCase: PerformRegisterUseCase,
+    private val determineAuthStatesUseCase: DetermineAuthStatesUseCase,
+    private val authFlowNavigationMapper: AuthFlowNavigationMapper
+) : AccountViewModel() {
+    private val _uiEvent = MutableSharedFlow<UiEvent>()
+    val uiEvent: SharedFlow<UiEvent> = _uiEvent
+    fun onRegisterButtonClick() {
+        viewModelScope.launch {
+            updateState(AccountUiStateUpdate.UpdateLoading(true))
+            val currentState = accountUiState.value
+            when (val registerResult = performRegisterUseCase(currentState.email, currentState.password)) {
+                is DomainResult.Success -> {
+                    when (val authStatesResult = determineAuthStatesUseCase()) {
+                        is DomainResult.Success -> {
+                            val destination = authFlowNavigationMapper.determineDestination(authStatesResult.data)
+                            _uiEvent.emit(UiEvent.Navigate(destination.route))
+                        }
+                        is DomainResult.Failure -> {
+                            val errorMessage = AppErrorMapper.getUserFriendlyMessage(authStatesResult.error)
+                            updateState(AccountUiStateUpdate.UpdateError(errorMessage))
+                        }
+                    }
+                }
+                is DomainResult.Failure -> {
+                    val errorMessage = AppErrorMapper.getUserFriendlyMessage(registerResult.error)
+                    updateState(AccountUiStateUpdate.UpdateError(errorMessage))
+                }
+            }
+            updateState(AccountUiStateUpdate.UpdateLoading(false))
+        }
+    }
+    fun onTextFooterClick() {
+        viewModelScope.launch {
+            _uiEvent.emit(UiEvent.Navigate(Screen.Login.route))
+        }
+    }
+    fun clearError() {
+        updateState(AccountUiStateUpdate.UpdateError(null))
+    }
+}
+//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/startup/account/shared/domain/usecase/ValidateCredentialsUseCase.kt
+package com.openparty.app.features.startup.account.shared.domain.usecase
+
+import com.openparty.app.core.shared.domain.DomainResult
+import com.openparty.app.core.shared.domain.error.AppError
+import kotlin.text.Regex
+
+class ValidateCredentialsUseCase {
+    operator fun invoke(email: String, password: String): DomainResult<Unit> {
+        println("Validating credentials for email: $email")
+        if (email.isBlank() || password.isBlank()) {
+            println("Validation failed: Email or password is blank")
+            return DomainResult.Failure(AppError.Register.ValidateEmail)
+        }
+        val emailRegex = Regex("^[A-Za-z0-9+_.-]+@(.+)$")
+        if (!emailRegex.matches(email)) {
+            println("Validation failed: Invalid email format - $email")
+            return DomainResult.Failure(AppError.Register.ValidateEmail)
+        }
+        if (password.length < 6) {
+            println("Validation failed: Password length is less than 6 characters")
+            return DomainResult.Failure(AppError.Register.ValidatePassword)
+        }
+        println("Validation succeeded for email: $email")
+        return DomainResult.Success(Unit)
+    }
+}
+//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/startup/account/shared/presentation/components/EmailForm.kt
+package com.openparty.app.features.startup.account.shared.presentation.components
+
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.ImeAction
+
+@Composable
+fun EmailForm(
+    email: String,
+    onEmailChange: (String) -> Unit
+) {
+    OutlinedTextField(
+        value = email,
+        onValueChange = onEmailChange,
+        label = { Text("Email") },
+        modifier = Modifier.fillMaxWidth(),
+        keyboardOptions = KeyboardOptions.Default.copy(
+            imeAction = ImeAction.Next
+        )
+    )
+}
+//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/startup/account/shared/presentation/components/PasswordForm.kt
+package com.openparty.app.features.startup.account.shared.presentation.components
+
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
+
+@Composable
+fun PasswordForm(
+    password: String,
+    onPasswordChange: (String) -> Unit,
+    isPasswordVisible: Boolean,
+    onTogglePasswordVisibility: () -> Unit,
+    onDone: () -> Unit
+) {
+    OutlinedTextField(
+        value = password,
+        onValueChange = onPasswordChange,
+        label = { Text("Password") },
+        modifier = Modifier.fillMaxWidth(),
+        visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+        trailingIcon = {
+            IconButton(onClick = onTogglePasswordVisibility) {
+                Icon(
+                    imageVector = if (isPasswordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                    contentDescription = null
+                )
+            }
+        },
+        keyboardOptions = KeyboardOptions.Default.copy(
+            imeAction = ImeAction.Done
+        )
+    )
+}//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/startup/account/shared/presentation/model/AccountUiState.kt
+package com.openparty.app.features.startup.account.shared.presentation.model
+
+data class AccountUiState(
+    val email: String = "",
+    val password: String = "",
+    val isPasswordVisible: Boolean = false,
+    val error: String? = null,
+    val isLoading: Boolean = false
+)
+
+//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/startup/account/shared/presentation/model/AccountUiStateUpdate.kt
+package com.openparty.app.features.startup.account.shared.presentation.model
+
+sealed class AccountUiStateUpdate {
+    data class UpdateEmail(val email: String) : AccountUiStateUpdate()
+    data class UpdatePassword(val password: String) : AccountUiStateUpdate()
+    object TogglePasswordVisibility : AccountUiStateUpdate()
+    data class UpdateError(val error: String?) : AccountUiStateUpdate()
+    data class UpdateLoading(val isLoading: Boolean) : AccountUiStateUpdate()
+}
+//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/startup/account/shared/presentation/AccountScreen.kt
+package com.openparty.app.features.startup.account.shared.presentation
+
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import androidx.navigation.NavHostController
+import com.openparty.app.core.shared.presentation.ErrorText
+import com.openparty.app.core.shared.presentation.TitleText
+import com.openparty.app.core.shared.presentation.UiEvent
+import com.openparty.app.features.startup.account.shared.presentation.components.EmailForm
+import com.openparty.app.features.startup.account.shared.presentation.components.PasswordForm
+import com.openparty.app.features.startup.account.shared.presentation.model.AccountUiStateUpdate
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.collectLatest
+
+@Composable
+fun AccountScreen(
+    viewModel: AccountViewModel,
+    title: String,
+    actionText: String,
+    footerText: String,
+    onActionClick: () -> Unit,
+    onFooterClick: () -> Unit,
+    uiEvent: SharedFlow<UiEvent>? = null,
+    navController: NavHostController
+) {
+    val state = viewModel.accountUiState.collectAsState().value
+    LaunchedEffect(uiEvent) {
+        uiEvent?.collectLatest { event ->
+            when (event) {
+                is UiEvent.Navigate -> {
+                    navController.navigate(event.destination) {
+                        popUpTo(event.destination) { inclusive = true }
+                    }
+                }
+            }
+        }
+    }
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.background
+    ) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 32.dp, vertical = 16.dp),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                TitleText(text = title)
+                Spacer(modifier = Modifier.height(16.dp))
+                EmailForm(
+                    email = state.email,
+                    onEmailChange = { viewModel.updateState(AccountUiStateUpdate.UpdateEmail(it)) }
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                PasswordForm(
+                    password = state.password,
+                    onPasswordChange = { viewModel.updateState(AccountUiStateUpdate.UpdatePassword(it)) },
+                    isPasswordVisible = state.isPasswordVisible,
+                    onTogglePasswordVisibility = { viewModel.updateState(AccountUiStateUpdate.TogglePasswordVisibility) },
+                    onDone = onActionClick
+                )
+                ErrorText(errorMessage = state.error)
+                Spacer(modifier = Modifier.height(16.dp))
+                Button(
+                    onClick = onActionClick,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(text = actionText)
+                }
+                Text(
+                    text = footerText,
+                    modifier = Modifier.clickable { onFooterClick() }
+                )
+                if (state.isLoading) {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    CircularProgressIndicator()
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+        }
+    }
+}
+//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/startup/account/shared/presentation/AccountViewModel.kt
+package com.openparty.app.features.startup.account.shared.presentation
+
+import androidx.lifecycle.ViewModel
+import com.openparty.app.features.startup.account.shared.presentation.model.AccountUiState
+import com.openparty.app.features.startup.account.shared.presentation.model.AccountUiStateUpdate
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+
+open class AccountViewModel : ViewModel() {
+    private val _accountUiState = MutableStateFlow(AccountUiState())
+    val accountUiState: StateFlow<AccountUiState> = _accountUiState.asStateFlow()
+    fun updateState(update: AccountUiStateUpdate) {
+        _accountUiState.value = when (update) {
+            is AccountUiStateUpdate.UpdateEmail -> _accountUiState.value.copy(email = update.email)
+            is AccountUiStateUpdate.UpdatePassword -> _accountUiState.value.copy(password = update.password)
+            AccountUiStateUpdate.TogglePasswordVisibility -> _accountUiState.value.copy(
+                isPasswordVisible = !_accountUiState.value.isPasswordVisible
+            )
+            is AccountUiStateUpdate.UpdateError -> _accountUiState.value.copy(error = update.error)
+            is AccountUiStateUpdate.UpdateLoading -> _accountUiState.value.copy(isLoading = update.isLoading)
+        }
+    }
+}
+//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/startup/feature_authentication/data/datasource/AuthDataSource.kt
+package com.openparty.app.features.startup.feature_authentication.data.datasource
+
+import dev.gitlive.firebase.auth.FirebaseUser
+import kotlinx.coroutines.flow.Flow
+
+interface AuthDataSource {
+    suspend fun signIn(email: String, password: String): FirebaseUser
+    suspend fun register(email: String, password: String): FirebaseUser
+    suspend fun sendVerificationEmail(user: FirebaseUser)
+    fun authStateFlow(): Flow<Result<FirebaseUser?>>
+    fun currentUser(): FirebaseUser?
+    suspend fun getToken(forceRefresh: Boolean = false): Result<String?>
+    suspend fun signOut(): Result<Unit>
+}
+
+package com.openparty.app.features.startup.feature_authentication.data.datasource
+
+import com.openparty.app.core.shared.domain.error.AppError
+import dev.gitlive.firebase.Firebase
+import dev.gitlive.firebase.auth.FirebaseAuth
+import dev.gitlive.firebase.auth.FirebaseAuthException
+import dev.gitlive.firebase.auth.FirebaseUser
+import dev.gitlive.firebase.auth.auth
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.map
+import kotlin.coroutines.cancellation.CancellationException
+
+class FirebaseAuthDataSource(
+    private val auth: FirebaseAuth = Firebase.auth
+) : AuthDataSource {
+
+    override suspend fun signIn(email: String, password: String): FirebaseUser {
+        return try {
+            val result = auth.signInWithEmailAndPassword(email, password)
+            result.user ?: throw AppError.Authentication.General
+        } catch (e: FirebaseAuthException) {
+            throw Exception("Sign-in failed for email: $email. Please check credentials or try again.", e)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            throw Exception("Sign-in failed for email: $email. Please check credentials or try again.", e)
+        }
+    }
+
+    override suspend fun register(email: String, password: String): FirebaseUser {
+        return try {
+            val result = auth.createUserWithEmailAndPassword(email, password)
+            result.user ?: throw AppError.Authentication.General
+        } catch (e: FirebaseAuthException) {
+            if (e.message?.contains("email already in use") == true) {
+                throw AppError.Authentication.UserAlreadyExists
+            } else {
+                throw Exception("Registration failed for email: $email. Please check input and try again.", e)
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            throw Exception("Registration failed for email: $email. Please check input and try again.", e)
+        }
+    }
+
+    override suspend fun sendVerificationEmail(user: FirebaseUser) {
+        try {
+            auth.currentUser?.sendEmailVerification()
+        } catch (e: FirebaseAuthException) {
+            throw Exception("Failed to send verification email to user: ${user.uid}. Please try again.", e)
+        } catch (e: Exception) {
+            throw Exception("Failed to send verification email to user: ${user.uid}. Please try again.", e)
+        }
+    }
+
+    override fun authStateFlow(): Flow<Result<FirebaseUser?>> {
+        return flow {
+            emit(auth.currentUser)
+            auth.authStateChanged.collect { user ->
+                emit(user)
+            }
+        }.map { user ->
+            Result.success(user)
+        }.catch { e ->
+            emit(Result.failure(e))
+        }
+    }
+
+    override fun currentUser(): FirebaseUser? {
+        return auth.currentUser
+    }
+
+    override suspend fun getToken(forceRefresh: Boolean): Result<String?> {
+        return try {
+            val token = auth.currentUser?.getIdToken(forceRefresh)
+            Result.success(token)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun signOut(): Result<Unit> {
+        return try {
+            auth.signOut() // Call the Firebase sign-out method
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(Exception("Error during sign-out process: ${e.message}", e))
+        }
+    }
+
+}
+//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/startup/feature_authentication/data/AuthenticationRepositoryImpl.kt
+package com.openparty.app.features.startup.feature_authentication.data
+
+import com.openparty.app.core.shared.domain.DomainResult
+import com.openparty.app.core.shared.domain.error.AppError
+import com.openparty.app.core.storage.SecureStorage
+import com.openparty.app.features.startup.feature_authentication.data.datasource.AuthDataSource
+import com.openparty.app.features.startup.feature_authentication.domain.repository.AuthenticationRepository
+import dev.gitlive.firebase.auth.FirebaseUser
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
+
+class AuthenticationRepositoryImpl(
+    private val authDataSource: AuthDataSource,
+    private val secureStorage: SecureStorage
+) : AuthenticationRepository {
+
+    override suspend fun login(email: String, password: String): DomainResult<Unit> {
+        println("Login invoked with email: $email")
+        return try {
+            val user = authDataSource.signIn(email, password)
+            println("Login successful for email: $email, userId: ${user.uid}")
+            val tokenResult = authDataSource.getToken(forceRefresh = true)
+            tokenResult.onSuccess { token ->
+                if (token != null) {
+                    secureStorage.saveToken(token)
+                    println("Token saved successfully for userId: ${user.uid}")
+                } else {
+                    println("Token is null for userId: ${user.uid}")
+                    throw AppError.Authentication.General
+                }
+            }.onFailure { error ->
+                println("Failed to fetch token for userId: ${user.uid}, exception: ${error.message}")
+                throw AppError.Authentication.General
+            }
+            DomainResult.Success(Unit)
+        } catch (e: AppError.Authentication) {
+            println("Login failed for email: $email, exception: ${e.message}")
+            DomainResult.Failure(e)
+        } catch (e: Throwable) {
+            println("Login failed for email: $email, exception: ${e.message}")
+            DomainResult.Failure(AppError.Authentication.General)
+        }
+    }
+
+    override suspend fun register(email: String, password: String): DomainResult<String> {
+        println("Register invoked with email: $email")
+        return try {
+            val user = authDataSource.register(email, password)
+            println("Registration successful for email: $email, userId: ${user.uid}")
+            val tokenResult = authDataSource.getToken(forceRefresh = true)
+            tokenResult.onSuccess { token ->
+                if (token != null) {
+                    secureStorage.saveToken(token)
+                    println("Token saved successfully for userId: ${user.uid}")
+                } else {
+                    println("Token is null for userId: ${user.uid}")
+                    throw AppError.Authentication.General
+                }
+            }.onFailure { error ->
+                println("Failed to fetch token for userId: ${user.uid}, exception: ${error.message}")
+                throw AppError.Authentication.General
+            }
+            DomainResult.Success(user.uid)
+        } catch (e: AppError.Authentication.UserAlreadyExists) {
+            println("Registration failed: User already exists for email: $email")
+            DomainResult.Failure(AppError.Authentication.UserAlreadyExists)
+        } catch (e: Throwable) {
+            println("Registration failed for email: $email, exception: ${e.message}")
+            DomainResult.Failure(AppError.Authentication.General)
+        }
+    }
+
+    override suspend fun sendEmailVerification(): DomainResult<Unit> {
+        println("SendEmailVerification invoked")
+        val currentUser = authDataSource.currentUser()
+        if (currentUser == null) {
+            println("SendEmailVerification failed: No current user found")
+            return DomainResult.Failure(AppError.Authentication.General)
+        }
+        return try {
+            authDataSource.sendVerificationEmail(currentUser)
+            println("Verification email sent successfully to userId: ${currentUser.uid}")
+            DomainResult.Success(Unit)
+        } catch (e: Throwable) {
+            println("Failed to send verification email to userId: ${currentUser.uid}, exception: ${e.message}")
+            DomainResult.Failure(AppError.Authentication.General)
+        }
+    }
+
+    override fun observeAuthState(): Flow<FirebaseUser?> {
+        return authDataSource.authStateFlow()
+            .map { result ->
+                result.getOrElse {
+                    println("Error observing auth state: ${it.message}")
+                    null
+                }
+            }
+    }
+
+    override suspend fun logout(): DomainResult<Unit> {
+        println("Logout invoked")
+        return try {
+            val signOutResult = authDataSource.signOut()
+            signOutResult.onSuccess {
+                secureStorage.clearToken()
+                println("User logged out and token cleared successfully")
+            }.onFailure { error ->
+                println("Error during sign-out process: ${error.message}")
+                throw AppError.Authentication.General
+            }
+            DomainResult.Success(Unit)
+        } catch (e: Throwable) {
+            println("Logout failed, exception: ${e.message}")
+            DomainResult.Failure(AppError.Authentication.General)
+        }
+    }
+
+    override suspend fun getCurrentUser(): FirebaseUser? {
+        println("GetCurrentUser invoked")
+        return try {
+            val user = authDataSource.currentUser()
+            println("Current user fetched: $user")
+            user
+        } catch (e: Throwable) {
+            println("Error fetching current user, exception: ${e.message}")
+            null
+        }
+    }
+
+    override suspend fun refreshAccessToken(): DomainResult<String> {
+        println("RefreshAccessToken invoked")
+        val user = authDataSource.currentUser()
+        if (user == null) {
+            println("RefreshAccessToken failed: No current user found")
+            return DomainResult.Failure(AppError.Authentication.General)
+        }
+        return try {
+            val tokenResult = authDataSource.getToken(forceRefresh = true)
+            tokenResult.fold(
+                onSuccess = { token ->
+                    if (token != null) {
+                        secureStorage.saveToken(token)
+                        println("Access token refreshed and saved successfully for userId: ${user.uid}")
+                        DomainResult.Success(token)
+                    } else {
+                        println("Token is null for userId: ${user.uid}")
+                        DomainResult.Failure(AppError.Authentication.General)
+                    }
+                },
+                onFailure = { error ->
+                    println("Failed to refresh access token for userId: ${user.uid}, exception: ${error.message}")
+                    DomainResult.Failure(AppError.Authentication.General)
+                }
+            )
+        } catch (e: Throwable) {
+            println("Failed to refresh access token for userId: ${user.uid}, exception: ${e.message}")
+            DomainResult.Failure(AppError.Authentication.General)
+        }
+    }
+}
+//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/startup/feature_authentication/di/AuthenticationModule.kt
+package com.openparty.app.features.startup.feature_authentication.di
+
+import com.openparty.app.features.startup.feature_authentication.data.datasource.AuthDataSource
+import com.openparty.app.features.startup.feature_authentication.data.datasource.FirebaseAuthDataSource
+import com.openparty.app.features.startup.feature_authentication.data.AuthenticationRepositoryImpl
+import com.openparty.app.features.startup.feature_authentication.domain.repository.AuthenticationRepository
+import com.openparty.app.features.startup.feature_authentication.domain.usecase.*
+import com.openparty.app.features.startup.feature_authentication.presentation.AuthFlowNavigationMapper
+import com.openparty.app.features.shared.feature_user.domain.usecase.GetUserUseCase
+import org.koin.core.module.Module
+import org.koin.dsl.module
+
+val authenticationModule: Module = module {
+    single<AuthDataSource> {
+        FirebaseAuthDataSource()
+    }
+    single<AuthenticationRepository> {
+        AuthenticationRepositoryImpl(
+            authDataSource = get(),
+            secureStorage = get()
+        )
+    }
+    single {
+        SignInUseCase(authenticationRepository = get())
+    }
+    single {
+        RegisterUseCase(
+            authenticationRepository = get(),
+            userRepository = get()
+        )
+    }
+    single {
+        SendEmailVerificationUseCase(authenticationRepository = get())
+    }
+    single {
+        LogoutUseCase(authenticationRepository = get())
+    }
+    single {
+        RefreshAccessTokenUseCase(authenticationRepository = get())
+    }
+    single {
+        GetUserUseCase(
+            userRepository = get(),
+            getFirebaseUserUseCase = get()
+        )
+    }
+    single {
+        DetermineAuthStatesUseCase(
+            authenticationRepository = get(),
+            getUserUseCase = get()
+        )
+    }
+    single {
+        GetFirebaseUserUseCase(authenticationRepository = get())
+    }
+    single {
+        GetCurrentUserIdUseCase(getFirebaseUserUseCase = get())
+    }
+    single {
+        AuthFlowNavigationMapper()
+    }
+}
+//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/startup/feature_authentication/domain/model/AuthState.kt
+package com.openparty.app.features.startup.feature_authentication.domain.model
+
+sealed class AuthState(val name: String) {
+    object isLoggedIn : AuthState("isLoggedIn")
+    object isEmailVerified : AuthState("isEmailVerified")
+    object isLocationVerified : AuthState("isLocationVerified")
+    object isScreenNameGenerated : AuthState("isScreenNameGenerated")
+    object isPolicyAccepted : AuthState("isPolicyAccepted")
+    object isManuallyVerified : AuthState("isManuallyVerified")
+}
+//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/startup/feature_authentication/domain/repository/AuthenticationRepository.kt
+package com.openparty.app.features.startup.feature_authentication.domain.repository
+
+import com.openparty.app.core.shared.domain.DomainResult
+import dev.gitlive.firebase.auth.FirebaseUser
+import kotlinx.coroutines.flow.Flow
+
+interface AuthenticationRepository {
+    suspend fun login(email: String, password: String): DomainResult<Unit>
+    suspend fun register(email: String, password: String): DomainResult<String>
+    suspend fun sendEmailVerification(): DomainResult<Unit>
+    fun observeAuthState(): Flow<FirebaseUser?>
+    suspend fun logout(): DomainResult<Unit>
+    suspend fun getCurrentUser(): FirebaseUser?
+    suspend fun refreshAccessToken(): DomainResult<String>
+}
+//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/startup/feature_authentication/domain/usecase/DetermineAuthStatesUseCase.kt
+package com.openparty.app.features.startup.feature_authentication.domain.usecase
+
+import dev.gitlive.firebase.auth.FirebaseUser
+import com.openparty.app.core.shared.domain.DomainResult
+import com.openparty.app.core.shared.domain.error.AppError
+import com.openparty.app.features.shared.feature_user.domain.model.User
+import com.openparty.app.features.startup.feature_authentication.domain.model.AuthState
+import com.openparty.app.features.startup.feature_authentication.domain.repository.AuthenticationRepository
+import com.openparty.app.features.shared.feature_user.domain.usecase.GetUserUseCase
+import com.openparty.app.core.shared.domain.GlobalLogger.logger
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.withContext
+
+class DetermineAuthStatesUseCase(
+    private val authenticationRepository: AuthenticationRepository,
+    private val getUserUseCase: GetUserUseCase
+) {
+    suspend operator fun invoke(): DomainResult<List<AuthState>> {
+        return try {
+            withContext(Dispatchers.Default) {
+                logger.d { "Invoking DetermineAuthStatesUseCase" }
+                val firebaseUser = getFirebaseUser() ?: return@withContext DomainResult.Success(emptyList())
+                reloadFirebaseUser(firebaseUser)
+                determineAuthStates(firebaseUser)
+            }
+        } catch (e: Exception) {
+            logger.e { "Unexpected error in DetermineAuthStatesUseCase: ${e.message}" }
+            DomainResult.Failure(AppError.Navigation.DetermineAuthStates)
+        }
+    }
+
+    private suspend fun determineAuthStates(firebaseUser: FirebaseUser): DomainResult<List<AuthState>> {
+        val states = mutableListOf<AuthState>()
+        val domainUser = getUserDetails(firebaseUser.uid)
+            ?: return DomainResult.Failure(AppError.Navigation.DetermineAuthStates)
+        states.add(AuthState.isLoggedIn)
+        if (!firebaseUser.isEmailVerified) {
+            logger.d { "User is logged in but email is not verified." }
+            return DomainResult.Success(states)
+        }
+        states.add(AuthState.isEmailVerified)
+        if (!domainUser.isLocationVerified) {
+            logger.d { "Location not verified." }
+            return DomainResult.Success(states)
+        }
+        states.add(AuthState.isLocationVerified)
+        if (domainUser.screenName.isBlank()) {
+            logger.d { "Screen name not generated." }
+            return DomainResult.Success(states)
+        }
+        states.add(AuthState.isScreenNameGenerated)
+        if (!domainUser.isPolicyAccepted) {
+            logger.d { "Privacy policy not accepted." }
+            return DomainResult.Success(states)
+        }
+        states.add(AuthState.isPolicyAccepted)
+        if (!domainUser.manuallyVerified) {
+            logger.d { "User not manually verified." }
+            return DomainResult.Success(states)
+        }
+        states.add(AuthState.isManuallyVerified)
+        logger.d { "All checks passed. Determined auth states: $states" }
+        return DomainResult.Success(states)
+    }
+
+    private suspend fun getFirebaseUser(): FirebaseUser? {
+        return try {
+            authenticationRepository.observeAuthState().firstOrNull().also {
+                if (it == null) logger.d { "No Firebase user found." }
+            }
+        } catch (e: Exception) {
+            logger.e { "Error observing auth state: ${e.message}" }
+            null
+        }
+    }
+
+    private suspend fun reloadFirebaseUser(firebaseUser: FirebaseUser): Boolean {
+        return try {
+            logger.d { "Reloading Firebase user data" }
+            firebaseUser.reload()
+            true
+        } catch (e: Exception) {
+            logger.e { "Failed to reload Firebase user data: ${e.message}" }
+            false
+        }
+    }
+
+    private suspend fun getUserDetails(userId: String): User? {
+        return try {
+            when (val result = getUserUseCase()) {
+                is DomainResult.Success -> {
+                    logger.d { "User details fetched successfully for userId: $userId" }
+                    result.data
+                }
+                is DomainResult.Failure -> {
+                    logger.e { "Failed to fetch user details for userId: $userId" }
+                    null
+                }
+            }
+        } catch (e: Throwable) {
+            logger.e { "Unexpected error fetching user details for userId: $userId, error: ${e.message}" }
+            null
+        }
+    }
+}//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/startup/feature_authentication/domain/usecase/GetCurrentUserIdUseCase.kt
+package com.openparty.app.features.startup.feature_authentication.domain.usecase
+
+import com.openparty.app.core.shared.domain.DomainResult
+import com.openparty.app.core.shared.domain.error.AppError
+import com.openparty.app.core.shared.domain.GlobalLogger.logger
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+
+class GetCurrentUserIdUseCase(
+    private val getFirebaseUserUseCase: GetFirebaseUserUseCase
+) {
+    suspend operator fun invoke(): DomainResult<String> {
+        return withContext(Dispatchers.Default) {
+            logger.i { "GetCurrentUserIdUseCase invoked" }
+            try {
+                logger.i { "Fetching current user" }
+                when (val userResult = getFirebaseUserUseCase()) {
+                    is DomainResult.Success -> {
+                        logger.i { "User fetched successfully: UID=${userResult.data.uid}" }
+                        DomainResult.Success(userResult.data.uid)
+                    }
+                    is DomainResult.Failure -> {
+                        logger.e { "Failed to fetch user: ${userResult.error}" }
+                        DomainResult.Failure(AppError.Authentication.GetUserId)
+                    }
+                }
+            } catch (e: Throwable) {
+                logger.e(e) { "Unexpected error while fetching user ID: ${e.message}" }
+                DomainResult.Failure(AppError.Authentication.GetUserId)
+            }
+        }
+    }
+}
+//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/startup/feature_authentication/domain/usecase/GetFirebaseUserUseCase.kt
+package com.openparty.app.features.startup.feature_authentication.domain.usecase
+
+import dev.gitlive.firebase.auth.FirebaseUser
+import com.openparty.app.core.shared.domain.DomainResult
+import com.openparty.app.core.shared.domain.error.AppError
+import com.openparty.app.features.startup.feature_authentication.domain.repository.AuthenticationRepository
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+
+class GetFirebaseUserUseCase(
+    private val authenticationRepository: AuthenticationRepository
+) {
+    suspend operator fun invoke(): DomainResult<FirebaseUser> {
+        return withContext(Dispatchers.Default) {
+            println("GetFirebaseUserUseCase invoked")
+            try {
+                println("Fetching current user from authentication repository")
+                val user = authenticationRepository.getCurrentUser()
+                if (user != null) {
+                    println("Current user retrieved successfully: UID=${user.uid}")
+                    DomainResult.Success(user)
+                } else {
+                    println("No current user found; returning failure")
+                    DomainResult.Failure(AppError.Authentication.GetUser)
+                }
+            } catch (e: Throwable) {
+                println("Unexpected error while fetching current user: ${e.message}")
+                DomainResult.Failure(AppError.Authentication.GetUser)
+            }
+        }
+    }
+}
+//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/startup/feature_authentication/domain/usecase/LogoutUseCase.kt
+package com.openparty.app.features.startup.feature_authentication.domain.usecase
+
+import com.openparty.app.core.shared.domain.DomainResult
+import com.openparty.app.core.shared.domain.error.AppError
+import com.openparty.app.features.startup.feature_authentication.domain.repository.AuthenticationRepository
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+
+class LogoutUseCase(
+    private val authenticationRepository: AuthenticationRepository
+) {
+    suspend operator fun invoke(): DomainResult<Unit> {
+        return withContext(Dispatchers.Default) {
+            println("LogoutUseCase invoked")
+            try {
+                println("Attempting to log out user")
+                val result = authenticationRepository.logout()
+                when (result) {
+                    is DomainResult.Success -> {
+                        println("User logged out successfully")
+                        DomainResult.Success(Unit)
+                    }
+                    is DomainResult.Failure -> {
+                        println("Failed to log out user: ${result.error}")
+                        DomainResult.Failure(result.error)
+                    }
+                }
+            } catch (e: Throwable) {
+                println("Unexpected error during logout: ${e.message}")
+                DomainResult.Failure(AppError.Authentication.Logout)
+            }
+        }
+    }
+}
+//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/startup/feature_authentication/domain/usecase/RefreshAccessTokenUseCase.kt
+package com.openparty.app.features.startup.feature_authentication.domain.usecase
+
+import com.openparty.app.core.shared.domain.DomainResult
+import com.openparty.app.core.shared.domain.error.AppError
+import com.openparty.app.features.startup.feature_authentication.domain.repository.AuthenticationRepository
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+
+class RefreshAccessTokenUseCase(
+    private val authenticationRepository: AuthenticationRepository
+) {
+    suspend operator fun invoke(): DomainResult<String> {
+        return withContext(Dispatchers.Default) {
+            println("RefreshAccessTokenUseCase invoked")
+            try {
+                println("Attempting to refresh access token")
+                when (val result = authenticationRepository.refreshAccessToken()) {
+                    is DomainResult.Success -> {
+                        println("Access token refreshed successfully: ${result.data}")
+                        result
+                    }
+                    is DomainResult.Failure -> {
+                        println("Failed to refresh access token: ${result.error}")
+                        DomainResult.Failure(result.error)
+                    }
+                }
+            } catch (e: Throwable) {
+                println("Unexpected error during access token refresh: ${e.message}")
+                DomainResult.Failure(AppError.Authentication.RefreshToken)
+            }
+        }
+    }
+}
+//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/startup/feature_authentication/domain/usecase/RegisterUseCase.kt
+package com.openparty.app.features.startup.feature_authentication.domain.usecase
+
+import com.openparty.app.core.shared.domain.DomainResult
+import com.openparty.app.core.shared.domain.error.AppError
+import com.openparty.app.features.shared.feature_user.data.model.OtherUserInfo
+import com.openparty.app.features.shared.feature_user.data.model.UserDto
+import com.openparty.app.features.shared.feature_user.domain.repository.UserRepository
+import com.openparty.app.features.startup.feature_authentication.domain.repository.AuthenticationRepository
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+
+class RegisterUseCase(
+    private val authenticationRepository: AuthenticationRepository,
+    private val userRepository: UserRepository
+) {
+    suspend operator fun invoke(email: String, password: String): DomainResult<Unit> {
+        return withContext(Dispatchers.Default) {
+            println("Registering user with email: $email")
+            try {
+                when (val registerResult = authenticationRepository.register(email, password)) {
+                    is DomainResult.Success -> {
+                        println("User successfully registered in AuthenticationRepository")
+                        val userId = registerResult.data
+                        val user = UserDto(
+                            userId = userId,
+                            accountType = "Constituent",
+                            manuallyVerified = false,
+                            governmentName = null,
+                            location = null,
+                            locationVerified = false,
+                            otherUserInfo = OtherUserInfo(
+                                email = email,
+                                phoneNumber = null,
+                                profilePictureUrl = null
+                            ),
+                            screenName = null,
+                            title = null
+                        )
+                        println("Creating UserDto with userId: $userId")
+                        when (val addResult = userRepository.addUser(userId, user)) {
+                            is DomainResult.Success -> {
+                                println("User successfully added in UserRepository with userId: $userId")
+                                DomainResult.Success(Unit)
+                            }
+                            is DomainResult.Failure -> {
+                                println("Failed to add user in UserRepository with userId: $userId")
+                                DomainResult.Failure(AppError.Authentication.Register)
+                            }
+                        }
+                    }
+                    is DomainResult.Failure -> {
+                        if (registerResult.error == AppError.Authentication.UserAlreadyExists) {
+                            println("Failed to register user: User already exists for email: $email")
+                            DomainResult.Failure(AppError.Authentication.UserAlreadyExists)
+                        } else {
+                            println("Failed to register user in AuthenticationRepository")
+                            DomainResult.Failure(AppError.Authentication.Register)
+                        }
+                    }
+                }
+            } catch (e: Throwable) {
+                println("An exception occurred while registering the user with email: $email, error: ${e.message}")
+                DomainResult.Failure(AppError.Authentication.Register)
+            }
+        }
+    }
+}
+//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/startup/feature_authentication/domain/usecase/SendEmailVerificationUseCase.kt
+package com.openparty.app.features.startup.feature_authentication.domain.usecase
+
+import com.openparty.app.core.shared.domain.DomainResult
+import com.openparty.app.core.shared.domain.error.AppError
+import com.openparty.app.features.startup.feature_authentication.domain.repository.AuthenticationRepository
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+
+class SendEmailVerificationUseCase(
+    private val authenticationRepository: AuthenticationRepository
+) {
+    suspend operator fun invoke(): DomainResult<Unit> {
+        return withContext(Dispatchers.Default) {
+            try {
+                println("SendEmailVerificationUseCase invoked")
+                when (val result = authenticationRepository.sendEmailVerification()) {
+                    is DomainResult.Success -> result
+                    is DomainResult.Failure -> DomainResult.Failure(result.error)
+                }
+            } catch (e: Throwable) {
+                println("An error occurred while sending email verification: ${e.message}")
+                DomainResult.Failure(AppError.Authentication.EmailVerification)
+            }
+        }
+    }
+}
+//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/startup/feature_authentication/domain/usecase/SignInUseCase.kt
+package com.openparty.app.features.startup.feature_authentication.domain.usecase
+
+import com.openparty.app.core.shared.domain.DomainResult
+import com.openparty.app.core.shared.domain.error.AppError
+import com.openparty.app.features.startup.feature_authentication.domain.repository.AuthenticationRepository
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+
+class SignInUseCase(
+    private val authenticationRepository: AuthenticationRepository
+) {
+    suspend operator fun invoke(email: String, password: String): DomainResult<Unit> {
+        return withContext(Dispatchers.Default) {
+            try {
+                println("SignInUseCase invoked with email: $email")
+                when (val result = authenticationRepository.login(email, password)) {
+                    is DomainResult.Success -> result
+                    is DomainResult.Failure -> DomainResult.Failure(result.error)
+                }
+            } catch (e: Throwable) {
+                println("An exception occurred during sign-in: ${e.message}")
+                DomainResult.Failure(AppError.Authentication.SignIn)
+            }
+        }
+    }
+}
+//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/startup/feature_authentication/presentation/AuthFlowNavigationMapper.kt
+package com.openparty.app.features.startup.feature_authentication.presentation
+
+import com.openparty.app.features.startup.feature_authentication.domain.model.AuthState
+import com.openparty.app.navigation.Screen
+
+class AuthFlowNavigationMapper {
+
+    fun determineDestination(states: List<AuthState>): Screen {
+        println("Determining navigation destination based on auth states: $states")
+
+        return when {
+            !states.contains(AuthState.isLoggedIn) -> {
+                println("User is not logged in; navigating to Login")
+                Screen.Login
+            }
+            !states.contains(AuthState.isEmailVerified) -> {
+                println("User email is not verified; navigating to EmailVerification")
+                Screen.EmailVerification
+            }
+            !states.contains(AuthState.isLocationVerified) -> {
+                println("User location is not verified; navigating to LocationVerification")
+                Screen.LocationVerification
+            }
+            !states.contains(AuthState.isScreenNameGenerated) -> {
+                println("User screen name is not generated; navigating to ScreenNameGeneration")
+                Screen.ScreenNameGeneration
+            }
+            !states.contains(AuthState.isPolicyAccepted) -> {
+                println("Policy is not accepted; navigating to PolicyScreen")
+                Screen.Policy
+            }
+            !states.contains(AuthState.isManuallyVerified) -> {
+                println("User is not manually verified; navigating to ManualVerification")
+                Screen.ManualVerification
+            }
+            else -> {
+                println("All auth states satisfied; navigating to DiscussionsPreview")
+                Screen.DiscussionsPreview
+            }
+        }
     }
 }
 //File: composeApp/src/commonMain/kotlin/com/openparty/app/features/shared/feature_user/data/model/UserDto.kt
@@ -628,7 +1715,8 @@ data class UserDto(
     val screenName: String? = null,
     val title: String? = null,
     val isPolicyAccepted: Boolean = false,
-    val blockedUsers: List<String> = emptyList()
+    val blockedUsers: List<String> = emptyList(),
+    val hiddenDiscussions: List<String> = emptyList()
 )
 
 @Serializable
@@ -714,67 +1802,19 @@ class UserRepositoryImpl(
             DomainResult.Failure(AppError.User.BlockUser)
         }
     }
-}
-//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/shared/feature_user/di/userModule.kt
-package com.openparty.app.features.shared.feature_user.di
 
-import com.openparty.app.features.shared.feature_user.data.datasource.FirebaseUserDataSource
-import com.openparty.app.features.shared.feature_user.data.datasource.UserDataSource
-import com.openparty.app.features.shared.feature_user.data.repository.UserRepositoryImpl
-import com.openparty.app.features.shared.feature_user.domain.repository.UserRepository
-import com.openparty.app.features.shared.feature_user.domain.usecase.GetUserUseCase
-import com.openparty.app.features.shared.feature_user.domain.usecase.UpdateUserUseCase
-import com.openparty.app.features.shared.feature_user.domain.usecase.BlockUserUseCase
-import dev.gitlive.firebase.Firebase
-import dev.gitlive.firebase.firestore.firestore
-import org.koin.core.module.Module
-import org.koin.dsl.module
-
-val userModule: Module = module {
-    single {
-        Firebase.firestore
-    }
-
-    single<UserDataSource> {
-        FirebaseUserDataSource(
-            firestore = get()
-        )
-    }
-
-    single<UserRepository> {
-        UserRepositoryImpl(
-            userDataSource = get()
-        )
-    }
-
-    single {
-        GetUserUseCase(
-            userRepository = get(),
-            getFirebaseUserUseCase = get()
-        )
-    }
-
-    single {
-        UpdateUserUseCase(
-            userRepository = get()
-        )
-    }
-
-    single {
-        BlockUserUseCase(
-            userRepository = get()
-        )
+    override suspend fun hideDiscussion(userId: String, discussionId: String): DomainResult<Unit> {
+        println("hideDiscussion called with userId: $userId, discussionId: $discussionId")
+        return try {
+            userDataSource.hideDiscussion(userId, discussionId)
+            println("Successfully hid discussion with discussionId: $discussionId for user: $userId")
+            DomainResult.Success(Unit)
+        } catch (e: Exception) {
+            println("Error hiding discussion with userId: $userId, discussionId: $discussionId, exception: ${e.message}")
+            DomainResult.Failure(AppError.User.HideDiscussion)
+        }
     }
 }
-//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/shared/feature_user/domain/model/UpdateUserRequest.kt
-package com.openparty.app.features.shared.feature_user.domain.model
-
-data class UpdateUserRequest(
-    val location: String? = null,
-    val locationVerified: Boolean? = null,
-    val screenName: String? = null,
-    val locationCoordinates: String? = null
-)
 //File: composeApp/src/commonMain/kotlin/com/openparty/app/features/shared/feature_user/domain/model/User.kt
 package com.openparty.app.features.shared.feature_user.domain.model
 
@@ -786,7 +1826,8 @@ data class User(
     val manuallyVerified: Boolean,
     val isLocationVerified: Boolean,
     val isPolicyAccepted: Boolean,
-    val blockedUsers: List<String> // NEW: blockedUsers field
+    val blockedUsers: List<String>,
+    val hiddenDiscussions: List<String>
 )
 
 enum class AccountType {
@@ -794,6 +1835,15 @@ enum class AccountType {
     CONSTITUENT,
     REPRESENTATIVE
 }
+//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/shared/feature_user/domain/model/UpdateUserRequest.kt
+package com.openparty.app.features.shared.feature_user.domain.model
+
+data class UpdateUserRequest(
+    val location: String? = null,
+    val locationVerified: Boolean? = null,
+    val screenName: String? = null,
+    val locationCoordinates: String? = null
+)
 //File: composeApp/src/commonMain/kotlin/com/openparty/app/features/shared/feature_user/domain/repository/UserRepository.kt
 package com.openparty.app.features.shared.feature_user.domain.repository
 
@@ -807,6 +1857,7 @@ interface UserRepository {
     suspend fun updateUser(userId: String, request: Any): DomainResult<Unit>
     suspend fun addUser(userId: String, user: UserDto): DomainResult<Unit>
     suspend fun blockUser(currentUserId: String, blockedUserId: String): DomainResult<Unit>
+    suspend fun hideDiscussion(userId: String, discussionId: String): DomainResult<Unit>
 }
 //File: composeApp/src/commonMain/kotlin/com/openparty/app/features/shared/feature_user/domain/usecase/BlockUserUseCase.kt
 package com.openparty.app.features.shared.feature_user.domain.usecase
@@ -871,6 +1922,7 @@ class GetUserUseCase(
         }
     }
 }
+
 //File: composeApp/src/commonMain/kotlin/com/openparty/app/features/shared/feature_user/domain/usecase/UpdateUserUseCase.kt
 package com.openparty.app.features.shared.feature_user.domain.usecase
 
@@ -903,993 +1955,6 @@ class UpdateUserUseCase(
 }
 
 
-//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/newsfeed/discussions/feature_add_discussion/di/AddDiscussionModule.kt
-package com.openparty.app.features.newsfeed.discussions.feature_add_discussion.di
-
-import org.koin.dsl.module
-import org.koin.core.module.dsl.viewModel
-import com.openparty.app.features.newsfeed.discussions.feature_add_discussion.domain.usecase.AddDiscussionUseCase
-import com.openparty.app.features.newsfeed.discussions.feature_add_discussion.presentation.AddDiscussionViewModel
-
-val addDiscussionModule = module {
-    single { AddDiscussionUseCase(get()) }
-    viewModel { AddDiscussionViewModel(get(), get(), get()) }
-}
-//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/newsfeed/discussions/feature_add_discussion/domain/usecase/AddDiscussionUseCase.kt
-package com.openparty.app.features.newsfeed.discussions.feature_add_discussion.domain.usecase
-
-import com.openparty.app.core.shared.domain.DomainResult
-import com.openparty.app.core.shared.domain.error.AppError
-import com.openparty.app.features.newsfeed.discussions.shared.domain.repository.DiscussionRepository
-import com.openparty.app.features.newsfeed.discussions.shared.domain.model.Discussion
-import com.openparty.app.core.shared.domain.GlobalLogger.logger
-
-class AddDiscussionUseCase(
-    private val discussionRepository: DiscussionRepository
-) {
-    suspend operator fun invoke(discussion: Discussion): DomainResult<Discussion> {
-        logger.i { "AddDiscussionUseCase invoked with discussion: ${discussion.title}" }
-        val discussionWithReportCount = discussion.copy(reportCount = 0)
-        return try {
-            when (val result = discussionRepository.addDiscussion(discussionWithReportCount)) {
-                is DomainResult.Success -> {
-                    logger.i { "Successfully added discussion: ${discussion.title}" }
-                    DomainResult.Success(result.data)
-                }
-                is DomainResult.Failure -> {
-                    logger.e { "Failed to add discussion: ${discussion.title}, Error: ${result.error}" }
-                    DomainResult.Failure(result.error)
-                }
-            }
-        } catch (e: Exception) {
-            logger.e(e) { "Unexpected error while adding discussion: ${discussion.title}" }
-            DomainResult.Failure(AppError.Discussion.AddDiscussion)
-        }
-    }
-}
-//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/newsfeed/discussions/feature_add_discussion/presentation/components/AddDiscussionUiState.kt
-package com.openparty.app.features.newsfeed.discussions.feature_add_discussion.presentation.components
-
-import androidx.compose.ui.text.input.TextFieldValue
-
-data class AddDiscussionUiState(
-    val title: TextFieldValue = TextFieldValue(""),
-    val contentText: TextFieldValue = TextFieldValue(""),
-    val errorMessage: String = "",
-    val isLoading: Boolean = false
-)
-//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/newsfeed/discussions/feature_add_discussion/presentation/AddDiscussionButton.kt
-package com.openparty.app.features.newsfeed.discussions.feature_add_discussion.presentation
-
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.Icon
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material3.MaterialTheme
-
-@Composable
-fun AddDiscussionButton(
-    onClick: () -> Unit
-) {
-    Box(
-        modifier = Modifier
-            .fillMaxSize(),
-        contentAlignment = Alignment.BottomCenter
-    ) {
-        FloatingActionButton(
-            onClick = onClick,
-            shape = CircleShape,
-            containerColor = MaterialTheme.colorScheme.primary,
-            modifier = Modifier
-                .padding(bottom = 32.dp)
-                .size(90.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Default.Add,
-                contentDescription = "Create Discussion",
-                modifier = Modifier.size(45.dp)
-            )
-        }
-    }
-}
-//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/newsfeed/discussions/feature_add_discussion/presentation/AddDiscussionScreen.kt
-package com.openparty.app.features.newsfeed.discussions.feature_add_discussion.presentation
-
-import androidx.compose.foundation.layout.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
-import org.koin.compose.viewmodel.koinViewModel
-import androidx.navigation.NavController
-import com.openparty.app.core.shared.presentation.BodyTextInput
-import com.openparty.app.core.shared.presentation.ErrorText
-import com.openparty.app.core.shared.presentation.UiEvent
-import kotlinx.coroutines.flow.collectLatest
-import com.openparty.app.core.shared.presentation.TopContainer
-
-@Composable
-fun AddDiscussionScreen(
-    navController: NavController,
-    viewModel: AddDiscussionViewModel = koinViewModel()
-) {
-    val uiState by viewModel.uiState.collectAsState()
-
-    LaunchedEffect(viewModel.uiEvent) {
-        viewModel.uiEvent.collectLatest { event ->
-            when (event) {
-                is UiEvent.Navigate -> {
-                    if (event.destination == "back") {
-                        navController.popBackStack()
-                    } else {
-                        navController.navigate(event.destination)
-                    }
-                }
-            }
-        }
-    }
-
-    ErrorText(uiState.errorMessage)
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
-    ) {
-        TopContainer(
-            headerText = "Add Discussion",
-            onBackClicked = { viewModel.onBackClicked() },
-            onPostClicked = { viewModel.onPostClicked() }
-        )
-
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        BodyTextInput(
-            textFieldValue = uiState.title,
-            onTextChange = { viewModel.onTitleTextChanged(it) },
-            placeholderText = "Title..."
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        BodyTextInput(
-            textFieldValue = uiState.contentText,
-            onTextChange = { viewModel.onContentTextChanged(it) },
-            placeholderText = "Main Text..."
-        )
-    }
-}
-//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/newsfeed/discussions/feature_add_discussion/presentation/AddDiscussionViewModel.kt
-package com.openparty.app.features.newsfeed.discussions.feature_add_discussion.presentation
-
-import androidx.compose.ui.text.input.TextFieldValue
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
-import dev.gitlive.firebase.firestore.Timestamp
-import com.openparty.app.core.analytics.domain.usecase.TrackDiscussionPostedUseCase
-import com.openparty.app.core.shared.domain.DomainResult
-import com.openparty.app.core.shared.domain.error.AppErrorMapper
-import com.openparty.app.core.shared.presentation.UiEvent
-import com.openparty.app.features.newsfeed.discussions.feature_add_discussion.domain.usecase.AddDiscussionUseCase
-import com.openparty.app.features.newsfeed.discussions.feature_add_discussion.presentation.components.AddDiscussionUiState
-import com.openparty.app.features.newsfeed.discussions.shared.domain.model.Discussion
-import com.openparty.app.features.startup.feature_authentication.domain.usecase.GetCurrentUserIdUseCase
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharedFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.launch
-import com.openparty.app.core.shared.domain.GlobalLogger.logger
-import com.openparty.app.navigation.Screen
-
-class AddDiscussionViewModel(
-    private val addDiscussionUseCase: AddDiscussionUseCase,
-    private val trackDiscussionPostedUseCase: TrackDiscussionPostedUseCase,
-    private val getCurrentUserIdUseCase: GetCurrentUserIdUseCase
-) : ViewModel() {
-
-    private val _uiState = MutableStateFlow(AddDiscussionUiState())
-    val uiState: StateFlow<AddDiscussionUiState> = _uiState
-
-    private val _uiEvent = MutableSharedFlow<UiEvent>()
-    val uiEvent: SharedFlow<UiEvent> = _uiEvent
-
-    private val _currentUserId = MutableStateFlow<String?>(null)
-
-    init {
-        loadCurrentUserId()
-    }
-
-    private fun loadCurrentUserId() {
-        viewModelScope.launch {
-            when (val result = getCurrentUserIdUseCase()) {
-                is DomainResult.Success -> {
-                    _currentUserId.value = result.data
-                    logger.i { "Fetched current user id: ${result.data}" }
-                }
-                is DomainResult.Failure -> {
-                    val errorMessage = AppErrorMapper.getUserFriendlyMessage(result.error)
-                    logger.e(result.error) { "Error fetching current user id: $errorMessage" }
-                }
-            }
-        }
-    }
-
-    fun onTitleTextChanged(newText: TextFieldValue) {
-        updateUiState(title = newText)
-    }
-
-    fun onContentTextChanged(newText: TextFieldValue) {
-        updateUiState(contentText = newText)
-    }
-
-    fun onBackClicked() {
-        emitUiEvent(UiEvent.Navigate("back"))
-    }
-
-    fun onPostClicked() {
-        val currentState = _uiState.value
-        if (isInputValid(currentState)) {
-            val discussion = createDiscussionFromState(currentState)
-            postDiscussion(discussion)
-        } else {
-            updateUiState(errorMessage = "Title and content cannot be empty")
-        }
-    }
-
-    private fun createDiscussionFromState(state: AddDiscussionUiState): Discussion {
-        return Discussion(
-            discussionId = "",
-            userId = _currentUserId.value ?: "",
-            title = state.title.text,
-            contentText = state.contentText.text,
-            timestamp = Timestamp.now(),
-            upvoteCount = 0,
-            downvoteCount = 0,
-            commentCount = 0
-        )
-    }
-
-    private fun postDiscussion(discussion: Discussion) {
-        viewModelScope.launch {
-            updateUiState(isLoading = true)
-            when (val result = addDiscussionUseCase(discussion)) {
-                is DomainResult.Success -> {
-                    val addedDiscussion = result.data
-                    val discussionId = addedDiscussion.discussionId
-                    val title = addedDiscussion.title
-                    trackDiscussionPosted(discussionId, title)
-                    emitUiEvent(UiEvent.Navigate(Screen.DiscussionsPreview.route))
-                    resetUiState()
-                }
-                is DomainResult.Failure -> {
-                    val errorMessage = AppErrorMapper.getUserFriendlyMessage(result.error)
-                    updateUiState(isLoading = false, errorMessage = errorMessage)
-                }
-            }
-        }
-    }
-
-    private suspend fun trackDiscussionPosted(discussionId: String, title: String) {
-        when (val result = trackDiscussionPostedUseCase(discussionId, title)) {
-            is DomainResult.Success -> logger.i { "Discussion posted event tracked: $discussionId" }
-            is DomainResult.Failure -> logger.e { "Failed to track discussion posted event for ID: $discussionId" }
-        }
-    }
-
-    private fun updateUiState(
-        title: TextFieldValue? = null,
-        contentText: TextFieldValue? = null,
-        isLoading: Boolean? = null,
-        errorMessage: String? = null
-    ) {
-        val currentState = _uiState.value
-        _uiState.value = currentState.copy(
-            title = title ?: currentState.title,
-            contentText = contentText ?: currentState.contentText,
-            isLoading = isLoading ?: currentState.isLoading,
-            errorMessage = errorMessage ?: currentState.errorMessage
-        )
-    }
-
-    private fun resetUiState() {
-        _uiState.value = AddDiscussionUiState()
-    }
-
-    private fun emitUiEvent(event: UiEvent) {
-        viewModelScope.launch {
-            _uiEvent.emit(event)
-        }
-    }
-
-    private fun isInputValid(state: AddDiscussionUiState): Boolean {
-        return state.title.text.isNotBlank() && state.contentText.text.isNotBlank()
-    }
-}
-//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/newsfeed/discussions/feature_discussions_preview/di/DiscussionsKoinModule.kt
-package com.openparty.app.features.newsfeed.discussions.feature_discussions_preview.di
-
-import com.openparty.app.features.newsfeed.discussions.shared.domain.repository.DiscussionRepository
-import com.openparty.app.features.newsfeed.discussions.shared.data.repository.DiscussionRepositoryImpl
-import com.openparty.app.features.newsfeed.discussions.feature_discussions_preview.domain.usecase.GetDiscussionsUseCase
-import com.openparty.app.features.newsfeed.discussions.feature_discussions_preview.presentation.DiscussionsPreviewViewModel
-import dev.gitlive.firebase.Firebase
-import dev.gitlive.firebase.firestore.firestore
-import org.koin.core.module.dsl.viewModel
-import org.koin.dsl.module
-
-val discussionsKoinModule = module {
-    single<DiscussionRepository> { DiscussionRepositoryImpl(get()) }
-    single { Firebase.firestore }
-    single { GetDiscussionsUseCase(get()) }
-    viewModel { DiscussionsPreviewViewModel(get(), get(), get(), get()) }
-}
-//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/newsfeed/discussions/feature_discussions_preview/domain/usecase/GetDiscussionsUseCase.kt
-package com.openparty.app.features.newsfeed.discussions.feature_discussions_preview.domain.usecase
-
-import androidx.paging.PagingData
-import com.openparty.app.core.shared.domain.DomainResult
-import com.openparty.app.core.shared.domain.error.AppError
-import com.openparty.app.features.newsfeed.discussions.shared.domain.model.Discussion
-import com.openparty.app.features.newsfeed.discussions.shared.domain.repository.DiscussionRepository
-import kotlinx.coroutines.flow.Flow
-import com.openparty.app.core.shared.domain.GlobalLogger.logger
-
-class GetDiscussionsUseCase(
-    private val repository: DiscussionRepository
-) {
-    operator fun invoke(): DomainResult<Flow<PagingData<Discussion>>> {
-        logger.i { "GetDiscussionsUseCase invoked" }
-        return try {
-            logger.i { "Fetching discussions from repository" }
-            val discussionsFlow = repository.getDiscussions()
-            logger.i { "Successfully fetched discussions flow" }
-            DomainResult.Success(discussionsFlow)
-        } catch (e: Exception) {
-            logger.e(e) { "Error occurred while fetching discussions" }
-            DomainResult.Failure(AppError.Discussion.FetchDiscussions)
-        }
-    }
-}
-//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/newsfeed/discussions/feature_discussions_preview/presentation/DiscussionCard.kt
-package com.openparty.app.features.newsfeed.discussions.feature_discussions_preview.presentation
-
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Card
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.ListItem
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Block
-import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material.icons.filled.Flag
-import com.openparty.app.features.engagement.engagement_bars.feature_preview_enagement_footer.presentation.EngagementFooter
-import com.openparty.app.features.engagement.engagement_bars.feature_preview_enagement_footer.domain.model.EngagementFooterState
-import com.openparty.app.features.newsfeed.discussions.shared.domain.model.Discussion
-import com.openparty.app.features.utils.feature_report.presentation.ReportMenu
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun DiscussionCard(
-    discussion: Discussion,
-    currentUserId: String,
-    onClick: () -> Unit,
-    onBlockUser: (blockedUserId: String) -> Unit
-) {
-    var showBottomSheet by remember { mutableStateOf(false) }
-    var showReportMenu by remember { mutableStateOf(false) }
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(8.dp)
-    ) {
-        Box(modifier = Modifier.fillMaxSize()) {
-            Column(
-                modifier = Modifier
-                    .clickable { onClick() }
-                    .padding(16.dp)
-            ) {
-                Text(
-                    text = discussion.title,
-                    style = MaterialTheme.typography.titleLarge,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = discussion.contentText,
-                    style = MaterialTheme.typography.bodyMedium,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                EngagementFooter(
-                    currentUserId = currentUserId,
-                    discussionId = discussion.discussionId,
-                    initialState = EngagementFooterState(
-                        upvoteCount = discussion.upvoteCount,
-                        downvoteCount = discussion.downvoteCount,
-                        commentCount = discussion.commentCount,
-                        userVote = null
-                    )
-                )
-            }
-            IconButton(
-                onClick = { showBottomSheet = true },
-                modifier = Modifier.align(Alignment.TopEnd)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.MoreVert,
-                    contentDescription = "Settings"
-                )
-            }
-        }
-    }
-    if (showBottomSheet) {
-        ModalBottomSheet(
-            onDismissRequest = { showBottomSheet = false }
-        ) {
-            ListItem(
-                headlineContent = { Text("Block Account") },
-                leadingContent = {
-                    Icon(
-                        imageVector = Icons.Default.Block,
-                        contentDescription = "Block Account"
-                    )
-                },
-                modifier = Modifier.clickable {
-                    showBottomSheet = false
-                    onBlockUser(discussion.userId)
-                }
-            )
-            ListItem(
-                headlineContent = { Text("Hide Content") },
-                leadingContent = {
-                    Icon(
-                        imageVector = Icons.Default.VisibilityOff,
-                        contentDescription = "Hide Content"
-                    )
-                },
-                modifier = Modifier.clickable {
-                    showBottomSheet = false
-                }
-            )
-            ListItem(
-                headlineContent = { Text("Report") },
-                leadingContent = {
-                    Icon(
-                        imageVector = Icons.Default.Flag,
-                        contentDescription = "Report"
-                    )
-                },
-                modifier = Modifier.clickable {
-                    showBottomSheet = false
-                    showReportMenu = true
-                }
-            )
-        }
-    }
-    if (showReportMenu) {
-        ReportMenu(
-            discussionId = discussion.discussionId,
-            reporterUserId = currentUserId,
-            onDismiss = { showReportMenu = false }
-        )
-    }
-}
-//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/newsfeed/discussions/feature_discussions_preview/presentation/DiscussionsPreviewScreen.kt
-package com.openparty.app.features.newsfeed.discussions.feature_discussions_preview.presentation
-
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.ui.Modifier
-import org.koin.compose.viewmodel.koinViewModel
-import androidx.navigation.NavHostController
-import app.cash.paging.compose.collectAsLazyPagingItems
-import com.openparty.app.core.shared.presentation.ErrorText
-import com.openparty.app.core.shared.presentation.UiEvent
-import com.openparty.app.features.newsfeed.discussions.feature_add_discussion.presentation.AddDiscussionButton
-import com.openparty.app.features.newsfeed.shared.presentation.BaseFeedScreen
-import com.openparty.app.navigation.NavigationFooter
-import com.openparty.app.navigation.Screen
-import com.openparty.app.features.newsfeed.discussions.shared.domain.model.Discussion
-import kotlinx.coroutines.flow.collectLatest
-
-@Composable
-fun DiscussionsPreviewScreen(
-    navController: NavHostController,
-    viewModel: DiscussionsPreviewViewModel = koinViewModel()
-) {
-    val lazyDiscussions = viewModel.discussions.collectAsLazyPagingItems()
-    val uiEvent = viewModel.uiEvent
-    val uiState by viewModel.uiState.collectAsState()
-    val currentUserId by viewModel.currentUserId.collectAsState()
-
-    LaunchedEffect(uiEvent) {
-        uiEvent.collectLatest { event ->
-            when (event) {
-                is UiEvent.Navigate -> {
-                    navController.navigate(event.destination)
-                }
-            }
-        }
-    }
-
-    Box(modifier = Modifier.fillMaxSize()) {
-        Column(modifier = Modifier.fillMaxSize()) {
-            Box(modifier = Modifier.weight(1f)) {
-                if (currentUserId != null) {
-                    BaseFeedScreen<Discussion>(
-                        items = lazyDiscussions,
-                        emptyPlaceholder = "No discussions yet..."
-                    ) { discussion ->
-                        if (discussion != null) {
-                            DiscussionCard(
-                                discussion = discussion,
-                                currentUserId = currentUserId!!,
-                                onClick = { viewModel.onDiscussionSelected(discussion.discussionId) },
-                                onBlockUser = { blockedUserId ->
-                                    viewModel.onBlockUser(blockedUserId)
-                                }
-                            )
-                        }
-                    }
-                    AddDiscussionButton {
-                        navController.navigate(Screen.AddDiscussion.route)
-                    }
-                } else {
-                    // Optionally, display a loading indicator or placeholder until user ID is available.
-                }
-            }
-            ErrorText(errorMessage = uiState.errorMessage)
-        }
-    }
-}
-//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/newsfeed/discussions/feature_discussions_preview/presentation/DiscussionsPreviewViewModel.kt
-package com.openparty.app.features.newsfeed.discussions.feature_discussions_preview.presentation
-
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
-import androidx.paging.PagingData
-import androidx.paging.cachedIn
-import androidx.paging.filter
-import com.openparty.app.core.analytics.domain.usecase.TrackDiscussionSelectedUseCase
-import com.openparty.app.core.shared.domain.DomainResult
-import com.openparty.app.core.shared.domain.error.AppErrorMapper
-import com.openparty.app.core.shared.presentation.UiEvent
-import com.openparty.app.core.shared.presentation.UiState
-import com.openparty.app.features.newsfeed.discussions.shared.domain.model.Discussion
-import com.openparty.app.features.newsfeed.discussions.feature_discussions_preview.domain.usecase.GetDiscussionsUseCase
-import com.openparty.app.features.shared.feature_user.domain.usecase.BlockUserUseCase
-import com.openparty.app.features.shared.feature_user.domain.usecase.GetUserUseCase
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharedFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.launch
-import com.openparty.app.core.shared.domain.GlobalLogger.logger
-import com.openparty.app.navigation.Screen
-
-class DiscussionsPreviewViewModel(
-    private val getDiscussionsUseCase: GetDiscussionsUseCase,
-    private val trackDiscussionSelectedUseCase: TrackDiscussionSelectedUseCase,
-    private val blockUserUseCase: BlockUserUseCase,
-    private val getUserUseCase: GetUserUseCase
-) : ViewModel() {
-
-    private val _uiState = MutableStateFlow(UiState())
-    val uiState: StateFlow<UiState> = _uiState
-
-    private val _uiEvent = MutableSharedFlow<UiEvent>()
-    val uiEvent: SharedFlow<UiEvent> = _uiEvent
-
-    private val _currentUserId = MutableStateFlow<String?>(null)
-    val currentUserId: StateFlow<String?> = _currentUserId
-
-    private val _blockedUsers = MutableStateFlow<List<String>>(emptyList())
-    val blockedUsers: StateFlow<List<String>> = _blockedUsers
-
-    private val _rawDiscussions = MutableStateFlow<PagingData<Discussion>>(PagingData.empty())
-    val discussions = combine(_rawDiscussions, _blockedUsers) { pagingData, blockedUsers ->
-        pagingData.filter { discussion ->
-            !blockedUsers.contains(discussion.userId)
-        }
-    }
-
-    init {
-        loadUser()
-        loadDiscussions()
-    }
-
-    private fun loadUser() {
-        viewModelScope.launch {
-            when (val result = getUserUseCase()) {
-                is DomainResult.Success -> {
-                    val user = result.data
-                    _currentUserId.value = user.userId
-                    _blockedUsers.value = user.blockedUsers
-                    logger.i { "Loaded user: ${user.userId} with blocked users: ${user.blockedUsers}" }
-                }
-                is DomainResult.Failure -> {
-                    val errorMessage = AppErrorMapper.getUserFriendlyMessage(result.error)
-                    logger.e(result.error) { "Error loading user: $errorMessage" }
-                }
-            }
-        }
-    }
-
-    private fun loadDiscussions() {
-        viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true)
-            when (val result = getDiscussionsUseCase()) {
-                is DomainResult.Success -> {
-                    result.data.cachedIn(viewModelScope).collect { pagingData ->
-                        _rawDiscussions.value = pagingData
-                    }
-                    _uiState.value = _uiState.value.copy(isLoading = false, errorMessage = null)
-                }
-                is DomainResult.Failure -> {
-                    val errorMessage = AppErrorMapper.getUserFriendlyMessage(result.error)
-                    logger.e(result.error) { "Error loading discussions" }
-                    _uiState.value = _uiState.value.copy(isLoading = false, errorMessage = errorMessage)
-                }
-            }
-        }
-    }
-
-    fun onDiscussionSelected(discussionId: String) {
-        viewModelScope.launch {
-            when (val result = trackDiscussionSelectedUseCase(discussionId)) {
-                is DomainResult.Success -> logger.i { "Discussion selected event tracked: $discussionId" }
-                is DomainResult.Failure -> logger.e { "Failed to track discussion selected event for ID: $discussionId" }
-            }
-            _uiEvent.emit(UiEvent.Navigate(Screen.DiscussionsArticle.createRoute(discussionId)))
-        }
-    }
-
-    fun onBlockUser(authorId: String) {
-        viewModelScope.launch {
-            val currentUser = _currentUserId.value
-            if (currentUser == null) {
-                logger.e { "Current user ID is null, cannot block user" }
-                return@launch
-            }
-            when (val result = blockUserUseCase(currentUser, authorId)) {
-                is DomainResult.Success -> {
-                    logger.i { "Successfully blocked user: $authorId" }
-                    loadUser()
-                }
-                is DomainResult.Failure -> {
-                    val errorMessage = AppErrorMapper.getUserFriendlyMessage(result.error)
-                    logger.e(result.error) { "Failed to block user: $authorId" }
-                    _uiState.value = _uiState.value.copy(errorMessage = errorMessage)
-                }
-            }
-        }
-    }
-}
-// File: composeApp/src/commonMain/kotlin/com/openparty/app/features/newsfeed/discussions/shared/data/repository/DiscussionRepositoryImpl.kt
-package com.openparty.app.features.newsfeed.discussions.shared.data.repository
-
-import androidx.paging.PagingData
-import com.openparty.app.core.shared.domain.DomainResult
-import com.openparty.app.core.shared.domain.error.AppError
-import com.openparty.app.features.newsfeed.discussions.shared.domain.repository.DiscussionRepository
-import com.openparty.app.features.newsfeed.discussions.shared.domain.model.Discussion
-import com.openparty.app.features.newsfeed.shared.data.datasource.FirebaseNewsfeedDataSource
-import com.openparty.app.features.newsfeed.shared.data.repository.FirestoreRepository
-import kotlinx.coroutines.flow.Flow
-import com.openparty.app.core.shared.domain.GlobalLogger.logger
-import dev.gitlive.firebase.firestore.FirebaseFirestore
-import kotlin.random.Random
-import kotlinx.serialization.serializer
-
-class DiscussionRepositoryImpl(
-    private val firestore: FirebaseFirestore
-) : FirestoreRepository<Discussion>(
-    dataSource = FirebaseNewsfeedDataSource(
-        firestore = firestore,
-        collectionName = "discussions",
-        orderByField = "upvoteCount",
-        transform = { documentSnapshot ->
-            try {
-                logger.i { "Transforming document snapshot to Discussion object: ${documentSnapshot.id}" }
-                val decoded: Discussion? = try {
-                    documentSnapshot.data(Discussion.serializer())
-                } catch (e: Exception) {
-                    null
-                }
-                decoded?.copy(discussionId = documentSnapshot.id)
-            } catch (e: Exception) {
-                logger.e(e) { "Error transforming document snapshot to Discussion object: ${documentSnapshot.id}" }
-                null
-            }
-        }
-    ),
-    error = AppError.Discussion.General
-), DiscussionRepository {
-
-    override fun getDiscussions(): Flow<PagingData<Discussion>> {
-        logger.i { "Fetching discussions from DiscussionRepositoryImpl" }
-        return getPagedItems()
-    }
-
-    override suspend fun getDiscussionById(discussionId: String): DomainResult<Discussion> {
-        logger.i { "Fetching discussion by ID: $discussionId from DiscussionRepositoryImpl" }
-        return getItemById(discussionId)
-    }
-
-    override suspend fun addDiscussion(discussion: Discussion): DomainResult<Discussion> {
-        logger.i { "addDiscussion invoked for discussion: ${discussion.title}" }
-        return try {
-            val generatedId = Random.nextLong().toString()
-            val document = firestore.collection("discussions").document(generatedId)
-            logger.i { "Generated new document ID: ${document.id} for discussion: ${discussion.title}" }
-            val discussionWithId = discussion.copy(discussionId = document.id)
-            document.set(discussionWithId)
-            logger.i { "Successfully added discussion with ID: ${discussionWithId.discussionId}" }
-            DomainResult.Success(discussionWithId)
-        } catch (e: Exception) {
-            logger.e(e) { "Error adding discussion: ${discussion.title}" }
-            DomainResult.Failure(AppError.Discussion.General)
-        }
-    }
-}
-//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/newsfeed/discussions/shared/domain/model/Discussion.kt
-package com.openparty.app.features.newsfeed.discussions.shared.domain.model
-
-import dev.gitlive.firebase.firestore.Timestamp
-import kotlinx.serialization.Serializable
-
-@Serializable
-data class Discussion(
-    val discussionId: String = "",
-    val userId: String = "",
-    val title: String = "",
-    val contentText: String = "",
-    val timestamp: Timestamp? = null,
-    val commentCount: Int = 0,
-    val upvoteCount: Int = 0,
-    val downvoteCount: Int = 0,
-    val reportCount: Int = 0
-)
-//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/newsfeed/discussions/shared/data/domain/repository/DiscussionRepository.kt
-package com.openparty.app.features.newsfeed.discussions.shared.domain.repository
-
-import androidx.paging.PagingData
-import com.openparty.app.core.shared.domain.DomainResult
-import com.openparty.app.features.newsfeed.discussions.shared.domain.model.Discussion
-import kotlinx.coroutines.flow.Flow
-
-interface DiscussionRepository {
-    fun getDiscussions(): Flow<PagingData<Discussion>>
-    suspend fun getDiscussionById(discussionId: String): DomainResult<Discussion>
-    suspend fun addDiscussion(discussion: Discussion): DomainResult<Discussion>
-}
-//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/newsfeed/shared/data/datasource/FirebaseNewsfeedDataSource.kt
-package com.openparty.app.features.newsfeed.shared.data.datasource
-
-import dev.gitlive.firebase.firestore.DocumentSnapshot
-import dev.gitlive.firebase.firestore.FirebaseFirestore
-import dev.gitlive.firebase.firestore.Query
-import dev.gitlive.firebase.firestore.Direction
-import com.openparty.app.core.shared.domain.GlobalLogger.logger
-
-class FirebaseNewsfeedDataSource<T : Any>(
-    private val firestore: FirebaseFirestore,
-    val collectionName: String,
-    private val orderByField: String,
-    val transform: (DocumentSnapshot) -> T?
-) {
-    fun getQuery(startAfter: DocumentSnapshot?, loadSize: Int): Query {
-        val queryDescription = buildString {
-            appendLine("Constructing Firestore query:")
-            appendLine("  Collection: $collectionName")
-            appendLine("  OrderBy: $orderByField (DESC)")
-            appendLine("  Limit: $loadSize")
-            if (startAfter != null) {
-                appendLine("  StartAfter doc ID: ${startAfter.id}")
-            }
-        }
-        logger.d { "getQuery() -> $queryDescription" }
-        return try {
-            val baseQuery = firestore.collection(collectionName)
-                .orderBy(orderByField, Direction.DESCENDING)
-                .limit(loadSize.toLong())
-            if (startAfter != null) {
-                baseQuery.startAfter(startAfter)
-            } else {
-                baseQuery
-            }
-        } catch (e: Exception) {
-            logger.e(e) { "Error creating query for collection: $collectionName" }
-            throw Exception("Failed to create query for collection: $collectionName. Please try again.", e)
-        }
-    }
-
-    suspend fun getItemById(itemId: String): T? {
-        logger.d { "Fetching item by ID: $itemId from collection: $collectionName" }
-        return try {
-            val snapshot = firestore.collection(collectionName)
-                .document(itemId)
-                .get()
-            logger.d { "Item fetched successfully for ID: $itemId in collection: $collectionName" }
-            transform(snapshot)
-        } catch (e: Exception) {
-            logger.e(e) { "Error fetching item by ID: $itemId from collection: $collectionName" }
-            null
-        }
-    }
-}
-// File: composeApp/src/commonMain/kotlin/com/openparty/app/features/newsfeed/shared/data/datasource/FirestorePagingSource.kt
-package com.openparty.app.features.newsfeed.shared.data.datasource
-
-import app.cash.paging.PagingSource
-import app.cash.paging.PagingState
-import dev.gitlive.firebase.firestore.DocumentSnapshot
-import com.openparty.app.core.shared.domain.GlobalLogger.logger
-
-class FirestorePagingSource<T : Any>(
-    private val dataSource: FirebaseNewsfeedDataSource<T>
-) : PagingSource<DocumentSnapshot, T>() {
-
-    override suspend fun load(params: LoadParams<DocumentSnapshot>): LoadResult<DocumentSnapshot, T> {
-        val collection = dataSource.collectionName
-        val startAfterId = params.key?.id
-        logger.d { "Loading data from FirestorePagingSource for $collection with loadSize: ${params.loadSize} and startAfter: $startAfterId" }
-        return try {
-            val query = dataSource.getQuery(params.key, params.loadSize)
-            val snapshot = query.get()
-            val items = snapshot.documents.mapNotNull { dataSource.transform(it) }
-            val nextKey = snapshot.documents.lastOrNull()
-            if (items.isEmpty()) {
-                logger.w { "No items loaded for $collection (startAfter = $startAfterId). Possibly an empty collection or no more data." }
-            } else {
-                logger.d { "Successfully loaded ${items.size} items from $collection, next key: ${nextKey?.id}" }
-            }
-            LoadResult.Page(
-                data = items,
-                prevKey = null,
-                nextKey = nextKey
-            )
-        } catch (e: Exception) {
-            logger.e(e) { "Error loading data in FirestorePagingSource for $collection" }
-            LoadResult.Error(e)
-        }
-    }
-
-    override fun getRefreshKey(state: PagingState<DocumentSnapshot, T>): DocumentSnapshot? {
-        logger.d { "Getting refresh key in FirestorePagingSource for ${dataSource.collectionName}" }
-        return null
-    }
-}
-// File: composeApp/src/commonMain/kotlin/com/openparty/app/features/newsfeed/shared/data/repository/FirestoreRepository.kt
-package com.openparty.app.features.newsfeed.shared.data.repository
-
-import app.cash.paging.Pager
-import app.cash.paging.PagingConfig
-import app.cash.paging.PagingData
-import com.openparty.app.core.shared.domain.DomainResult
-import com.openparty.app.core.shared.domain.error.AppError
-import com.openparty.app.features.newsfeed.shared.data.datasource.FirestorePagingSource
-import kotlinx.coroutines.flow.Flow
-import com.openparty.app.core.shared.domain.GlobalLogger.logger
-import com.openparty.app.features.newsfeed.shared.data.datasource.FirebaseNewsfeedDataSource
-
-abstract class FirestoreRepository<T : Any>(
-    private val dataSource: FirebaseNewsfeedDataSource<T>,
-    private val error: AppError
-) {
-    fun getPagedItems(): Flow<PagingData<T>> {
-        logger.d { "Fetching paged items from FirestoreRepository for ${dataSource.collectionName}" }
-        return Pager(
-            config = PagingConfig(
-                pageSize = 10,
-                enablePlaceholders = false
-            ),
-            pagingSourceFactory = {
-                logger.d { "Creating FirestorePagingSource for ${dataSource.collectionName}" }
-                FirestorePagingSource(dataSource)
-            }
-        ).flow
-    }
-
-    suspend fun getItemById(itemId: String): DomainResult<T> {
-        logger.d { "Fetching item by ID: $itemId in FirestoreRepository for ${dataSource.collectionName}" }
-        return try {
-            val item = dataSource.getItemById(itemId)
-            if (item != null) {
-                logger.d { "Item found for ID: $itemId in ${dataSource.collectionName}" }
-                DomainResult.Success(item)
-            } else {
-                logger.w { "Item not found for ID: $itemId in ${dataSource.collectionName}" }
-                DomainResult.Failure(error)
-            }
-        } catch (e: Exception) {
-            logger.e(e) { "Error fetching item by ID: $itemId in ${dataSource.collectionName}" }
-            DomainResult.Failure(error)
-        }
-    }
-}
-// File: composeApp/src/commonMain/kotlin/com/openparty/app/features/newsfeed/shared/presentation/BaseFeedScreen.kt
-package com.openparty.app.features.newsfeed.shared.presentation
-
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import app.cash.paging.compose.LazyPagingItems
-
-@Composable
-fun <T : Any> BaseFeedScreen(
-    items: LazyPagingItems<T>,
-    emptyPlaceholder: String,
-    content: @Composable (item: T?) -> Unit
-) {
-    if (items.itemCount == 0) {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(text = emptyPlaceholder)
-        }
-    } else {
-        LazyColumn {
-            items(
-                count = items.itemCount,
-                key = { index -> items[index]?.hashCode() ?: index }
-            ) { index ->
-                val item = items[index]
-                content(item)
-            }
-        }
-    }
-}
-
-
-
 ---------
 
 Notes: 
@@ -1911,50 +1976,22 @@ Notes:
 
 ---------
 
-i've given you my feature discussions preview code above 
+I want to add functionality to the above code
 
-in my discussiosn card, there is a menu that has the options "Block User", "Report", "Hide Content"
+The settings screen right now is just a box with text in it as a disclaimer. I want to change this 
 
-The "Hide Content" functionality isn't implented yet, I want you to write it for me 
+Instead I want the settings screen to have these two features: 
+- A list of cards, each card representing a setting that the user can change 
+    - Each card should have an icon repreesenting the setting and text saying what the setting is 
+    - e.g. for "Disclaimer" it would be an icon representing the disclaimer, then text saying "Disclaimer" 
+- A logout button pinned to the bottom of the screen 
+    - Don't create the functionality for the logout button right now, just leave it as a placeholder
+    - I'll ask you to make this functionality later
 
-I talked to another AI about this and it gave me this advice: 
-For “Hide Content,” a common pattern is to maintain a per-user list of hidden discussion IDs. When a user clicks “Hide Content” on a discussion card, your client-side code sends the discussion ID to your backend, which then stores it (e.g., in a table or user profile data structure) as “hidden” for that user. Later, when fetching the news feed, your API will filter out any posts whose IDs appear in that user’s hidden list.
-
-There are two main approaches:
-
-1. **Server-Side Filtering:**  
-   - Store a “hiddenPosts” list (or table with userID + postID pairs) for each user.  
-   - When querying for the feed, include a clause (or join) to exclude posts in that list.  
-   - This ensures that the news feed you serve to the user already omits hidden content.
-
-2. **Client-Side Filtering:**  
-   - Alternatively, you could mark posts as “hidden” in the client’s store when the user chooses to hide them.  
-   - But ideally, you want to do the filtering on the server so that counts and pagination remain consistent.
-
-For performance and consistency, the server-side filtering is preferable. Every time a report or “hide” request is made, you simply add that post ID to the user’s hidden list (using an atomic insert or update). When building the feed (with pagination, for example), your SQL query or feed-generation logic excludes posts whose IDs are in the hidden list for that user.
-
-This pattern allows the hidden list to be efficiently maintained and ensures that even if the user refreshes the feed, hidden posts remain excluded without having to re-filter on the client.
-
-Would you like a deeper dive into the server-side implementation or how to handle synchronization with pagination?
-
----------------
-
-I want to do server side filtering, which means that for each user, you are going to have to have a field called hiddenDiscussions which has a list of discussion ids 
-
-When the discussionspreviewviewmodel class is loaded, it calls the user object on init. From here, you can get the hiddenDiscussions list since it is part of the user object 
-
-Then you can pass that into your loadDiscussions method, and use the hiddenDiscussions list to make sure you exclude any discussions that should be hidden 
-
-However, when i click "Hide Content" on a post, i also want that post to disappear from the newsfeed instantly, i don't want to have to wait for the page to be reopened for it to disappear 
-
-I talked to an AI about how to do this and this was the advice it gave: 
-
-You can achieve an instant “hide” by using an optimistic update on the client. When the user clicks “Hide Content,” immediately remove that post from the current list in your client-side state (for example, by filtering it out from your Redux store or component state). Simultaneously, fire off an asynchronous API call to record that the post is hidden for that user (adding its ID to their hidden posts list on the backend). This way, the user sees the post disappear immediately, while the backend gets updated in parallel. If the API call fails, you can then notify the user or re-add the post as needed.
-
-----------------
-
-This seems sensible to me. Store a list of hiddenDiscussions in the user firebase object, and use this for filtering the discussions on the server side when you load the discussions 
-
-However also combine this a client side state change that instantly hides the discussion from the user when the user clicks "Hide Content" 
-
-Put all of this code (or at least as much as is appropriate) in a feature of it's own. Call it feature_hide_posts and put it here - //File: composeApp/src/commonMain/kotlin/com/openparty/app/features/utils/feature_hide_posts
+- For right now, there will only be one card in the list of settings cards (I'll add more later) 
+- The only card right now will be for "Disclaimer"
+- The Disclaimer setting, when clicked, takes the user to the Disclaimer screen 
+- The disclaimer screen just shows the user text that has the disclaimer 
+- Right now, this text is already being shown to the user in the Settings Screen, so just take the text from the settings screen, and move it to the disclaimer screen 
+- make the disclaimer screen its own feature - feature_disclaimer
+- Put it here - //File: composeApp/src/commonMain/kotlin/com/openparty/app/features/utils/settings/feature_disclaimer/presentation
