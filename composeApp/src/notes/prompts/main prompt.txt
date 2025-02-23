@@ -344,592 +344,122 @@ OpenParty/
     └── iosApp.xcodeproj/
 
 ---------
+//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/utils/settings/feature_disclaimer/presentation/DisclaimerScreen.kt
+package com.openparty.app.features.utils.settings.feature_disclaimer.presentation
 
-//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/utils/settings/feature_settings/presentation/SettingsScreen.kt
-package com.openparty.app.features.utils.settings.feature_settings.presentation
-
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen() {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = "Disclaimer\n\n" +
-                    "This app is not affiliated with, endorsed by, or representative of any government entity. " +
-                    "Any government-related content displayed in this app is uploaded by users. " +
-                    "The app is a social media platform that allows user-generated content, and its inclusion of " +
-                    "government-related information is solely from users. " +
-                    "Use of this app does not establish any government affiliation or authorization.",
-            style = MaterialTheme.typography.bodyLarge
-        )
-    }
-}
-
-package com.openparty.app.features.startup.account.feature_login.di
-
-import com.openparty.app.features.startup.account.feature_login.domain.usecase.PerformLoginUseCase
-import com.openparty.app.features.startup.account.shared.domain.usecase.ValidateCredentialsUseCase
-import com.openparty.app.features.startup.account.feature_login.presentation.LoginViewModel
-import org.koin.core.module.Module
-import org.koin.dsl.module
-import org.koin.core.module.dsl.viewModel
-
-val loginModule: Module = module {
-    single {
-        ValidateCredentialsUseCase()
-    }
-
-    single {
-        PerformLoginUseCase(
-            validateCredentialsUseCase = get(),
-            signInUseCase = get()
-        )
-    }
-
-    viewModel {
-        LoginViewModel(
-            performLoginUseCase = get(),
-            determineAuthStatesUseCase = get(),
-            authFlowNavigationMapper = get()
-        )
-    }
-}
-
-package com.openparty.app.features.startup.account.feature_login.domain.usecase
-
-import com.openparty.app.core.shared.domain.DomainResult
-import com.openparty.app.features.startup.account.shared.domain.usecase.ValidateCredentialsUseCase
-import com.openparty.app.features.startup.feature_authentication.domain.usecase.SignInUseCase
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.IO
-import kotlinx.coroutines.withContext
-
-class PerformLoginUseCase(
-    private val validateCredentialsUseCase: ValidateCredentialsUseCase,
-    private val signInUseCase: SignInUseCase
-) {
-    suspend operator fun invoke(email: String, password: String): DomainResult<Unit> {
-        println("PerformLoginUseCase invoked with email: $email")
-        return withContext(Dispatchers.IO) {
-            println("Validating credentials")
-            when (val validationResult = validateCredentialsUseCase(email, password)) {
-                is DomainResult.Failure -> {
-                    println("Validation failed: ${validationResult.error}")
-                    return@withContext validationResult
-                }
-                is DomainResult.Success -> {
-                    println("Validation successful for email: $email")
-                }
-            }
-            println("Attempting to sign in")
-            when (val signInResult = signInUseCase(email, password)) {
-                is DomainResult.Success -> {
-                    println("Sign in successful for email: $email")
-                    DomainResult.Success(Unit)
-                }
-                is DomainResult.Failure -> {
-                    println("Sign in failed: ${signInResult.error}")
-                    signInResult
-                }
-            }
+fun DisclaimerScreen() {
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(text = "Disclaimer") }
+            )
+        }
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .padding(16.dp)
+        ) {
+            Text(
+                text = "Disclaimer\n\n" +
+                        "This app is not affiliated with, endorsed by, or representative of any government entity. " +
+                        "Any government-related content displayed in this app is uploaded by users. " +
+                        "The app is a social media platform that allows user-generated content, and its inclusion of " +
+                        "government-related information is solely from users. " +
+                        "Use of this app does not establish any government affiliation or authorization.",
+                style = MaterialTheme.typography.bodyLarge
+            )
         }
     }
 }
-package com.openparty.app.features.startup.account.feature_login.presentation
-
-import androidx.compose.runtime.Composable
-import androidx.navigation.NavHostController
-import com.openparty.app.features.startup.account.shared.presentation.AccountScreen
-import org.koin.compose.viewmodel.koinViewModel
-
-@Composable
-fun LoginScreen(
-    navController: NavHostController,
-    viewModel: LoginViewModel = koinViewModel()
-) {
-    AccountScreen(
-        viewModel = viewModel,
-        title = "Login",
-        actionText = "Login",
-        footerText = "Don't have an account? Register",
-        onActionClick = { viewModel.onLoginButtonClick() },
-        onFooterClick = { viewModel.onTextFooterClick() },
-        uiEvent = viewModel.uiEvent,
-        navController = navController
-    )
-}
-package com.openparty.app.features.startup.account.feature_login.presentation
-
-import androidx.lifecycle.viewModelScope
-import com.openparty.app.core.shared.domain.DomainResult
-import com.openparty.app.core.shared.domain.error.AppErrorMapper
-import com.openparty.app.core.shared.presentation.UiEvent
-import com.openparty.app.features.startup.account.feature_login.domain.usecase.PerformLoginUseCase
-import com.openparty.app.features.startup.account.shared.presentation.AccountViewModel
-import com.openparty.app.features.startup.account.shared.presentation.model.AccountUiStateUpdate
-import com.openparty.app.features.startup.feature_authentication.domain.usecase.DetermineAuthStatesUseCase
-import com.openparty.app.features.startup.feature_authentication.presentation.AuthFlowNavigationMapper
-import com.openparty.app.navigation.Screen
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.SharedFlow
-import kotlinx.coroutines.launch
-
-class LoginViewModel(
-    private val performLoginUseCase: PerformLoginUseCase,
-    private val determineAuthStatesUseCase: DetermineAuthStatesUseCase,
-    private val authFlowNavigationMapper: AuthFlowNavigationMapper
-) : AccountViewModel() {
-    private val _uiEvent = MutableSharedFlow<UiEvent>()
-    val uiEvent: SharedFlow<UiEvent> = _uiEvent
-    fun onLoginButtonClick() {
-        viewModelScope.launch {
-            updateState(AccountUiStateUpdate.UpdateLoading(true))
-            val currentState = accountUiState.value
-            when (val loginResult = performLoginUseCase(currentState.email, currentState.password)) {
-                is DomainResult.Success -> {
-                    when (val authStatesResult = determineAuthStatesUseCase()) {
-                        is DomainResult.Success -> {
-                            val destination = authFlowNavigationMapper.determineDestination(authStatesResult.data)
-                            _uiEvent.emit(UiEvent.Navigate(destination.route))
-                        }
-                        is DomainResult.Failure -> {
-                            val errorMessage = AppErrorMapper.getUserFriendlyMessage(authStatesResult.error)
-                            updateState(AccountUiStateUpdate.UpdateError(errorMessage))
-                        }
-                    }
-                }
-                is DomainResult.Failure -> {
-                    val errorMessage = AppErrorMapper.getUserFriendlyMessage(loginResult.error)
-                    updateState(AccountUiStateUpdate.UpdateError(errorMessage))
-                }
-            }
-            updateState(AccountUiStateUpdate.UpdateLoading(false))
-        }
-    }
-    fun onTextFooterClick() {
-        viewModelScope.launch {
-            _uiEvent.emit(UiEvent.Navigate(Screen.Register.route))
-        }
-    }
-    fun clearError() {
-        updateState(AccountUiStateUpdate.UpdateError(null))
-    }
-}
-package com.openparty.app.features.startup.account.feature_register.di
-
-import com.openparty.app.features.startup.account.feature_register.domain.usecase.PerformRegisterUseCase
-import com.openparty.app.features.startup.account.feature_register.presentation.RegisterViewModel
-import com.openparty.app.features.startup.account.shared.domain.usecase.ValidateCredentialsUseCase
-import org.koin.core.module.dsl.viewModel
-import org.koin.core.module.Module
-import org.koin.dsl.module
-
-val registerModule: Module = module {
-    single { ValidateCredentialsUseCase() }
-    single {
-        PerformRegisterUseCase(
-            validateCredentialsUseCase = get(),
-            registerUseCase = get(),
-            determineAuthStatesUseCase = get()
-        )
-    }
-    viewModel {
-        RegisterViewModel(
-            performRegisterUseCase = get(),
-            determineAuthStatesUseCase = get(),
-            authFlowNavigationMapper = get()
-        )
-    }
-}
-package com.openparty.app.features.startup.account.feature_register.domain.usecase
-
-import com.openparty.app.core.shared.domain.DomainResult
-import com.openparty.app.core.shared.domain.error.AppError
-import com.openparty.app.features.startup.account.shared.domain.usecase.ValidateCredentialsUseCase
-import com.openparty.app.features.startup.feature_authentication.domain.usecase.DetermineAuthStatesUseCase
-import com.openparty.app.features.startup.feature_authentication.domain.usecase.RegisterUseCase
-
-class PerformRegisterUseCase(
-    private val validateCredentialsUseCase: ValidateCredentialsUseCase,
-    private val registerUseCase: RegisterUseCase,
-    private val determineAuthStatesUseCase: DetermineAuthStatesUseCase
-) {
-    suspend operator fun invoke(email: String, password: String): DomainResult<Unit> {
-        return try {
-            println("Starting PerformRegisterUseCase with email: $email")
-            when (val validateResult = validateCredentialsUseCase(email, password)) {
-                is DomainResult.Failure -> {
-                    println("Validation failed: $validateResult")
-                    return validateResult
-                }
-                is DomainResult.Success -> {
-                    println("Validation succeeded")
-                }
-            }
-            when (val registerResult = registerUseCase(email, password)) {
-                is DomainResult.Failure -> {
-                    println("Registration failed: $registerResult")
-                    return registerResult
-                }
-                is DomainResult.Success -> {
-                    println("Registration succeeded")
-                    when (val authStatesResult = determineAuthStatesUseCase()) {
-                        is DomainResult.Failure -> {
-                            println("DetermineAuthStatesUseCase failed: $authStatesResult")
-                            return authStatesResult
-                        }
-                        is DomainResult.Success -> {
-                            println("DetermineAuthStatesUseCase succeeded: ${authStatesResult.data}")
-                        }
-                    }
-                }
-            }
-            println("PerformRegisterUseCase completed successfully")
-            DomainResult.Success(Unit)
-        } catch (e: Exception) {
-            println("Unexpected error in PerformRegisterUseCase: $e")
-            DomainResult.Failure(AppError.Authentication.Register)
-        }
-    }
-}package com.openparty.app.features.startup.account.feature_register.presentation
-
-import androidx.compose.runtime.Composable
-import org.koin.compose.viewmodel.koinViewModel
-import androidx.navigation.NavHostController
-import com.openparty.app.features.startup.account.shared.presentation.AccountScreen
-
-@Composable
-fun RegisterScreen(
-    navController: NavHostController,
-    viewModel: RegisterViewModel = koinViewModel()
-) {
-    AccountScreen(
-        viewModel = viewModel,
-        title = "Create Your Account",
-        actionText = "Register",
-        footerText = "Already have an account? Login",
-        onActionClick = { viewModel.onRegisterButtonClick() },
-        onFooterClick = { viewModel.onTextFooterClick() },
-        uiEvent = viewModel.uiEvent,
-        navController = navController
-    )
-}
-package com.openparty.app.features.startup.account.feature_register.presentation
-
-import androidx.lifecycle.viewModelScope
-import com.openparty.app.core.shared.domain.DomainResult
-import com.openparty.app.core.shared.domain.error.AppErrorMapper
-import com.openparty.app.core.shared.presentation.UiEvent
-import com.openparty.app.features.startup.account.feature_register.domain.usecase.PerformRegisterUseCase
-import com.openparty.app.features.startup.account.shared.presentation.AccountViewModel
-import com.openparty.app.features.startup.account.shared.presentation.model.AccountUiStateUpdate
-import com.openparty.app.features.startup.feature_authentication.domain.usecase.DetermineAuthStatesUseCase
-import com.openparty.app.features.startup.feature_authentication.presentation.AuthFlowNavigationMapper
-import com.openparty.app.navigation.Screen
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.SharedFlow
-import kotlinx.coroutines.launch
-
-class RegisterViewModel(
-    private val performRegisterUseCase: PerformRegisterUseCase,
-    private val determineAuthStatesUseCase: DetermineAuthStatesUseCase,
-    private val authFlowNavigationMapper: AuthFlowNavigationMapper
-) : AccountViewModel() {
-    private val _uiEvent = MutableSharedFlow<UiEvent>()
-    val uiEvent: SharedFlow<UiEvent> = _uiEvent
-    fun onRegisterButtonClick() {
-        viewModelScope.launch {
-            updateState(AccountUiStateUpdate.UpdateLoading(true))
-            val currentState = accountUiState.value
-            when (val registerResult = performRegisterUseCase(currentState.email, currentState.password)) {
-                is DomainResult.Success -> {
-                    when (val authStatesResult = determineAuthStatesUseCase()) {
-                        is DomainResult.Success -> {
-                            val destination = authFlowNavigationMapper.determineDestination(authStatesResult.data)
-                            _uiEvent.emit(UiEvent.Navigate(destination.route))
-                        }
-                        is DomainResult.Failure -> {
-                            val errorMessage = AppErrorMapper.getUserFriendlyMessage(authStatesResult.error)
-                            updateState(AccountUiStateUpdate.UpdateError(errorMessage))
-                        }
-                    }
-                }
-                is DomainResult.Failure -> {
-                    val errorMessage = AppErrorMapper.getUserFriendlyMessage(registerResult.error)
-                    updateState(AccountUiStateUpdate.UpdateError(errorMessage))
-                }
-            }
-            updateState(AccountUiStateUpdate.UpdateLoading(false))
-        }
-    }
-    fun onTextFooterClick() {
-        viewModelScope.launch {
-            _uiEvent.emit(UiEvent.Navigate(Screen.Login.route))
-        }
-    }
-    fun clearError() {
-        updateState(AccountUiStateUpdate.UpdateError(null))
-    }
-}
-//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/startup/account/shared/domain/usecase/ValidateCredentialsUseCase.kt
-package com.openparty.app.features.startup.account.shared.domain.usecase
-
-import com.openparty.app.core.shared.domain.DomainResult
-import com.openparty.app.core.shared.domain.error.AppError
-import kotlin.text.Regex
-
-class ValidateCredentialsUseCase {
-    operator fun invoke(email: String, password: String): DomainResult<Unit> {
-        println("Validating credentials for email: $email")
-        if (email.isBlank() || password.isBlank()) {
-            println("Validation failed: Email or password is blank")
-            return DomainResult.Failure(AppError.Register.ValidateEmail)
-        }
-        val emailRegex = Regex("^[A-Za-z0-9+_.-]+@(.+)$")
-        if (!emailRegex.matches(email)) {
-            println("Validation failed: Invalid email format - $email")
-            return DomainResult.Failure(AppError.Register.ValidateEmail)
-        }
-        if (password.length < 6) {
-            println("Validation failed: Password length is less than 6 characters")
-            return DomainResult.Failure(AppError.Register.ValidatePassword)
-        }
-        println("Validation succeeded for email: $email")
-        return DomainResult.Success(Unit)
-    }
-}
-//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/startup/account/shared/presentation/components/EmailForm.kt
-package com.openparty.app.features.startup.account.shared.presentation.components
-
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.input.ImeAction
-
-@Composable
-fun EmailForm(
-    email: String,
-    onEmailChange: (String) -> Unit
-) {
-    OutlinedTextField(
-        value = email,
-        onValueChange = onEmailChange,
-        label = { Text("Email") },
-        modifier = Modifier.fillMaxWidth(),
-        keyboardOptions = KeyboardOptions.Default.copy(
-            imeAction = ImeAction.Next
-        )
-    )
-}
-//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/startup/account/shared/presentation/components/PasswordForm.kt
-package com.openparty.app.features.startup.account.shared.presentation.components
-
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.VisualTransformation
-
-@Composable
-fun PasswordForm(
-    password: String,
-    onPasswordChange: (String) -> Unit,
-    isPasswordVisible: Boolean,
-    onTogglePasswordVisibility: () -> Unit,
-    onDone: () -> Unit
-) {
-    OutlinedTextField(
-        value = password,
-        onValueChange = onPasswordChange,
-        label = { Text("Password") },
-        modifier = Modifier.fillMaxWidth(),
-        visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-        trailingIcon = {
-            IconButton(onClick = onTogglePasswordVisibility) {
-                Icon(
-                    imageVector = if (isPasswordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                    contentDescription = null
-                )
-            }
-        },
-        keyboardOptions = KeyboardOptions.Default.copy(
-            imeAction = ImeAction.Done
-        )
-    )
-}//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/startup/account/shared/presentation/model/AccountUiState.kt
-package com.openparty.app.features.startup.account.shared.presentation.model
-
-data class AccountUiState(
-    val email: String = "",
-    val password: String = "",
-    val isPasswordVisible: Boolean = false,
-    val error: String? = null,
-    val isLoading: Boolean = false
-)
-
-//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/startup/account/shared/presentation/model/AccountUiStateUpdate.kt
-package com.openparty.app.features.startup.account.shared.presentation.model
-
-sealed class AccountUiStateUpdate {
-    data class UpdateEmail(val email: String) : AccountUiStateUpdate()
-    data class UpdatePassword(val password: String) : AccountUiStateUpdate()
-    object TogglePasswordVisibility : AccountUiStateUpdate()
-    data class UpdateError(val error: String?) : AccountUiStateUpdate()
-    data class UpdateLoading(val isLoading: Boolean) : AccountUiStateUpdate()
-}
-//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/startup/account/shared/presentation/AccountScreen.kt
-package com.openparty.app.features.startup.account.shared.presentation
+//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/utils/settings/feature_settings/presentation/SettingsScreen.kt
+package com.openparty.app.features.utils.settings.feature_settings.presentation
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
-import com.openparty.app.core.shared.presentation.ErrorText
-import com.openparty.app.core.shared.presentation.TitleText
-import com.openparty.app.core.shared.presentation.UiEvent
-import com.openparty.app.features.startup.account.shared.presentation.components.EmailForm
-import com.openparty.app.features.startup.account.shared.presentation.components.PasswordForm
-import com.openparty.app.features.startup.account.shared.presentation.model.AccountUiStateUpdate
-import kotlinx.coroutines.flow.SharedFlow
-import kotlinx.coroutines.flow.collectLatest
 
 @Composable
-fun AccountScreen(
-    viewModel: AccountViewModel,
-    title: String,
-    actionText: String,
-    footerText: String,
-    onActionClick: () -> Unit,
-    onFooterClick: () -> Unit,
-    uiEvent: SharedFlow<UiEvent>? = null,
-    navController: NavHostController
-) {
-    val state = viewModel.accountUiState.collectAsState().value
-    LaunchedEffect(uiEvent) {
-        uiEvent?.collectLatest { event ->
-            when (event) {
-                is UiEvent.Navigate -> {
-                    navController.navigate(event.destination) {
-                        popUpTo(event.destination) { inclusive = true }
-                    }
-                }
-            }
-        }
-    }
-    Surface(
-        modifier = Modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.background
-    ) {
-        Box(modifier = Modifier.fillMaxSize()) {
-            Column(
+fun SettingsScreen(navController: NavHostController) {
+    Scaffold(
+        bottomBar = {
+            Button(
+                onClick = { /* Placeholder for logout functionality */ },
                 modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 32.dp, vertical = 16.dp),
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally
+                    .fillMaxWidth()
+                    .padding(16.dp)
             ) {
-                TitleText(text = title)
-                Spacer(modifier = Modifier.height(16.dp))
-                EmailForm(
-                    email = state.email,
-                    onEmailChange = { viewModel.updateState(AccountUiStateUpdate.UpdateEmail(it)) }
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                PasswordForm(
-                    password = state.password,
-                    onPasswordChange = { viewModel.updateState(AccountUiStateUpdate.UpdatePassword(it)) },
-                    isPasswordVisible = state.isPasswordVisible,
-                    onTogglePasswordVisibility = { viewModel.updateState(AccountUiStateUpdate.TogglePasswordVisibility) },
-                    onDone = onActionClick
-                )
-                ErrorText(errorMessage = state.error)
-                Spacer(modifier = Modifier.height(16.dp))
-                Button(
-                    onClick = onActionClick,
-                    modifier = Modifier.fillMaxWidth()
+                Text(text = "Logout")
+            }
+        }
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .padding(16.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { navController.navigate("disclaimer") },
+                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    horizontalAlignment = Alignment.Start
                 ) {
-                    Text(text = actionText)
+                    Icon(
+                        imageVector = Icons.Filled.Info,
+                        contentDescription = null
+                    )
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Text(
+                        text = "Disclaimer",
+                        style = MaterialTheme.typography.titleMedium
+                    )
                 }
-                Text(
-                    text = footerText,
-                    modifier = Modifier.clickable { onFooterClick() }
-                )
-                if (state.isLoading) {
-                    Spacer(modifier = Modifier.height(16.dp))
-                    CircularProgressIndicator()
-                }
-                Spacer(modifier = Modifier.height(16.dp))
             }
         }
     }
 }
-//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/startup/account/shared/presentation/AccountViewModel.kt
-package com.openparty.app.features.startup.account.shared.presentation
 
-import androidx.lifecycle.ViewModel
-import com.openparty.app.features.startup.account.shared.presentation.model.AccountUiState
-import com.openparty.app.features.startup.account.shared.presentation.model.AccountUiStateUpdate
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-
-open class AccountViewModel : ViewModel() {
-    private val _accountUiState = MutableStateFlow(AccountUiState())
-    val accountUiState: StateFlow<AccountUiState> = _accountUiState.asStateFlow()
-    fun updateState(update: AccountUiStateUpdate) {
-        _accountUiState.value = when (update) {
-            is AccountUiStateUpdate.UpdateEmail -> _accountUiState.value.copy(email = update.email)
-            is AccountUiStateUpdate.UpdatePassword -> _accountUiState.value.copy(password = update.password)
-            AccountUiStateUpdate.TogglePasswordVisibility -> _accountUiState.value.copy(
-                isPasswordVisible = !_accountUiState.value.isPasswordVisible
-            )
-            is AccountUiStateUpdate.UpdateError -> _accountUiState.value.copy(error = update.error)
-            is AccountUiStateUpdate.UpdateLoading -> _accountUiState.value.copy(isLoading = update.isLoading)
-        }
-    }
-}
 //File: composeApp/src/commonMain/kotlin/com/openparty/app/features/startup/feature_authentication/data/datasource/AuthDataSource.kt
 package com.openparty.app.features.startup.feature_authentication.data.datasource
 
@@ -1978,20 +1508,14 @@ Notes:
 
 I want to add functionality to the above code
 
-The settings screen right now is just a box with text in it as a disclaimer. I want to change this 
+The settings screen shows a list of cards (each representing a setting) and a logout button at the bottom 
 
-Instead I want the settings screen to have these two features: 
-- A list of cards, each card representing a setting that the user can change 
-    - Each card should have an icon repreesenting the setting and text saying what the setting is 
-    - e.g. for "Disclaimer" it would be an icon representing the disclaimer, then text saying "Disclaimer" 
-- A logout button pinned to the bottom of the screen 
-    - Don't create the functionality for the logout button right now, just leave it as a placeholder
-    - I'll ask you to make this functionality later
+Right now the logout button doesn't work, it's just a placeholder. I want you to write code to make it work. 
 
-- For right now, there will only be one card in the list of settings cards (I'll add more later) 
-- The only card right now will be for "Disclaimer"
-- The Disclaimer setting, when clicked, takes the user to the Disclaimer screen 
-- The disclaimer screen just shows the user text that has the disclaimer 
-- Right now, this text is already being shown to the user in the Settings Screen, so just take the text from the settings screen, and move it to the disclaimer screen 
-- make the disclaimer screen its own feature - feature_disclaimer
-- Put it here - //File: composeApp/src/commonMain/kotlin/com/openparty/app/features/utils/settings/feature_disclaimer/presentation
+I would probably expect you to justt use the LogoutUseCase which is in the feature_authentication code 
+
+This is a fine way to do it, but this is a kotlin compose mulitplatform project so the logout button has to work for  both android and ios 
+
+I think it already will since i'm using a firebase multiplatform library 
+
+but yeah, make the logout button work.

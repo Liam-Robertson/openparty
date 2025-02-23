@@ -24,6 +24,7 @@ import com.openparty.app.features.startup.verification.feature_email_verificatio
 import com.openparty.app.features.startup.verification.feature_location_verification.di.locationVerificationModule
 import com.openparty.app.features.utils.feature_hide_posts.di.hidePostsModule
 import com.openparty.app.features.utils.feature_report.di.reportModule
+import com.openparty.app.features.utils.settings.feature_settings.di.settingsModule
 import com.openparty.app.main.di.mainModule
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.context.startKoin
@@ -65,5 +66,6 @@ object AndroidKoinInitializer {
         policyModule,
         reportModule,
         hidePostsModule,
+        settingsModule,
     )
 }

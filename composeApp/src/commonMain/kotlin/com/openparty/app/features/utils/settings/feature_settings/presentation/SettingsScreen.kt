@@ -1,4 +1,3 @@
-//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/utils/settings/feature_settings/presentation/SettingsScreen.kt
 package com.openparty.app.features.utils.settings.feature_settings.presentation
 
 import androidx.compose.foundation.clickable
@@ -19,17 +18,35 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
+import com.openparty.app.core.shared.presentation.ErrorText
+import com.openparty.app.core.shared.presentation.UiEvent
+import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
-fun SettingsScreen(navController: NavHostController) {
+fun SettingsScreen(navController: NavHostController, viewModel: SettingsViewModel = koinViewModel()) {
+    val uiState by viewModel.uiState.collectAsState()
+    LaunchedEffect(Unit) {
+        viewModel.uiEvent.collect { event ->
+            when (event) {
+                is UiEvent.Navigate -> {
+                    navController.navigate(event.destination) {
+                        popUpTo(0) { inclusive = true }
+                    }
+                }
+            }
+        }
+    }
     Scaffold(
         bottomBar = {
             Button(
-                onClick = { /* Placeholder for logout functionality */ },
+                onClick = { viewModel.logout() },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp)
@@ -66,6 +83,9 @@ fun SettingsScreen(navController: NavHostController) {
                         style = MaterialTheme.typography.titleMedium
                     )
                 }
+            }
+            if (uiState.errorMessage != null) {
+                ErrorText(errorMessage = uiState.errorMessage)
             }
         }
     }
