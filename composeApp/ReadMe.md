@@ -1,3 +1,13 @@
+How to build release ios app:
+- Run this: 
+  - ./gradlew linkReleaseFrameworkIosArm64
+- Go to xcode, go to Product, click Archive
+
+
+-----------------
+
+Old:
+
 How to build release ios app: 
 - Go to info.plist
 - Search for "Bundle Version String" and update the version

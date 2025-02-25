@@ -1,0 +1,1 @@
+FIREBASE_CONFIG_FILE = $(SRCROOT)/iosApp/iosApp/GoogleService-Info-Release.plist
