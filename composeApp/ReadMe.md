@@ -13,6 +13,15 @@ How to build release ios app:
 - After the archive has finished building, it will automatically open the Organiser window
 - Click the "Distribute App" button
 - This is automatically linked to your account so it's automatically uploaded
+- Once it's uploaded:
+- Go to app store connect
+- Scroll down to the "Build" section
+- Replace the current build with your new build 
+
+How to run release build locally: 
+- Go to Product -> Schema -> Edit Scheme
+- Change the build configuration from debug to release
+- Click close to save your changes
 
 ----------------- 
 
