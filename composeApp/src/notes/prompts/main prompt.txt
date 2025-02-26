@@ -368,10 +368,67 @@ Notes:
 
 ---------
 
-I've given you my navigation code 
+- I've just given you the above notes so hyou have some context on what my app does, they're not that important
+- The important issue is that my kotlin multiplatform app works completely fine on android and iosApp
+- However, i'm trying to make it so that my ios points at my dev firebase database in debug mode and my prod database in my release build
+- To do this, I created this build phase script in xcode: 
+echo "Using Firebase config file: ${FIREBASE_CONFIG_FILE}"
+cp "${FIREBASE_CONFIG_FILE}" "${BUILT_PRODUCTS_DIR}/${PRODUCT_NAME}.app/GoogleService-Info.plist"
 
-in the appnavigation file, it uses a scaffold with the navigation footer, to pin the navigation footer to the bototm of the screen 
+- and i'm using these files in my iosApp/ folder: Release.xcconfig and Debug.xcconfig
+- I also have these folders in iosApp/ folder: GoogleService-Info-Debug.plist and GoogleService-Info-Release.plist
+- I'm also using cocoapods to handle my firebase dependencies
+- I'm using this gradle task to build the project: 
+    - ./gradlew linkReleaseFrameworkIosArm64
+- I'm not sure CopyGoogleServiceInfo.sh is actually being used anywhere, i don't think i have a run script for it 
+- I'm going to give you some files for context: 
 
-this works fine in android, but in my iphone app it just shows a blank screen. why? 
+podfile: 
+platform :ios, '13.0'
 
-I know that the problem is specifically having the navigation footer in the bottom bar, i.e. this bit: 
+target 'iosApp' do
+  use_frameworks!
+
+  pod 'Firebase/Core', '11.8.1'
+  pod 'Firebase/Auth', '11.8.1'
+  pod 'Firebase/Firestore', '11.8.1'
+  pod 'Firebase/Storage', '11.8.1'
+end
+
+----
+Release.xcconfig:
+#include "${SRCROOT}/Pods/Target\ Support\ Files/Pods-iosApp/Pods-iosApp.release.xcconfig"
+FIREBASE_CONFIG_FILE = $(SRCROOT)/iosApp/iosApp/GoogleService-Info-Release.plist
+
+-----
+Debug.xcconfig:
+#include "${SRCROOT}/Pods/Target\ Support\ Files/Pods-iosApp/Pods-iosApp.debug.xcconfig"
+FIREBASE_CONFIG_FILE = $(SRCROOT)/iosApp/iosApp/GoogleService-Info-Debug.plist
+
+----
+CopyGoogleServiceInfo.sh: 
+#!/bin/sh
+#File: iosApp/CopyGoogleServiceInfo.sh
+if [ "${CONFIGURATION}" = "Debug" ]; then
+    cp "${SRCROOT}/GoogleService-Info-Debug.plist" "${BUILT_PRODUCTS_DIR}/${PRODUCT_NAME}.app/GoogleService-Info.plist"
+else
+    cp "${SRCROOT}/GoogleService-Info-Release.plist" "${BUILT_PRODUCTS_DIR}/${PRODUCT_NAME}.app/GoogleService-Info.plist"
+fi
+
+----
+
+- I would have thought that when my build starts, this run script would kick in: custom - devVsProdConfig: 
+echo "Using Firebase config file: ${FIREBASE_CONFIG_FILE}"
+cp "${FIREBASE_CONFIG_FILE}" "${BUILT_PRODUCTS_DIR}/${PRODUCT_NAME}.app/GoogleService-Info.plist"
+
+but it doesn't seem to work. It throws these errors:
+
+/Users/liam/Local Documents/Programming/openparty/iosApp/Debug.xcconfig:1:1 could not find included file '${SRCROOT}/Pods/Target\ Support\ Files/Pods-iosApp/Pods-iosApp.debug.xcconfig' in search paths
+
+iosApp
+Unable to load contents of file list: '/Target Support Files/Pods-iosApp/Pods-iosApp-frameworks-Debug-input-files.xcfilelist'
+
+Unable to load contents of file list: '/Target Support Files/Pods-iosApp/Pods-iosApp-frameworks-Debug-output-files.xcfilelist'
+
+/Users/liam/Local Documents/Programming/openparty/iosApp/Debug.xcconfig
+/Users/liam/Local Documents/Programming/openparty/iosApp/Debug.xcconfig:1:1 could not find included file '${SRCROOT}/Pods/Target\ Support\ Files/Pods-iosApp/Pods-iosApp.debug.xcconfig' in search paths

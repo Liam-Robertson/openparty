@@ -1,1 +1,3 @@
-FIREBASE_CONFIG_FILE = $(SRCROOT)/iosApp/iosApp/GoogleService-Info-Release.plist
+//File: iosApp/Release.xcconfig
+#include "Pods/Target Support Files/Pods-iosApp/Pods-iosApp.release.xcconfig"
+FIREBASE_CONFIG_FILE = $(SRCROOT)/GoogleService-Info-Release.plist

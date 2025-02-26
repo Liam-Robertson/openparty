@@ -1,10 +1,14 @@
+Notes:
+- I'm using pods to manage firebase, but gradle to create my builds
+- I'm using this build script to manage my dev and prod database config - custom - devVsProdConfig
+
 How to build release ios app:
 - Run this: 
   - ./gradlew linkReleaseFrameworkIosArm64
 - Go to xcode, go to Product, click Archive
 
 
------------------
+----------------- 
 
 Old:
 
