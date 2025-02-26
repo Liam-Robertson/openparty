@@ -11,7 +11,6 @@ import com.openparty.app.features.newsfeed.council_meetings.shared.di.councilMee
 import com.openparty.app.features.newsfeed.discussions.feature_add_discussion.di.addDiscussionModule
 import com.openparty.app.features.newsfeed.discussions.feature_discussions_article.di.discussionArticleKoinModule
 import com.openparty.app.features.newsfeed.discussions.feature_discussions_preview.di.discussionsKoinModule
-import com.openparty.app.features.shared.feature_permissions.di.androidPermissionModule
 import com.openparty.app.features.shared.feature_permissions.di.permissionModule
 import com.openparty.app.features.shared.feature_user.di.userModule
 import com.openparty.app.features.startup.account.feature_login.di.loginModule
@@ -35,7 +34,7 @@ object AndroidKoinInitializer {
         startKoin {
             androidContext(application)
             modules(
-                sharedModules() + androidModules() + listOf(androidPermissionModule(application))
+                sharedModules() + androidModules()
             )
         }
     }

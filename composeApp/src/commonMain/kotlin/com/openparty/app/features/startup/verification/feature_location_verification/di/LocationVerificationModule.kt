@@ -22,7 +22,7 @@ val locationVerificationModule = module {
         )
     }
     single { HandleLocationPopupUseCase() }
-    single { LocationPermissionCheckUseCase(get()) }
+    single { LocationPermissionCheckUseCase() }
     single { GetUserLocationUseCase() }
     single { UpdateUserLocationUseCase(get(), get()) }
     single { VerifyAndUpdateLocationUseCase(get(), get(), get()) }

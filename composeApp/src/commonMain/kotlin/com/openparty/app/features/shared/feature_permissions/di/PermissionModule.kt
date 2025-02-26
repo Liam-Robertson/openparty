@@ -5,7 +5,5 @@ import com.openparty.app.features.shared.feature_permissions.domain.usecase.Loca
 import org.koin.dsl.module
 
 val permissionModule = module {
-    single {
-        LocationPermissionCheckUseCase(get())
-    }
+    single { LocationPermissionCheckUseCase() }
 }

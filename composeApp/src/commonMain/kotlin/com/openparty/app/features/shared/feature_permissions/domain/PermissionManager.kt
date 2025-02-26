@@ -3,6 +3,6 @@ package com.openparty.app.features.shared.feature_permissions.domain
 
 import com.openparty.app.core.shared.domain.DomainResult
 
-interface PermissionManager {
+expect object PermissionManager {
     fun hasPermission(permission: String): DomainResult<Boolean>
 }
