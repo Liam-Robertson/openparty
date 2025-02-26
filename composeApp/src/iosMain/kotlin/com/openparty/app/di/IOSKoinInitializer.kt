@@ -22,6 +22,7 @@ import com.openparty.app.features.utils.feature_hide_posts.di.hidePostsModule
 import com.openparty.app.features.utils.feature_report.di.reportModule
 import com.openparty.app.features.utils.settings.feature_settings.di.settingsModule
 import com.openparty.app.core.storage.clearAllKeychainData
+import com.openparty.app.features.startup.feature_policy.di.policyModule
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -60,6 +61,7 @@ object IOSKoinInitializer {
                     reportModule,
                     hidePostsModule,
                     settingsModule,
+                    policyModule,
                 )
             )
         }
