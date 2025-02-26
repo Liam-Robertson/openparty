@@ -3,10 +3,16 @@ Notes:
 - I'm using this build script to manage my dev and prod database config - custom - devVsProdConfig
 
 How to build release ios app:
+- Go to info.plist
+- Search for "Bundle Version String" and update the version
+- Do the same for "Bundle Version"
+- Go to android studio, open terminal
 - Run this: 
   - ./gradlew linkReleaseFrameworkIosArm64
 - Go to xcode, go to Product, click Archive
-
+- After the archive has finished building, it will automatically open the Organiser window
+- Click the "Distribute App" button
+- This is automatically linked to your account so it's automatically uploaded
 
 ----------------- 
 
