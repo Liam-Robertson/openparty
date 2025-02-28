@@ -12,16 +12,25 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavHostController
+import com.openparty.app.features.newsfeed.shared.presentation.StandardHeader
+import com.openparty.app.navigation.Screen
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DisclaimerScreen() {
+fun DisclaimerScreen(
+    navController: NavHostController
+) {
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(text = "Disclaimer") }
+            StandardHeader(
+                onXClicked = {
+                    navController.navigate(Screen.Settings.route) {
+                        popUpTo(Screen.Settings.route) { inclusive = true }
+                    }
+                }
             )
-        }
+        },
     ) { innerPadding ->
         Column(
             modifier = Modifier

@@ -11,7 +11,9 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import com.openparty.app.core.shared.presentation.ErrorText
 import com.openparty.app.core.shared.presentation.UiEvent
+import com.openparty.app.features.newsfeed.shared.presentation.StandardHeader
 import com.openparty.app.features.startup.feature_policy.data.loadPolicyText
+import com.openparty.app.navigation.Screen
 import kotlinx.coroutines.flow.collectLatest
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -38,6 +40,15 @@ fun PolicyScreen(
     val uiState by viewModel.uiState.collectAsState()
 
     Scaffold(
+        topBar = {
+            StandardHeader(
+                onXClicked = {
+                    navController.navigate(Screen.Settings.route) {
+                        popUpTo(Screen.Settings.route) { inclusive = true }
+                    }
+                }
+            )
+        },
         bottomBar = {
             Button(
                 onClick = { viewModel.acceptPolicy() },

@@ -1,4 +1,5 @@
 //File: composeApp/src/commonMain/kotlin/com/openparty/app/features/newsfeed/discussions/feature_discussions_article/presentation/DiscussionArticleScreen.kt
+
 package com.openparty.app.features.newsfeed.discussions.feature_discussions_article.presentation
 
 import androidx.compose.foundation.layout.padding
@@ -10,8 +11,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import com.openparty.app.core.shared.presentation.ErrorText
 import com.openparty.app.core.shared.presentation.UiEvent
@@ -19,8 +18,11 @@ import com.openparty.app.features.engagement.comments.feature_add_comment.presen
 import com.openparty.app.features.engagement.comments.feature_comments_section.presentation.CommentsSection
 import com.openparty.app.features.engagement.comments.feature_comments_section.presentation.CommentsSectionViewModel
 import com.openparty.app.navigation.Screen
+import com.openparty.app.features.newsfeed.shared.presentation.StandardHeader
 import kotlinx.coroutines.flow.collectLatest
 import org.koin.compose.viewmodel.koinViewModel
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 
 @Composable
 fun DiscussionArticleScreen(
@@ -41,7 +43,6 @@ fun DiscussionArticleScreen(
         }
     }
 
-    // Removed the popUpTo configuration to preserve the preview screen in the back stack.
     LaunchedEffect(viewModel.uiEvent) {
         viewModel.uiEvent.collectLatest { event ->
             when (event) {
@@ -54,6 +55,15 @@ fun DiscussionArticleScreen(
 
     discussion?.let { currentDiscussion ->
         Scaffold(
+            topBar = {
+                StandardHeader(
+                    onXClicked = {
+                        navController.navigate(Screen.DiscussionsPreview.route) {
+                            popUpTo(Screen.DiscussionsPreview.route) { inclusive = true }
+                        }
+                    }
+                )
+            },
             bottomBar = {
                 AddCommentFooter(
                     fullyVerified = true,

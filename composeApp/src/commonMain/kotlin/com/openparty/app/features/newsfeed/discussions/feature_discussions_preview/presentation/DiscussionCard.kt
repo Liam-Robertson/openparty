@@ -1,4 +1,5 @@
 //File: composeApp/src/commonMain/kotlin/com/openparty/app/features/newsfeed/discussions/feature_discussions_preview/presentation/DiscussionCard.kt
+
 package com.openparty.app.features.newsfeed.discussions.feature_discussions_preview.presentation
 
 import androidx.compose.foundation.clickable
@@ -51,12 +52,11 @@ fun DiscussionCard(
         modifier = Modifier
             .fillMaxWidth()
             .padding(8.dp)
+            .clickable { onClick() }
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
             Column(
-                modifier = Modifier
-                    .clickable { onClick() }
-                    .padding(16.dp)
+                modifier = Modifier.padding(16.dp)
             ) {
                 Text(
                     text = discussion.title,

@@ -65,7 +65,7 @@ fun AppNavigation() {
                 composable(Screen.CouncilMeetingsPreview.route) { CouncilMeetingsPreviewScreen(navController) }
                 composable(Screen.AddDiscussion.route) { AddDiscussionScreen(navController) }
                 composable(Screen.Settings.route) { SettingsScreen(navController) }
-                composable("disclaimer") { DisclaimerScreen() }
+                composable("disclaimer") { DisclaimerScreen(navController) }
                 composable(
                     route = Screen.DiscussionsArticle("").route,
                     arguments = listOf(navArgument("discussionId") { type = NavType.StringType })

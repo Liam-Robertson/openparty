@@ -345,6 +345,145 @@ OpenParty/
 
 ---------
 
+//File: composeApp/src/commonMain/kotlin/com/openparty/app/features/utils/feature_secure_storage/SecureStorage.kt
+package com.openparty.app.features.utils.feature_secure_storage
+
+expect class SecureStorage() {
+    suspend fun put(key: String, value: String)
+    suspend fun get(key: String): String?
+    suspend fun remove(key: String)
+}
+//File: composeApp/src/androidMain/kotlin/com/openparty/app/features/utils/feature_secure_storage/SecureStorage.kt
+package com.openparty.app.features.utils.feature_secure_storage
+
+import android.content.SharedPreferences
+import androidx.security.crypto.EncryptedSharedPreferences
+import androidx.security.crypto.MasterKeys
+import com.openparty.app.core.shared.PlatformContext
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+
+actual class SecureStorage actual constructor() {
+
+    private val sharedPreferences: SharedPreferences by lazy {
+        val context = PlatformContext.context
+        val masterKeyAlias = MasterKeys.getOrCreate(MasterKeys.AES256_GCM_SPEC)
+        EncryptedSharedPreferences.create(
+            "secure_prefs",
+            masterKeyAlias,
+            context,
+            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+        )
+    }
+
+    actual suspend fun put(key: String, value: String) {
+        withContext(Dispatchers.IO) {
+            sharedPreferences.edit().putString(key, value).apply()
+        }
+    }
+
+    actual suspend fun get(key: String): String? {
+        return withContext(Dispatchers.IO) {
+            sharedPreferences.getString(key, null)
+        }
+    }
+
+    actual suspend fun remove(key: String) {
+        withContext(Dispatchers.IO) {
+            sharedPreferences.edit().remove(key).apply()
+        }
+    }
+}
+//File: composeApp/src/iosMain/kotlin/com/openparty/app/features/utils/feature_secure_storage/SecureStorage.kt
+package com.openparty.app.features.utils.feature_secure_storage
+
+import kotlinx.cinterop.*
+import platform.CoreFoundation.CFDictionaryRef
+import platform.CoreFoundation.CFTypeRefVar
+import platform.CoreFoundation.kCFBooleanTrue
+import platform.Foundation.*
+import platform.Security.*
+import platform.posix.memcpy
+
+@OptIn(ExperimentalForeignApi::class)
+actual class SecureStorage actual constructor() {
+
+    actual suspend fun put(key: String, value: String) {
+        memScoped {
+            // Delete any existing item for this key.
+            val query = mapOf(
+                kSecClass to kSecClassGenericPassword,
+                kSecAttrAccount to key
+            )
+            SecItemDelete(query.asCFDictionary())
+            // Add the new value.
+            val valueData = value.encodeToByteArray().toNSData()
+            val addQuery = mapOf(
+                kSecClass to kSecClassGenericPassword,
+                kSecAttrAccount to key,
+                kSecValueData to valueData
+            )
+            val status = SecItemAdd(addQuery.asCFDictionary(), null)
+            if (status != errSecSuccess) {
+                throw Exception("Keychain insertion failed with status: $status")
+            }
+        }
+    }
+
+    actual suspend fun get(key: String): String? {
+        return memScoped {
+            val query = mapOf(
+                kSecClass to kSecClassGenericPassword,
+                kSecAttrAccount to key,
+                kSecReturnData to kCFBooleanTrue,
+                kSecMatchLimit to kSecMatchLimitOne
+            )
+            val result = alloc<CFTypeRefVar>()
+            val status = SecItemCopyMatching(query.asCFDictionary(), result.ptr)
+            if (status == errSecSuccess) {
+                val data = result.value as? NSData
+                data?.toByteArray()?.toKString()
+            } else {
+                null
+            }
+        }
+    }
+
+    actual suspend fun remove(key: String) {
+        memScoped {
+            val query = mapOf(
+                kSecClass to kSecClassGenericPassword,
+                kSecAttrAccount to key
+            )
+            SecItemDelete(query.asCFDictionary())
+        }
+    }
+}
+
+// Helper extensions for iOS:
+@OptIn(ExperimentalForeignApi::class)
+fun Map<Any?, Any?>.asCFDictionary(): CFDictionaryRef {
+    // Convert the map keys to strings.
+    val stringMap = this.entries.associate { it.key.toString() to it.value }
+    // Create an NSDictionary from the stringMap.
+    val nsDict = NSDictionary.create(stringMap)
+    // Cast the NSDictionary to CFDictionaryRef.
+    return nsDict as CFDictionaryRef
+}
+
+@OptIn(ExperimentalForeignApi::class)
+fun NSData.toByteArray(): ByteArray {
+    val length = this.length.toInt()
+    val byteArray = ByteArray(length)
+    memScoped {
+        val pointer = byteArray.refTo(0).getPointer(memScope)
+        memcpy(pointer, this@toByteArray.bytes, this@toByteArray.length)
+    }
+    return byteArray
+}
+
+fun ByteArray.toNSData(): NSData = NSData.create(bytes = this)
 
 
 ---------
@@ -368,67 +507,12 @@ Notes:
 
 ---------
 
-- I've just given you the above notes so hyou have some context on what my app does, they're not that important
-- The important issue is that my kotlin multiplatform app works completely fine on android and iosApp
-- However, i'm trying to make it so that my ios points at my dev firebase database in debug mode and my prod database in my release build
-- To do this, I created this build phase script in xcode: 
-echo "Using Firebase config file: ${FIREBASE_CONFIG_FILE}"
-cp "${FIREBASE_CONFIG_FILE}" "${BUILT_PRODUCTS_DIR}/${PRODUCT_NAME}.app/GoogleService-Info.plist"
+in this file: 
+//File: composeApp/src/iosMain/kotlin/com/openparty/app/features/utils/feature_secure_storage/SecureStorage.kt
 
-- and i'm using these files in my iosApp/ folder: Release.xcconfig and Debug.xcconfig
-- I also have these folders in iosApp/ folder: GoogleService-Info-Debug.plist and GoogleService-Info-Release.plist
-- I'm also using cocoapods to handle my firebase dependencies
-- I'm using this gradle task to build the project: 
-    - ./gradlew linkReleaseFrameworkIosArm64
-- I'm not sure CopyGoogleServiceInfo.sh is actually being used anywhere, i don't think i have a run script for it 
-- I'm going to give you some files for context: 
 
-podfile: 
-platform :ios, '13.0'
+I have a lot of issues, fix them for me. 
 
-target 'iosApp' do
-  use_frameworks!
+it uses htis a lot - query.asCFDictionary()
 
-  pod 'Firebase/Core', '11.8.1'
-  pod 'Firebase/Auth', '11.8.1'
-  pod 'Firebase/Firestore', '11.8.1'
-  pod 'Firebase/Storage', '11.8.1'
-end
-
-----
-Release.xcconfig:
-#include "${SRCROOT}/Pods/Target\ Support\ Files/Pods-iosApp/Pods-iosApp.release.xcconfig"
-FIREBASE_CONFIG_FILE = $(SRCROOT)/iosApp/iosApp/GoogleService-Info-Release.plist
-
------
-Debug.xcconfig:
-#include "${SRCROOT}/Pods/Target\ Support\ Files/Pods-iosApp/Pods-iosApp.debug.xcconfig"
-FIREBASE_CONFIG_FILE = $(SRCROOT)/iosApp/iosApp/GoogleService-Info-Debug.plist
-
-----
-CopyGoogleServiceInfo.sh: 
-#!/bin/sh
-#File: iosApp/CopyGoogleServiceInfo.sh
-if [ "${CONFIGURATION}" = "Debug" ]; then
-    cp "${SRCROOT}/GoogleService-Info-Debug.plist" "${BUILT_PRODUCTS_DIR}/${PRODUCT_NAME}.app/GoogleService-Info.plist"
-else
-    cp "${SRCROOT}/GoogleService-Info-Release.plist" "${BUILT_PRODUCTS_DIR}/${PRODUCT_NAME}.app/GoogleService-Info.plist"
-fi
-
-----
-
-- I would have thought that when my build starts, this run script would kick in: custom - devVsProdConfig: 
-echo "Using Firebase config file: ${FIREBASE_CONFIG_FILE}"
-cp "${FIREBASE_CONFIG_FILE}" "${BUILT_PRODUCTS_DIR}/${PRODUCT_NAME}.app/GoogleService-Info.plist"
-
-but it doesn't seem to work. It throws these errors:
-
-/Users/liam/Local Documents/Programming/openparty/iosApp/Debug.xcconfig:1:1 could not find included file '${SRCROOT}/Pods/Target\ Support\ Files/Pods-iosApp/Pods-iosApp.debug.xcconfig' in search paths
-
-iosApp
-Unable to load contents of file list: '/Target Support Files/Pods-iosApp/Pods-iosApp-frameworks-Debug-input-files.xcfilelist'
-
-Unable to load contents of file list: '/Target Support Files/Pods-iosApp/Pods-iosApp-frameworks-Debug-output-files.xcfilelist'
-
-/Users/liam/Local Documents/Programming/openparty/iosApp/Debug.xcconfig
-/Users/liam/Local Documents/Programming/openparty/iosApp/Debug.xcconfig:1:1 could not find included file '${SRCROOT}/Pods/Target\ Support\ Files/Pods-iosApp/Pods-iosApp.debug.xcconfig' in search paths
+but that cannot be resolved. do i need a new library dependency? Is that deprecated? etc
