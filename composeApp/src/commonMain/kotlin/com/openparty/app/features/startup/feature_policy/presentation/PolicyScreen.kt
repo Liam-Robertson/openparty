@@ -40,15 +40,6 @@ fun PolicyScreen(
     val uiState by viewModel.uiState.collectAsState()
 
     Scaffold(
-        topBar = {
-            StandardHeader(
-                onXClicked = {
-                    navController.navigate(Screen.Settings.route) {
-                        popUpTo(Screen.Settings.route) { inclusive = true }
-                    }
-                }
-            )
-        },
         bottomBar = {
             Button(
                 onClick = { viewModel.acceptPolicy() },
