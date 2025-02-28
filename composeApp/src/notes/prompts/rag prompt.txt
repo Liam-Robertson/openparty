@@ -1,0 +1,7 @@
+- I'm building a rag system for a generative AI
+- I'm going to use python with Django to build the web service
+- I'm using langchain to chunk the data
+- I'm using open ai to do embeddings
+- I'm using pinecone for vector database (free tier)
+- I'm using amazon web services aws elastic beanstalk for web hosting (free tier)
+
