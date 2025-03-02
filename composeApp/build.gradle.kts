@@ -27,7 +27,7 @@ kotlin {
         iosTarget.binaries.framework {
             baseName = "ComposeApp"
             isStatic = true
-            freeCompilerArgs += listOf("-Xbinary=bundleId=com.openparty.app")
+            freeCompilerArgs += listOf("-Xbinary=bundleId=com.openroots.app")
         }
     }
 
@@ -77,11 +77,11 @@ kotlin {
 }
 
 android {
-    namespace = "com.openparty.app"
+    namespace = "com.openroots.app"
     compileSdk = libs.versions.android.compileSdk.get().toInt()
 
     defaultConfig {
-        applicationId = "com.openparty.app"
+        applicationId = "com.openroots.app"
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
         versionCode = 4

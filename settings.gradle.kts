@@ -1,4 +1,4 @@
-rootProject.name = "OpenParty"
+rootProject.name = "OpenRoots"
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 
 pluginManagement {
