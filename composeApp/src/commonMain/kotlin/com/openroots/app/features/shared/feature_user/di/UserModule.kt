@@ -8,6 +8,7 @@ import com.openroots.app.features.shared.feature_user.domain.repository.UserRepo
 import com.openroots.app.features.shared.feature_user.domain.usecase.GetUserUseCase
 import com.openroots.app.features.shared.feature_user.domain.usecase.UpdateUserUseCase
 import com.openroots.app.features.shared.feature_user.domain.usecase.BlockUserUseCase
+import com.openroots.app.features.shared.feature_user.domain.usecase.DeleteUserUseCase
 import dev.gitlive.firebase.Firebase
 import dev.gitlive.firebase.firestore.firestore
 import org.koin.core.module.Module
@@ -45,6 +46,12 @@ val userModule: Module = module {
 
     single {
         BlockUserUseCase(
+            userRepository = get()
+        )
+    }
+
+    single {
+        DeleteUserUseCase(
             userRepository = get()
         )
     }

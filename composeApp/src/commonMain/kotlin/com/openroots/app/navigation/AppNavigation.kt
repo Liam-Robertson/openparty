@@ -30,6 +30,7 @@ import com.openroots.app.features.startup.verification.feature_location_verifica
 import com.openroots.app.features.startup.verification.feature_manual_verification.presentation.ManualVerificationScreen
 import com.openroots.app.features.utils.settings.feature_disclaimer.presentation.DisclaimerScreen
 import com.openroots.app.features.utils.settings.feature_settings.presentation.SettingsScreen
+import com.openroots.app.features.utils.settings.feature_delete_user.presentation.DeleteUserScreen
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 
@@ -46,7 +47,6 @@ fun AppNavigation() {
     )
 
     Column(modifier = Modifier.fillMaxSize()) {
-        // Content area occupies most of the space.
         Box(modifier = Modifier.weight(1f)) {
             NavHost(
                 navController = navController,
@@ -66,6 +66,7 @@ fun AppNavigation() {
                 composable(Screen.AddDiscussion.route) { AddDiscussionScreen(navController) }
                 composable(Screen.Settings.route) { SettingsScreen(navController) }
                 composable("disclaimer") { DisclaimerScreen(navController) }
+                composable("deleteUser") { DeleteUserScreen(navController) }
                 composable(
                     route = Screen.DiscussionsArticle("").route,
                     arguments = listOf(navArgument("discussionId") { type = NavType.StringType })

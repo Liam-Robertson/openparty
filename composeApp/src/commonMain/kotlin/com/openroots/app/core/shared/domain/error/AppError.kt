@@ -30,6 +30,7 @@ sealed class AppError : Exception() {
         object UpdateUserUseCase : AppError()
         object BlockUser : AppError()
         object HideDiscussion : AppError()
+        object DeleteUser : AppError()
     }
 
     sealed class Authentication : AppError() {

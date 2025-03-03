@@ -23,6 +23,7 @@ import com.openroots.app.features.utils.feature_report.di.reportModule
 import com.openroots.app.features.utils.settings.feature_settings.di.settingsModule
 import com.openroots.app.core.storage.clearAllKeychainData
 import com.openroots.app.features.startup.feature_policy.di.policyModule
+import com.openroots.app.features.utils.settings.feature_delete_user.di.deleteUserModule
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -62,6 +63,7 @@ object IOSKoinInitializer {
                     hidePostsModule,
                     settingsModule,
                     policyModule,
+                    deleteUserModule,
                 )
             )
         }

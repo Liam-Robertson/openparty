@@ -1,3 +1,4 @@
+//File: composeApp/src/commonMain/kotlin/com/openroots/app/features/utils/settings/feature_settings/presentation/SettingsScreen.kt
 package com.openroots.app.features.utils.settings.feature_settings.presentation
 
 import androidx.compose.foundation.clickable
@@ -21,7 +22,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
@@ -30,7 +30,7 @@ import com.openroots.app.core.shared.presentation.UiEvent
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
-fun SettingsScreen(navController: NavHostController, viewModel: SettingsViewModel = koinViewModel()) {
+fun SettingsScreen(navController: NavHostController, viewModel: com.openroots.app.features.utils.settings.feature_settings.presentation.SettingsViewModel = koinViewModel()) {
     val uiState by viewModel.uiState.collectAsState()
     LaunchedEffect(Unit) {
         viewModel.uiEvent.collect { event ->
@@ -61,7 +61,7 @@ fun SettingsScreen(navController: NavHostController, viewModel: SettingsViewMode
                 .padding(innerPadding)
                 .padding(16.dp),
             verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
+            horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally
         ) {
             Card(
                 modifier = Modifier
@@ -71,7 +71,7 @@ fun SettingsScreen(navController: NavHostController, viewModel: SettingsViewMode
             ) {
                 Column(
                     modifier = Modifier.padding(16.dp),
-                    horizontalAlignment = Alignment.Start
+                    horizontalAlignment = androidx.compose.ui.Alignment.Start
                 ) {
                     Icon(
                         imageVector = Icons.Filled.Info,
@@ -80,6 +80,28 @@ fun SettingsScreen(navController: NavHostController, viewModel: SettingsViewMode
                     Spacer(modifier = Modifier.width(16.dp))
                     Text(
                         text = "Disclaimer",
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.padding(vertical = 8.dp))
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { navController.navigate("deleteUser") },
+                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    horizontalAlignment = androidx.compose.ui.Alignment.Start
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Info,
+                        contentDescription = null
+                    )
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Text(
+                        text = "Delete User",
                         style = MaterialTheme.typography.titleMedium
                     )
                 }

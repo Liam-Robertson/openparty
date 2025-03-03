@@ -12,4 +12,5 @@ interface UserRepository {
     suspend fun addUser(userId: String, user: UserDto): DomainResult<Unit>
     suspend fun blockUser(currentUserId: String, blockedUserId: String): DomainResult<Unit>
     suspend fun hideDiscussion(userId: String, discussionId: String): DomainResult<Unit>
+    suspend fun deleteUser(userId: String): DomainResult<Unit>
 }

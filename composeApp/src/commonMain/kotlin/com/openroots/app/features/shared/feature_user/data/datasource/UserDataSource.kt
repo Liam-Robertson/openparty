@@ -10,4 +10,5 @@ interface UserDataSource {
     suspend fun addUser(userId: String, user: UserDto)
     suspend fun blockUser(userId: String, blockedUserId: String)
     suspend fun hideDiscussion(userId: String, discussionId: String)
+    suspend fun deleteUser(userId: String)
 }

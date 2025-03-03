@@ -87,4 +87,16 @@ class UserRepositoryImpl(
             DomainResult.Failure(AppError.User.HideDiscussion)
         }
     }
+
+    override suspend fun deleteUser(userId: String): DomainResult<Unit> {
+        println("deleteUser called with userId: $userId")
+        return try {
+            userDataSource.deleteUser(userId)
+            println("Successfully deleted user with userId: $userId")
+            DomainResult.Success(Unit)
+        } catch (e: Exception) {
+            println("Error deleting user with userId: $userId, exception: ${e.message}")
+            DomainResult.Failure(AppError.User.DeleteUser)
+        }
+    }
 }

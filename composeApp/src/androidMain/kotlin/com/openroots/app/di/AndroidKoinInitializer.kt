@@ -23,6 +23,7 @@ import com.openroots.app.features.startup.verification.feature_email_verificatio
 import com.openroots.app.features.startup.verification.feature_location_verification.di.locationVerificationModule
 import com.openroots.app.features.utils.feature_hide_posts.di.hidePostsModule
 import com.openroots.app.features.utils.feature_report.di.reportModule
+import com.openroots.app.features.utils.settings.feature_delete_user.di.deleteUserModule
 import com.openroots.app.features.utils.settings.feature_settings.di.settingsModule
 import com.openroots.app.main.di.mainModule
 import org.koin.android.ext.koin.androidContext
@@ -65,5 +66,6 @@ object AndroidKoinInitializer {
         reportModule,
         hidePostsModule,
         settingsModule,
+        deleteUserModule,
     )
 }

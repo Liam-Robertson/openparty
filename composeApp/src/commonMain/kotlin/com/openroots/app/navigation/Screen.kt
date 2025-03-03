@@ -18,6 +18,7 @@ sealed class Screen(val route: String) {
     @Serializable object CouncilMeetingsPreview : Screen("council_meetings_preview")
     @Serializable object AddDiscussion : Screen("add_discussion")
     @Serializable object Settings : Screen("settings")
+    @Serializable object DeleteUser : Screen("deleteUser")
 
     @Serializable
     data class DiscussionsArticle(val discussionId: String) : Screen("discussions_article/{discussionId}") {

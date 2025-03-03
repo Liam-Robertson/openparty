@@ -123,4 +123,10 @@ class FirebaseUserDataSource(
             throw RuntimeException("Failed to hide discussion for user: $userId", e)
         }
     }
+
+    override suspend fun deleteUser(userId: String) {
+        logger.d { "Deleting user with userId: $userId" }
+        firestore.collection("users").document(userId).delete()
+        logger.d { "Successfully deleted user with userId: $userId" }
+    }
 }
