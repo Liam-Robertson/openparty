@@ -84,8 +84,8 @@ android {
         applicationId = "com.openroots.app"
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
-        versionCode = 4
-        versionName = "4.4"
+        versionCode = 5
+        versionName = "5.1"
     }
     packaging {
         resources {
@@ -98,6 +98,7 @@ android {
         }
         getByName("release") {
             isMinifyEnabled = false
+//            signingConfig = signingConfigs.getByName("debug")
             // Release builds will use the configuration file located in src/release/google-services.json
         }
     }
