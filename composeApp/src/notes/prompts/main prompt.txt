@@ -1285,6 +1285,13 @@ class UpdateUserUseCase(
     }
 }
 
+---------
+
+Notes: 
+- This mobile app calls an api
+- The api is hosted on amazon web services lightsail
+- It uses kotlin spring boot, with a postgres database
+- The aws instance runs on Ubuntu 22.04 LTS
 
 ---------
 
@@ -1307,65 +1314,18 @@ Notes:
 
 ---------
 
-in my above kotlin multiplatform code, i have a settings screen. the settings screen has a series of cards it's displaying. right now it's only displaying a card called "Disclaimer" that when clicked takes you to the disclaimer page 
+My above code uses firebase database
 
-Create a new card called "Delete User", that when clicked takes the User to the DeleteUserScreen 
+However I don't like this since firebase is serverless and i instead want to use a server 
 
-Create a delete user feature to host all this code - feature_delete_user - which will be at this file path - //File: composeApp/src/commonMain/kotlin/com/openroots/app/features/utils/settings/feature_delete_user
+for that reason i'm going to use amazon web service lightsail 
 
-in the delete user screen, there should be button that says "Delete User". If the user clicks the button a popup appears that says "Are you sure you want to delete your account? This cannot be undone.", then it has two buttons in the popup - in the bottom left under hte text it says "Cancel", and in the bottom right it says "Ok" 
+to do this, i need to replace the firebase database with another type of database 
 
-If the user clicks "Cancel", it closes the popup. If the user clicks "Ok", it triggers the DeleteUserUseCase which deletes the user object from the firebase database
+I'm going to use postGres with a kotlin spring boot server on aws lightsail for  this 
 
-Here's an example of a firebase object in the collection called "users" where the document name is the same as the user id: 
+I want to make sure that when i scale, i can easily move from lightstail to a more scaleable aws account like ec2 
 
-accountType
-"Constituent"
-(string)
-blockedUsers
-(array)
-governmentName
-null
-(null)
-hiddenDiscussions
-(array)
-isPolicyAccepted
-true
-(boolean)
-location
-"West Lothian"
-(string)
-locationVerified
-true
-(boolean)
-manuallyVerified
-true
-(boolean)
-otherUserInfo
-(map)
-email
-"liam.rob32@gmail.com"
-(string)
-phoneNumber
-null
-(null)
-profilePictureUrl
-null
-(null)
-screenName
-"Enchanted Comet Pine"
-(string)
-title
-null
-(null)
-userId
-"Zj4jLsY83nXklQqbZv1cgdGCXGk1"
-locationHistory
+so for that reason, make sure it's scaleable, which i guess means it needs to be containerized etc 
 
----
-
-if the DeleteUserUseCase is triggered, just delete the entire user object. 
-
-The Delete user use case will need to be created since it doesn't exist yet, create it in the user feature - feature_user. 
-
-The DeleteUserUseCase will just be a normal feature_user use case, with teh same type of architecture as BlockUserUseCase
+Give me detailed steps  on creating my amazon lightsail account and setting up my postgres database
